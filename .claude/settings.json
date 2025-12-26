@@ -3,7 +3,6 @@
     "javascript-typescript@claude-code-workflows": true,
     "security-scanning@claude-code-workflows": true,
     "cicd-automation@claude-code-workflows": true,
-    "serena@claude-plugins-official": true,
     "code-documentation@claude-code-workflows": true
   }
 }

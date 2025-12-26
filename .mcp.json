@@ -16,7 +16,18 @@
       "env": {
         "DATABASE_URL": "sqlite+aiosqlite:///./.claude/mcp_mail.db"
       }
+    },
+    "serena": {
+      "command": "uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/oraios/serena",
+        "serena",
+        "start-mcp-server",
+        "--context",
+        "claude-code",
+        "--project-from-cwd"
+      ]
     }
   }
 }
-
