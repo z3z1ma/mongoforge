@@ -121,6 +121,72 @@ describe('checkIdUniqueness()', () => {
 
     expect(result.passed).toBe(true);
   });
+
+  it('should not count missing _id as duplicate', () => {
+    // Documents without _id should be excluded from uniqueness check
+    const docs = [{ _id: '1' }, { _id: '2' }, { name: 'No ID' }, { name: 'Also No ID' }];
+    const result = checkIdUniqueness(docs);
+
+    expect(result.totalKeys).toBe(2); // Only count docs with _id
+    expect(result.uniqueKeys).toBe(2);
+    expect(result.duplicates).toBe(0);
+    expect(result.passed).toBe(true);
+  });
+
+  it('should not count null _id as duplicate', () => {
+    // Documents with null _id should be excluded from uniqueness check
+    const docs = [{ _id: '1' }, { _id: '2' }, { _id: null }, { _id: null }];
+    const result = checkIdUniqueness(docs);
+
+    expect(result.totalKeys).toBe(2); // Only count docs with defined _id
+    expect(result.uniqueKeys).toBe(2);
+    expect(result.duplicates).toBe(0);
+    expect(result.passed).toBe(true);
+  });
+
+  it('should not count undefined _id as duplicate', () => {
+    // Documents with undefined _id should be excluded
+    const docs = [{ _id: '1' }, { _id: '2' }, { _id: undefined }, { _id: undefined }];
+    const result = checkIdUniqueness(docs);
+
+    expect(result.totalKeys).toBe(2);
+    expect(result.uniqueKeys).toBe(2);
+    expect(result.duplicates).toBe(0);
+    expect(result.passed).toBe(true);
+  });
+
+  it('should handle mix of missing, null, and defined _ids', () => {
+    const docs = [
+      { _id: '1' },
+      { _id: '2' },
+      { name: 'Missing ID' },
+      { _id: null },
+      { _id: undefined },
+      { _id: '3' },
+    ];
+    const result = checkIdUniqueness(docs);
+
+    expect(result.totalKeys).toBe(3); // Only '1', '2', '3'
+    expect(result.uniqueKeys).toBe(3);
+    expect(result.duplicates).toBe(0);
+    expect(result.passed).toBe(true);
+  });
+
+  it('should still detect duplicates among defined _ids with missing values present', () => {
+    const docs = [
+      { _id: '1' },
+      { _id: '2' },
+      { name: 'No ID' },
+      { _id: '1' }, // Duplicate
+      { _id: null },
+    ];
+    const result = checkIdUniqueness(docs);
+
+    expect(result.totalKeys).toBe(3); // Only count defined _ids
+    expect(result.uniqueKeys).toBe(2); // '1' and '2'
+    expect(result.duplicates).toBe(1);
+    expect(result.passed).toBe(false);
+  });
 });
 
 describe('checkKeyFieldUniqueness()', () => {

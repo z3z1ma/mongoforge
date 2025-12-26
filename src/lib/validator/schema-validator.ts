@@ -118,11 +118,12 @@ export function checkIdUniqueness(documents: any[]): {
   passed: boolean;
 } {
   const ids = new Set<string>();
-  const totalKeys = documents.length;
+  let totalKeys = 0;
 
   documents.forEach((doc) => {
     const id = doc._id;
     if (id !== undefined && id !== null) {
+      totalKeys++;
       // Normalize to string for comparison
       ids.add(String(id));
     }
