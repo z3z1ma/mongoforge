@@ -7,10 +7,14 @@ import { faker } from '@faker-js/faker';
 import { ObjectId } from 'mongodb';
 
 /**
- * Generate valid ObjectId string (24-char hex)
+ * Generate valid ObjectId string (24-char hex) deterministically using faker
  */
 function generateObjectId(): string {
-  return new ObjectId().toString();
+  // Generate 12 random bytes using faker for determinism
+  const bytes = Array.from({ length: 12 }, () =>
+    faker.number.int({ min: 0, max: 255 })
+  );
+  return Buffer.from(bytes).toString('hex');
 }
 
 /**
