@@ -1,0 +1,118 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mongoforge.dev/schemas/dynamic-key-metadata.json",
+  "title": "Dynamic Key Metadata",
+  "description": "Metadata about detected dynamic key patterns in MongoDB documents",
+  "type": "object",
+  "required": [
+    "enabled",
+    "pattern",
+    "confidence",
+    "confidenceLevel",
+    "countDistribution",
+    "countStats",
+    "documentsAnalyzed",
+    "uniqueKeysObserved",
+    "exampleKeys"
+  ],
+  "properties": {
+    "enabled": {
+      "type": "boolean",
+      "description": "Whether dynamic key pattern was detected and enabled"
+    },
+    "pattern": {
+      "type": "string",
+      "enum": ["UUID", "MONGODB_OBJECTID", "ULID", "NUMERIC_ID", "PREFIXED_ID", "CUSTOM"],
+      "description": "Detected pattern type for dynamic keys"
+    },
+    "customPattern": {
+      "type": "string",
+      "description": "Custom regex pattern (only if pattern is 'CUSTOM')",
+      "pattern": "^.+$"
+    },
+    "confidence": {
+      "type": "number",
+      "description": "Confidence score in detection (0.0 - 1.0)",
+      "minimum": 0.0,
+      "maximum": 1.0
+    },
+    "confidenceLevel": {
+      "type": "string",
+      "enum": ["high", "medium", "low"],
+      "description": "Confidence level category: high (≥0.8), medium (≥0.6), low (<0.6)"
+    },
+    "countDistribution": {
+      "$ref": "#/definitions/frequencyDistribution",
+      "description": "Distribution of key counts across documents"
+    },
+    "countStats": {
+      "$ref": "#/definitions/distributionStats",
+      "description": "Statistical summary of key count distribution"
+    },
+    "documentsAnalyzed": {
+      "type": "integer",
+      "description": "Number of documents analyzed for pattern detection",
+      "minimum": 1
+    },
+    "uniqueKeysObserved": {
+      "type": "integer",
+      "description": "Total number of unique keys observed across all documents",
+      "minimum": 1
+    },
+    "exampleKeys": {
+      "type": "array",
+      "description": "Sample keys matching the detected pattern (max 10)",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "maxItems": 10
+    }
+  },
+  "definitions": {
+    "frequencyDistribution": {
+      "type": "object",
+      "description": "Mapping of values to occurrence counts",
+      "patternProperties": {
+        "^[0-9]+$": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "additionalProperties": false,
+      "minProperties": 1
+    },
+    "distributionStats": {
+      "type": "object",
+      "required": ["min", "max", "median", "p95", "total", "unique"],
+      "properties": {
+        "min": {
+          "type": "number",
+          "description": "Minimum observed value"
+        },
+        "max": {
+          "type": "number",
+          "description": "Maximum observed value"
+        },
+        "median": {
+          "type": "number",
+          "description": "Median value (50th percentile)"
+        },
+        "p95": {
+          "type": "number",
+          "description": "95th percentile value"
+        },
+        "total": {
+          "type": "integer",
+          "description": "Total number of observations",
+          "minimum": 0
+        },
+        "unique": {
+          "type": "integer",
+          "description": "Number of unique values",
+          "minimum": 0
+        }
+      }
+    }
+  }
+}

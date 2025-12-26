@@ -1,0 +1,98 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mongoforge.dev/schemas/detection-config.json",
+  "title": "Dynamic Key Detection Configuration",
+  "description": "Configuration for dynamic key pattern detection algorithm",
+  "type": "object",
+  "required": [
+    "threshold",
+    "patterns",
+    "minPatternMatch",
+    "confidenceThreshold"
+  ],
+  "properties": {
+    "threshold": {
+      "type": "integer",
+      "description": "Threshold for number of unique keys to trigger detection",
+      "minimum": 2,
+      "default": 50
+    },
+    "patterns": {
+      "type": "array",
+      "description": "Regex patterns for key format matching",
+      "items": {
+        "type": "object",
+        "required": ["name", "regex"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Pattern name (e.g., 'UUID', 'MONGODB_OBJECTID')",
+            "minLength": 1
+          },
+          "regex": {
+            "type": "string",
+            "description": "Regular expression pattern (without delimiters)",
+            "minLength": 1
+          }
+        }
+      },
+      "minItems": 1,
+      "default": [
+        {
+          "name": "UUID",
+          "regex": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        {
+          "name": "MONGODB_OBJECTID",
+          "regex": "^[0-9a-f]{24}$"
+        },
+        {
+          "name": "ULID",
+          "regex": "^[0-9A-Z]{26}$"
+        },
+        {
+          "name": "NUMERIC_ID",
+          "regex": "^\\d{6,20}$"
+        },
+        {
+          "name": "PREFIXED_ID",
+          "regex": "^(user|doc|item|order)_[a-z0-9]{8,32}$"
+        }
+      ]
+    },
+    "minPatternMatch": {
+      "type": "number",
+      "description": "Minimum percentage of keys that must match a pattern (0.0 - 1.0)",
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "default": 0.8
+    },
+    "confidenceThreshold": {
+      "type": "number",
+      "description": "Minimum confidence score to enable dynamic key treatment (0.0 - 1.0)",
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "default": 0.7
+    },
+    "forceStaticPaths": {
+      "type": "array",
+      "description": "Field paths to force as static keys (override detection)",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*(\\.[a-zA-Z_][a-zA-Z0-9_]*)*$"
+      },
+      "default": []
+    },
+    "forceDynamicPaths": {
+      "type": "array",
+      "description": "Field paths to force as dynamic keys (override detection)",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*(\\.[a-zA-Z_][a-zA-Z0-9_]*)*$"
+      },
+      "default": []
+    }
+  }
+}
