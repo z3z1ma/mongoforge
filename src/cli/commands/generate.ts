@@ -4,6 +4,7 @@ import { promisify } from 'util';
 import { createReadStream, createWriteStream } from 'fs';
 import { createMongoInserter } from '../../lib/emitter/mongo-inserter.js';
 import { createNDJSONWriter } from '../../lib/emitter/ndjson-writer.js';
+import { createJSONWriter } from '../../lib/emitter/json-writer.js';
 import { createGeneratorStream } from '../../lib/generator/stream.js';
 import { loadGenerationSchema } from '../../lib/generator/schema-loader.js';
 import { logger } from '../../utils/logger.js';
@@ -64,12 +65,14 @@ export function createGenerateCommand(): Command {
               ? process.stdout
               : createWriteStream(opts.outputPath);
 
-          // Convert object stream to NDJSON strings before piping to output
-          const ndjsonWriter = createNDJSONWriter();
+          // Create format writer based on output format option
+          const formatWriter = opts.outputFormat === 'json'
+            ? createJSONWriter()
+            : createNDJSONWriter();
 
           await pipelineAsync(
             documentStream,
-            ndjsonWriter,
+            formatWriter,
             outputStream
           );
         }
