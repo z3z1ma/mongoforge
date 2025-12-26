@@ -246,7 +246,7 @@ describe('Phase 8: Validation and Quality Reports - Integration', () => {
 
       expect(comparison.tags).toBeDefined();
       expect(comparison.tags?.generated.p50Len).toBe(3);
-      expect(comparison.tags?.deviation.p50).toBeLessThanOrEqual(20); // Within 20%
+      expect(comparison.tags?.deviation.p50).toBeLessThanOrEqual(0.2); // Within 20% in fractional form
     });
 
     it('should detect significant deviations', () => {
@@ -276,7 +276,7 @@ describe('Phase 8: Validation and Quality Reports - Integration', () => {
       const comparison = compareArrayLengths(sampleStats, generatedDocs, 0.1);
 
       expect(comparison.tags?.passed).toBe(false);
-      expect(comparison.tags?.deviation.p50).toBeGreaterThan(10);
+      expect(comparison.tags?.deviation.p50).toBeGreaterThan(0.1); // 10% threshold in fractional form
     });
   });
 
@@ -388,7 +388,7 @@ describe('Phase 8: Validation and Quality Reports - Integration', () => {
 
       // All buckets should have low deviation
       for (const bucket of comparison.buckets) {
-        expect(bucket.deviation).toBeLessThanOrEqual(20);
+        expect(bucket.deviation).toBeLessThanOrEqual(0.2); // 20% in fractional form
       }
     });
   });

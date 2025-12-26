@@ -41,9 +41,9 @@ export function compareArrayLengths(
           p99Len: 0,
         },
         deviation: {
-          p50: 100,
-          p90: 100,
-          p99: 100,
+          p50: 1.0,
+          p90: 1.0,
+          p99: 1.0,
         },
         passed: false,
       };
@@ -124,7 +124,7 @@ export function compareDocumentSizes(
           count: 0,
           probability: 0,
         },
-        deviation: 100,
+        deviation: 1.0,
         passed: false,
       });
       continue;
@@ -154,8 +154,8 @@ export function compareDocumentSizes(
 }
 
 /**
- * Calculate percentage deviation between two values
- * Returns absolute percentage deviation (0-100+)
+ * Calculate fractional deviation between two values
+ * Returns absolute fractional deviation (0-1+, where 0.1 = 10%)
  */
 function calculatePercentageDeviation(expected: number, actual: number): number {
   if (expected === 0 && actual === 0) {
@@ -163,9 +163,8 @@ function calculatePercentageDeviation(expected: number, actual: number): number 
   }
 
   if (expected === 0) {
-    return 100; // Maximum deviation if expected is 0 but actual is not
+    return 1.0; // Maximum deviation if expected is 0 but actual is not
   }
 
-  const deviation = Math.abs(actual - expected) / expected;
-  return deviation * 100; // Convert to percentage
+  return Math.abs(actual - expected) / expected;
 }

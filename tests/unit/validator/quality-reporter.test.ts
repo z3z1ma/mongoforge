@@ -66,7 +66,7 @@ describe('compareArrayLengths()', () => {
     const comparison = compareArrayLengths(sampleStats, generatedDocs, 0.1);
 
     expect(comparison.items?.passed).toBe(false);
-    expect(comparison.items?.deviation.p50).toBeGreaterThan(10);
+    expect(comparison.items?.deviation.p50).toBeGreaterThan(0.1); // 10% threshold in fractional form
   });
 
   it('should handle missing fields in generated documents', () => {
@@ -93,7 +93,7 @@ describe('compareArrayLengths()', () => {
 
     expect(comparison.missingField).toBeDefined();
     expect(comparison.missingField?.passed).toBe(false);
-    expect(comparison.missingField?.deviation.p50).toBe(100);
+    expect(comparison.missingField?.deviation.p50).toBe(1.0); // 100% deviation in fractional form
   });
 });
 
@@ -152,7 +152,7 @@ describe('compareDocumentSizes()', () => {
     const comparison = compareDocumentSizes(sampleBuckets, generatedDocs, 0.2);
 
     // Should show high deviation since all docs fall outside expected bucket
-    expect(comparison.buckets[0]?.deviation).toBeGreaterThan(20);
+    expect(comparison.buckets[0]?.deviation).toBeGreaterThan(0.2); // 20% threshold in fractional form
     expect(comparison.buckets[0]?.passed).toBe(false);
   });
 
