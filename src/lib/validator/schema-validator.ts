@@ -49,10 +49,18 @@ export class SchemaValidator {
       return [];
     }
 
-    return this.validateFn.errors.map((error) => ({
-      path: error.instancePath || error.schemaPath,
-      message: `${error.message} (keyword: ${error.keyword})`,
-    }));
+    return this.validateFn.errors.map((error) => {
+      // For missing required properties, Ajv includes the field name in params
+      const path =
+        error.keyword === 'required' && error.params && 'missingProperty' in error.params
+          ? `/${error.params.missingProperty}`
+          : error.instancePath || error.schemaPath;
+
+      return {
+        path,
+        message: `${error.message} (keyword: ${error.keyword})`,
+      };
+    });
   }
 
   /**

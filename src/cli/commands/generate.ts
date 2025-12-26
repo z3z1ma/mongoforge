@@ -1,36 +1,106 @@
 import { Command } from 'commander';
-import { loadCustomGenerators } from '../../lib/generator/module-loader';
-import {
-  registerPathGenerator,
-  registerTypeGenerator
-} from '../../lib/generator/custom-formats';
+import { Readable } from 'stream';
+import { createReadStream, createWriteStream } from 'fs';
+import { createMongoInserter } from '../../lib/emitter/mongo-inserter.js';
+import { generateDocuments } from '../../lib/generator/stream.js';
+import { logger } from '../../utils/logger.js';
 
-export function setupGenerateCommand(program: Command): void {
+/**
+ * Configure generate command with MongoDB insertion mode
+ * @param program Commander CLI program
+ */
+export function configureGenerateCommand(program: Command): void {
   program
     .command('generate')
-    .description('Generate synthetic MongoDB documents')
-    .option('-c, --custom-generators <path>', 'Path to custom generator JavaScript module')
-    .action(async (options) => {
-      if (options.customGenerators) {
-        try {
-          const customGenerators = await loadCustomGenerators(options.customGenerators);
+    .description('Generate synthetic documents')
+    .option('--generation-schema <path>', 'Path to generation schema file', './schemas/generation.schema.json')
+    .option('--constraints <path>', 'Path to constraints file', './schemas/constraints.json')
+    .option('--doc-count <number>', 'Number of documents to generate', '10000')
+    .option('--seed <seed>', 'Seed for deterministic generation')
+    .option('--output-path <path>', 'Output path (or "stdout")', 'stdout')
+    .option('--output-format <format>', 'Output format', 'ndjson')
+    .option('--target-uri <uri>', 'MongoDB URI for direct insertion')
+    .option('--target-db <database>', 'Target database name')
+    .option('--target-collection <collection>', 'Target collection name')
+    .option('--collection-suffix <suffix>', 'Suffix for target collection')
+    .option('--batch-size <number>', 'Batch size for MongoDB bulk inserts', '1000')
+    .option('--write-concern <concern>', 'Write concern for MongoDB inserts', 'majority')
+    .option('--ordered-inserts', 'Use ordered bulk inserts', false)
+    .action(async (opts) => {
+      try {
+        const docCount = parseInt(opts.docCount, 10);
+        const batchSize = parseInt(opts.batchSize, 10);
 
-          // Register path generators
-          customGenerators.pathGenerators.forEach((gen, path) => {
-            registerPathGenerator(path, gen);
+        // Create document generation stream
+        const documentStream = generateDocuments({
+          generationSchemaPath: opts.generationSchema,
+          constraintsPath: opts.constraints,
+          count: docCount,
+          seed: opts.seed
+        });
+
+        let insertionMetrics = null;
+
+        // MongoDB Direct Insertion Mode
+        if (opts.targetUri && opts.targetDb && opts.targetCollection) {
+          const inserter = await createMongoInserter({
+            uri: opts.targetUri,
+            database: opts.targetDb,
+            collection: opts.targetCollection,
+            collectionSuffix: opts.collectionSuffix,
+            batchSize: batchSize,
+            writeConcern: opts.writeConcern,
+            orderedInserts: opts.orderedInserts
           });
 
-          // Register type generators
-          customGenerators.typeGenerators.forEach((gen, type) => {
-            registerTypeGenerator(type, gen);
-          });
-        } catch (error) {
-          console.error(`Failed to load custom generators: ${error.message}`);
-          process.exit(1);
+          insertionMetrics = await inserter.bulkInsert(documentStream as Readable);
         }
-      }
+        // File/Stdout Output Mode
+        else {
+          const outputStream =
+            opts.outputPath === 'stdout'
+              ? process.stdout
+              : createWriteStream(opts.outputPath);
 
-      // Actual generation logic would go here
-      console.log('Generating documents...');
+          documentStream.pipe(outputStream);
+
+          await new Promise((resolve, reject) => {
+            documentStream.on('end', resolve);
+            documentStream.on('error', reject);
+          });
+        }
+
+        // Prepare and output result
+        const result = {
+          status: 'success',
+          phase: 'generation',
+          output: {
+            totalDocuments: docCount,
+            ...(insertionMetrics
+              ? {
+                  destination: opts.targetUri + '/' + opts.targetDb + '/' + opts.targetCollection + (opts.collectionSuffix || ''),
+                  insertedDocuments: insertionMetrics.insertedDocuments,
+                  failedInserts: insertionMetrics.failedInserts
+                }
+              : {
+                  format: opts.outputFormat,
+                  path: opts.outputPath
+                }
+            )
+          },
+          metrics: insertionMetrics
+            ? {
+                durationMs: insertionMetrics.durationMs,
+                throughput: Math.round(docCount / (insertionMetrics.durationMs / 1000)),
+                memoryPeakMb: process.memoryUsage().heapUsed / 1024 / 1024
+              }
+            : null
+        };
+
+        console.log(JSON.stringify(result, null, 2));
+      } catch (error) {
+        logger.error('Generate command error', error);
+        process.exit(1);
+      }
     });
 }

@@ -5,7 +5,7 @@
 
 import { ArrayLengthStats, DocumentSizeBucket, ArrayLengthComparison, SizeBucketComparison } from '../../types/data-model.js';
 import { calculateAllArrayStats } from '../profiler/array-stats.js';
-import { extractSizeBuckets } from '../profiler/size-buckets.js';
+import { createSizeBuckets } from '../profiler/size-buckets.js';
 
 /**
  * Compare array length distributions between sample and generated documents
@@ -97,9 +97,14 @@ export function compareDocumentSizes(
 ): {
   buckets: SizeBucketComparison[];
 } {
-  // Extract size buckets from generated documents using same proxy type
+  // Extract size buckets from generated documents using same proxy type and bucket configuration
   const sizeProxy = sampleBuckets[0]?.sizeProxy ?? 'leafFieldCount';
-  const generatedBuckets = extractSizeBuckets(generatedDocuments, sizeProxy, sampleBuckets.length);
+  const bucketConfig = sampleBuckets.map((b) => ({
+    id: b.bucketId,
+    min: b.sizeRange.min,
+    max: b.sizeRange.max,
+  }));
+  const generatedBuckets = createSizeBuckets(generatedDocuments, sizeProxy, bucketConfig);
 
   const comparisons: SizeBucketComparison[] = [];
 

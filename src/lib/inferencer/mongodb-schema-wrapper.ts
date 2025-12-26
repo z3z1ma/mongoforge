@@ -60,29 +60,92 @@ export async function inferSchema(
     return cleanDoc;
   });
 
-  // Convert to Promise-based API
-  return new Promise((resolve, reject) => {
-    parseSchema(cleanDocs, options, (error: Error | null, schema: any) => {
-      if (error) {
-        logger.error('Schema inference failed', { error: error.message });
-        reject(error);
-        return;
+  try {
+    // mongodb-schema v12+ is Promise-based
+    const schema = await parseSchema(cleanDocs, options);
+
+    // Transform schema.fields array to Record<string, InferredSchemaField>
+    const fieldsRecord: Record<string, InferredSchemaField> = {};
+    for (const field of schema.fields) {
+      // Use the last segment of path as the field name
+      const fieldName = field.path[field.path.length - 1] || field.name;
+
+      // Extract lengths from ArraySchemaType if present
+      let lengths: number[] | undefined;
+      let nestedFields: Record<string, InferredSchemaField> | undefined;
+
+      for (const schemaType of field.types) {
+        if (schemaType.name === 'Array' && 'lengths' in schemaType) {
+          lengths = schemaType.lengths;
+        }
+        if (schemaType.name === 'Document' && 'fields' in schemaType) {
+          nestedFields = transformNestedFields(schemaType.fields);
+        }
       }
 
-      logger.info('Schema inference complete', {
-        fieldsInferred: Object.keys(schema.fields || {}).length,
-        documentCount: schema.count,
-      });
-
-      // Transform mongodb-schema output to our InferredSchema type
-      const inferredSchema: InferredSchema = {
-        count: schema.count || documents.length,
-        fields: schema.fields || {},
+      fieldsRecord[fieldName] = {
+        name: field.name,
+        path: field.path.join('.'),
+        count: field.count,
+        type: field.type,
+        probability: field.probability,
+        types: field.types.map(t => ({ name: t.name, probability: t.probability })),
+        lengths,
+        fields: nestedFields,
       };
+    }
 
-      resolve(inferredSchema);
+    logger.info('Schema inference complete', {
+      fieldsInferred: Object.keys(fieldsRecord).length,
+      documentCount: schema.count,
     });
-  });
+
+    // Transform mongodb-schema output to our InferredSchema type
+    const inferredSchema: InferredSchema = {
+      count: schema.count || documents.length,
+      fields: fieldsRecord,
+    };
+
+    return inferredSchema;
+  } catch (error) {
+    logger.error('Schema inference failed', { error: error instanceof Error ? error.message : String(error) });
+    throw error;
+  }
+}
+
+/**
+ * Helper to transform nested fields array to Record
+ */
+function transformNestedFields(fields: any[]): Record<string, InferredSchemaField> {
+  const record: Record<string, InferredSchemaField> = {};
+  for (const field of fields) {
+    const fieldName = field.path[field.path.length - 1] || field.name;
+
+    // Extract lengths and nested fields from types
+    let lengths: number[] | undefined;
+    let nestedFields: Record<string, InferredSchemaField> | undefined;
+
+    for (const schemaType of field.types) {
+      if (schemaType.name === 'Array' && 'lengths' in schemaType) {
+        lengths = schemaType.lengths;
+      }
+      if (schemaType.name === 'Document' && 'fields' in schemaType) {
+        nestedFields = transformNestedFields(schemaType.fields);
+      }
+    }
+
+    record[fieldName] = {
+      name: field.name,
+      path: field.path.join('.'),
+      count: field.count,
+      type: field.type,
+      probability: field.probability,
+      types: field.types.map(t => ({ name: t.name, probability: t.probability })),
+      lengths,
+      fields: nestedFields,
+    };
+  }
+  return record;
 }
 
 /**

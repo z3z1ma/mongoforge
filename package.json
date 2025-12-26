@@ -59,7 +59,8 @@
     "json-schema-faker": "^0.5.6",
     "mongodb": "^6.12.0",
     "mongodb-schema": "^12.2.0",
-    "ndjson": "^2.0.0"
+    "ndjson": "^2.0.0",
+    "yaml": "^2.8.2"
   },
   "devDependencies": {
     "@types/ndjson": "^2.0.4",
