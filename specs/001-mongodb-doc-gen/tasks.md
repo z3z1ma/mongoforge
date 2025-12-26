@@ -67,12 +67,12 @@ Tasks marked `[P]` within the same phase can be executed in parallel. Example:
 
 ### Tasks
 
-- [ ] [T001] Initialize npm project with package.json (name: mongoforge, version: 0.1.0)
-- [ ] [T002] Install core dependencies (mongodb, mongodb-schema, json-schema-faker, @faker-js/faker, ajv, commander, ndjson)
-- [ ] [T003] Install dev dependencies (@types/node, typescript, vitest, tsx, tsup, mongodb-memory-server)
-- [ ] [T004] Create tsconfig.json (strict mode, ES2022 target, node module resolution) → tsconfig.json
-- [ ] [T005] Create vitest.config.ts (coverage thresholds >80%, test patterns) → vitest.config.ts
-- [ ] [T006] [P] Create .gitignore (node_modules, dist, coverage, output, *.ndjson) → .gitignore
+- [x] [T001] Initialize npm project with package.json (name: mongoforge, version: 0.1.0)
+- [x] [T002] Install core dependencies (mongodb, mongodb-schema, json-schema-faker, @faker-js/faker, ajv, commander, ndjson)
+- [x] [T003] Install dev dependencies (@types/node, typescript, vitest, tsx, tsup, mongodb-memory-server)
+- [x] [T004] Create tsconfig.json (strict mode, ES2022 target, node module resolution) → tsconfig.json
+- [x] [T005] Create vitest.config.ts (coverage thresholds >80%, test patterns) → vitest.config.ts
+- [x] [T006] [P] Create .gitignore (node_modules, dist, coverage, output, *.ndjson) → .gitignore
 
 **Dependencies**: None (foundation tasks)
 
@@ -86,21 +86,21 @@ Tasks marked `[P]` within the same phase can be executed in parallel. Example:
 
 ### Tasks
 
-- [ ] [T007] [P] Create shared type definitions index → src/types/index.ts
-- [ ] [T008] [P] Create core data model types (SampleDocument, NormalizedDocument, InferredSchema, GenerationSchema, ConstraintsProfile, RunManifest, ValidationReport) → src/types/data-model.ts
-- [ ] [T009] [P] Create configuration types (SourceConfig, SamplingConfig, ConstraintsConfig, GenerationConfig, OutputConfig) → src/types/config.ts
-- [ ] [T010] [P] Create logger utility (structured logging with levels: error, warn, info, debug) → src/utils/logger.ts
-- [ ] [T011] [P] Create seed manager utility (hash seed strings to numbers, expose seeding API) → src/utils/seed-manager.ts
-- [ ] [T012] [P] Create MongoDB connector utility (connection pooling, authentication, error handling) → src/lib/sampler/connector.ts
-- [ ] [T013] [P] Create sampler module types → src/lib/sampler/types.ts
-- [ ] [T014] [P] Create normalizer module types → src/lib/normalizer/types.ts
-- [ ] [T015] [P] Create inferencer module types → src/lib/inferencer/types.ts
-- [ ] [T016] [P] Create synthesizer module types → src/lib/synthesizer/types.ts
-- [ ] [T017] [P] Create profiler module types → src/lib/profiler/types.ts
-- [ ] [T018] [P] Create generator module types → src/lib/generator/types.ts
-- [ ] [T019] [P] Create emitter module types → src/lib/emitter/types.ts
-- [ ] [T020] [P] Create validator module types → src/lib/validator/types.ts
-- [ ] [T021] [P] Create reporter module types → src/lib/reporter/types.ts
+- [x] [T007] [P] Create shared type definitions index → src/types/index.ts
+- [x] [T008] [P] Create core data model types (SampleDocument, NormalizedDocument, InferredSchema, GenerationSchema, ConstraintsProfile, RunManifest, ValidationReport) → src/types/data-model.ts
+- [x] [T009] [P] Create configuration types (SourceConfig, SamplingConfig, ConstraintsConfig, GenerationConfig, OutputConfig) → src/types/config.ts
+- [x] [T010] [P] Create logger utility (structured logging with levels: error, warn, info, debug) → src/utils/logger.ts
+- [x] [T011] [P] Create seed manager utility (hash seed strings to numbers, expose seeding API) → src/utils/seed-manager.ts
+- [x] [T012] [P] Create MongoDB connector utility (connection pooling, authentication, error handling) → src/lib/sampler/connector.ts
+- [x] [T013] [P] Create sampler module types → src/lib/sampler/types.ts
+- [x] [T014] [P] Create normalizer module types → src/lib/normalizer/types.ts
+- [x] [T015] [P] Create inferencer module types → src/lib/inferencer/types.ts
+- [x] [T016] [P] Create synthesizer module types → src/lib/synthesizer/types.ts
+- [x] [T017] [P] Create profiler module types → src/lib/profiler/types.ts
+- [x] [T018] [P] Create generator module types → src/lib/generator/types.ts
+- [x] [T019] [P] Create emitter module types → src/lib/emitter/types.ts
+- [x] [T020] [P] Create validator module types → src/lib/validator/types.ts
+- [x] [T021] [P] Create reporter module types → src/lib/reporter/types.ts
 
 **Dependencies**: Phase 1 complete
 
@@ -116,33 +116,33 @@ Tasks marked `[P]` within the same phase can be executed in parallel. Example:
 
 ### Tasks (Discovery → Profiling)
 
-- [ ] [T022] [US1] Implement MongoDB connection in connector → src/lib/sampler/connector.ts
-- [ ] [T023] [US1] Implement random sampling strategy → src/lib/sampler/strategies.ts
-- [ ] [T024] [US1] [P] Implement first-N sampling strategy → src/lib/sampler/strategies.ts
-- [ ] [T025] [US1] [P] Implement time-windowed sampling strategy → src/lib/sampler/strategies.ts
-- [ ] [T026] [US1] Create sampler module index (orchestrates sampling strategies) → src/lib/sampler/index.ts
+- [x] [T022] [US1] Implement MongoDB connection in connector → src/lib/sampler/connector.ts
+- [x] [T023] [US1] Implement random sampling strategy → src/lib/sampler/strategies.ts
+- [x] [T024] [US1] [P] Implement first-N sampling strategy → src/lib/sampler/strategies.ts
+- [x] [T025] [US1] [P] Implement time-windowed sampling strategy → src/lib/sampler/strategies.ts
+- [x] [T026] [US1] Create sampler module index (orchestrates sampling strategies) → src/lib/sampler/index.ts
 
 ### Tasks (Normalization)
 
-- [ ] [T027] [US1] Implement ObjectId → string normalization → src/lib/normalizer/type-mappers.ts
-- [ ] [T028] [US1] [P] Implement Date → ISO 8601 string normalization → src/lib/normalizer/type-mappers.ts
-- [ ] [T029] [US1] [P] Implement Decimal128 → string normalization → src/lib/normalizer/type-mappers.ts
-- [ ] [T030] [US1] [P] Implement BinData → base64 string normalization → src/lib/normalizer/type-mappers.ts
-- [ ] [T031] [US1] Create normalizer module index (orchestrates type mapping with __typeHints) → src/lib/normalizer/index.ts
+- [x] [T027] [US1] Implement ObjectId → string normalization → src/lib/normalizer/type-mappers.ts
+- [x] [T028] [US1] [P] Implement Date → ISO 8601 string normalization → src/lib/normalizer/type-mappers.ts
+- [x] [T029] [US1] [P] Implement Decimal128 → string normalization → src/lib/normalizer/type-mappers.ts
+- [x] [T030] [US1] [P] Implement BinData → base64 string normalization → src/lib/normalizer/type-mappers.ts
+- [x] [T031] [US1] Create normalizer module index (orchestrates type mapping with __typeHints) → src/lib/normalizer/index.ts
 
 ### Tasks (Profiling for Size/Array Constraints)
 
-- [ ] [T032] [US1] Implement array length statistics extraction (minLen, maxLen, p50, p90, p99) → src/lib/profiler/array-stats.ts
-- [ ] [T033] [US1] Implement document size bucket calculation (leafFieldCount proxy) → src/lib/profiler/size-buckets.ts
-- [ ] [T034] [US1] [P] Implement percentile-based array length clamping logic → src/lib/profiler/array-stats.ts
-- [ ] [T035] [US1] Create profiler module index (produces ConstraintsProfile) → src/lib/profiler/index.ts
+- [x] [T032] [US1] Implement array length statistics extraction (minLen, maxLen, p50, p90, p99) → src/lib/profiler/array-stats.ts
+- [x] [T033] [US1] Implement document size bucket calculation (leafFieldCount proxy) → src/lib/profiler/size-buckets.ts
+- [x] [T034] [US1] [P] Implement percentile-based array length clamping logic → src/lib/profiler/array-stats.ts
+- [x] [T035] [US1] Create profiler module index (produces ConstraintsProfile) → src/lib/profiler/index.ts
 
 ### Tasks (Generation Core)
 
-- [ ] [T036] [US1] Implement json-schema-faker initialization with @faker-js/faker provider → src/lib/generator/faker-engine.ts
-- [ ] [T037] [US1] Implement ObjectId custom format generator → src/lib/generator/custom-formats.ts
-- [ ] [T038] [US1] [P] Implement date-time custom format generator → src/lib/generator/custom-formats.ts
-- [ ] [T039] [US1] Create streaming generation logic (Readable stream yielding synthetic docs) → src/lib/generator/stream.ts
+- [x] [T036] [US1] Implement json-schema-faker initialization with @faker-js/faker provider → src/lib/generator/faker-engine.ts
+- [x] [T037] [US1] Implement ObjectId custom format generator → src/lib/generator/custom-formats.ts
+- [x] [T038] [US1] [P] Implement date-time custom format generator → src/lib/generator/custom-formats.ts
+- [x] [T039] [US1] Create streaming generation logic (Readable stream yielding synthetic docs) → src/lib/generator/stream.ts
 
 **Dependencies**: Phase 2 complete
 
@@ -159,12 +159,12 @@ Tasks marked `[P]` within the same phase can be executed in parallel. Example:
 
 ### Tasks
 
-- [ ] [T040] [US2] Implement seed hashing for string seeds (SHA-256 → numeric seed) → src/utils/seed-manager.ts
-- [ ] [T041] [US2] Integrate seed into faker engine initialization (faker.seed(numericSeed)) → src/lib/generator/faker-engine.ts
-- [ ] [T042] [US2] Create run manifest generator (version, seed, hashes, timestamps) → src/lib/reporter/index.ts
-- [ ] [T043] [US2] Implement manifest serialization (JSON output with artifact hashes) → src/lib/reporter/index.ts
-- [ ] [T044] [US2] Create integration test for repeatability (generate twice with same seed, compare byte-for-byte) → tests/integration/repeatability.test.ts
-- [ ] [T045] [US2] Document seed in manifest with SHA-256 hashes of schema + constraints → src/lib/reporter/index.ts
+- [x] [T040] [US2] Implement seed hashing for string seeds (SHA-256 → numeric seed) → src/utils/seed-manager.ts
+- [x] [T041] [US2] Integrate seed into faker engine initialization (faker.seed(numericSeed)) → src/lib/generator/faker-engine.ts
+- [x] [T042] [US2] Create run manifest generator (version, seed, hashes, timestamps) → src/lib/reporter/index.ts
+- [x] [T043] [US2] Implement manifest serialization (JSON output with artifact hashes) → src/lib/reporter/index.ts
+- [x] [T044] [US2] Create integration test for repeatability (generate twice with same seed, compare byte-for-byte) → tests/integration/repeatability.test.ts
+- [x] [T045] [US2] Document seed in manifest with SHA-256 hashes of schema + constraints → src/lib/reporter/index.ts
 
 **Dependencies**: Phase 3 complete (requires generator core)
 
@@ -424,18 +424,18 @@ Before marking a phase complete:
 **Completion Formula**: (Completed Tasks / Total Tasks) × 100%
 
 **Phase Completion**:
-- Phase 1: 0/6 (0%)
-- Phase 2: 0/15 (0%)
-- Phase 3: 0/18 (0%)
-- Phase 4: 0/6 (0%)
+- Phase 1: 6/6 (100%) ✅
+- Phase 2: 15/15 (100%) ✅
+- Phase 3: 18/18 (100%) ✅
+- Phase 4: 6/6 (100%) ✅
 - Phase 5: 0/13 (0%)
 - Phase 6: 0/8 (0%)
 - Phase 7: 0/9 (0%)
 - Phase 8: 0/12 (0%)
 
-**Overall Progress**: 0/87 (0%)
+**Overall Progress**: 45/87 (52%)
 
-**MVP Progress** (Phases 1-4): 0/45 (0%)
+**MVP Progress** (Phases 1-4): 45/45 (100%) ✅
 
 ---
 
