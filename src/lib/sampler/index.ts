@@ -21,10 +21,12 @@ export * from './strategies.js';
  */
 export class Sampler {
   private connector: MongoConnector | null = null;
-  private strategy: SamplingStrategy;
+  private strategy: SamplingStrategy | null = null;
 
-  constructor(options: SamplerOptions) {
-    this.strategy = createStrategy(options.strategy);
+  constructor(options?: SamplerOptions) {
+    if (options?.strategy) {
+      this.strategy = createStrategy(options.strategy);
+    }
   }
 
   /**
@@ -34,6 +36,11 @@ export class Sampler {
     const startTime = Date.now();
 
     try {
+      // Create strategy from options if not set in constructor
+      if (!this.strategy) {
+        this.strategy = createStrategy(options.strategy);
+      }
+
       // Connect to MongoDB
       this.connector = await createConnector({
         uri: options.uri,

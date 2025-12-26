@@ -89,7 +89,7 @@ describe('MongoDB Insertion', () => {
       uri: mongoUri,
       database: 'testdb',
       collection: 'duplicatecollection',
-      orderedInserts: true
+      orderedInserts: false // Use unordered to continue after errors
     };
 
     const testDocuments: Readable = Readable.from([
@@ -102,7 +102,7 @@ describe('MongoDB Insertion', () => {
     const metrics = await inserter.bulkInsert(testDocuments);
 
     expect(metrics.totalDocuments).toBe(3);
-    expect(metrics.insertedDocuments).toBe(2);
-    expect(metrics.failedInserts).toBe(1);
+    expect(metrics.insertedDocuments).toBe(2); // doc1 and doc2
+    expect(metrics.failedInserts).toBe(1); // duplicate doc1
   });
 });

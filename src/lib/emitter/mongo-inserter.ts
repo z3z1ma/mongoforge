@@ -97,9 +97,15 @@ export class MongoInserter {
         try {
           const result = await this.collection.insertMany(batch, bulkOptions);
           insertedDocuments += result.insertedCount;
-        } catch (error) {
+        } catch (error: any) {
           logger.error('Bulk insert failed', error);
-          failedInserts += batch.length;
+          // Even on error, some documents may have been inserted
+          if (error.result?.insertedCount) {
+            insertedDocuments += error.result.insertedCount;
+          }
+          // Calculate failed inserts as batch size minus successful inserts
+          const successfulInBatch = error.result?.insertedCount || 0;
+          failedInserts += batch.length - successfulInBatch;
         }
 
         batch.length = 0; // Clear batch

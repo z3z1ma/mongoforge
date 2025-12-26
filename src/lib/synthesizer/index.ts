@@ -131,6 +131,12 @@ function transformField(
       }
     }
 
+    // Fallback: create basic items schema if not set
+    if (!property.items) {
+      // Default to string type for array items
+      property.items = { type: 'string' };
+    }
+
     // Set minItems/maxItems from profiler stats (T053)
     if (arrayStats) {
       const arrayConstraints = extractArrayConstraints(
