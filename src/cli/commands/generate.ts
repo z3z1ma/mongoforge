@@ -1,10 +1,14 @@
 import { Command } from 'commander';
-import { Readable } from 'stream';
+import { Readable, pipeline } from 'stream';
+import { promisify } from 'util';
 import { createReadStream, createWriteStream } from 'fs';
 import { createMongoInserter } from '../../lib/emitter/mongo-inserter.js';
+import { createNDJSONWriter } from '../../lib/emitter/ndjson-writer.js';
 import { createGeneratorStream } from '../../lib/generator/stream.js';
 import { loadGenerationSchema } from '../../lib/generator/schema-loader.js';
 import { logger } from '../../utils/logger.js';
+
+const pipelineAsync = promisify(pipeline);
 
 /**
  * Create generate command with MongoDB insertion mode
@@ -60,12 +64,14 @@ export function createGenerateCommand(): Command {
               ? process.stdout
               : createWriteStream(opts.outputPath);
 
-          documentStream.pipe(outputStream);
+          // Convert object stream to NDJSON strings before piping to output
+          const ndjsonWriter = createNDJSONWriter();
 
-          await new Promise((resolve, reject) => {
-            documentStream.on('end', resolve);
-            documentStream.on('error', reject);
-          });
+          await pipelineAsync(
+            documentStream,
+            ndjsonWriter,
+            outputStream
+          );
         }
 
         // Prepare and output result
