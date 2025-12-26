@@ -117,9 +117,8 @@ function createErrorResponse(code: string, message: string, details?: string): a
 /**
  * T084: Implement validate command
  */
-export function setupValidateCommand(program: Command): void {
-  program
-    .command('validate')
+export function createValidateCommand(): Command {
+  return new Command('validate')
     .description('Validate generated documents against schema and constraints')
     .requiredOption('--generation-schema <path>', 'Path to generation.schema.json')
     .requiredOption('--constraints <path>', 'Path to constraints.json')

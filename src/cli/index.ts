@@ -6,6 +6,8 @@
 
 import { Command } from 'commander';
 import { createInferCommand } from './commands/infer.js';
+import { createGenerateCommand } from './commands/generate.js';
+import { createValidateCommand } from './commands/validate.js';
 import { logger } from '../utils/logger.js';
 
 // Read package.json for version
@@ -29,12 +31,8 @@ function createProgram(): Command {
 
   // Add commands
   program.addCommand(createInferCommand());
-
-  // TODO: Add generate command (Phase 6)
-  // program.addCommand(createGenerateCommand());
-
-  // TODO: Add validate command (Phase 7)
-  // program.addCommand(createValidateCommand());
+  program.addCommand(createGenerateCommand());
+  program.addCommand(createValidateCommand());
 
   return program;
 }

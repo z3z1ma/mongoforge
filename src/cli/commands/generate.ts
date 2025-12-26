@@ -7,12 +7,11 @@ import { loadGenerationSchema } from '../../lib/generator/schema-loader.js';
 import { logger } from '../../utils/logger.js';
 
 /**
- * Configure generate command with MongoDB insertion mode
- * @param program Commander CLI program
+ * Create generate command with MongoDB insertion mode
+ * @returns Commander Command
  */
-export function configureGenerateCommand(program: Command): void {
-  program
-    .command('generate')
+export function createGenerateCommand(): Command {
+  return new Command('generate')
     .description('Generate synthetic documents')
     .option('--generation-schema <path>', 'Path to generation schema file', './schemas/generation.schema.json')
     .option('--constraints <path>', 'Path to constraints file', './schemas/constraints.json')

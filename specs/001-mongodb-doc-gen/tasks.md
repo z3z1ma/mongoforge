@@ -181,25 +181,25 @@ Tasks marked `[P]` within the same phase can be executed in parallel. Example:
 
 ### Tasks (Inference)
 
-- [ ] [T046] [US3] Integrate mongodb-schema library for probabilistic inference → src/lib/inferencer/mongodb-schema-wrapper.ts
-- [ ] [T047] [US3] Create inferencer module index (orchestrates mongodb-schema with normalized documents) → src/lib/inferencer/index.ts
-- [ ] [T048] [US3] Implement field path extraction (JSONPath-style: "user.addresses[].city") → src/lib/inferencer/mongodb-schema-wrapper.ts
+- [x] [T046] [US3] Integrate mongodb-schema library for probabilistic inference → src/lib/inferencer/mongodb-schema-wrapper.ts
+- [x] [T047] [US3] Create inferencer module index (orchestrates mongodb-schema with normalized documents) → src/lib/inferencer/index.ts
+- [x] [T048] [US3] Implement field path extraction (JSONPath-style: "user.addresses[].city") → src/lib/inferencer/mongodb-schema-wrapper.ts
 
 ### Tasks (Schema Synthesis)
 
-- [ ] [T049] [US3] Implement InferredSchema → GenerationSchema transformer (JSON Schema draft-07) → src/lib/synthesizer/index.ts
-- [ ] [T050] [US3] Implement x-gen.key vendor keyword logic (uniqueness preference) → src/lib/synthesizer/vendor-keywords.ts
-- [ ] [T051] [US3] [P] Implement x-gen.mongoType vendor keyword logic (original type annotation) → src/lib/synthesizer/vendor-keywords.ts
-- [ ] [T052] [US3] [P] Implement x-gen.arrayLen vendor keyword logic (length constraints + strategy) → src/lib/synthesizer/vendor-keywords.ts
-- [ ] [T053] [US3] Set minItems/maxItems for array schemas from profiler stats → src/lib/synthesizer/index.ts
-- [ ] [T054] [US3] Generate required array (always includes "_id" + user-configured keys) → src/lib/synthesizer/index.ts
+- [x] [T049] [US3] Implement InferredSchema → GenerationSchema transformer (JSON Schema draft-07) → src/lib/synthesizer/index.ts
+- [x] [T050] [US3] Implement x-gen.key vendor keyword logic (uniqueness preference) → src/lib/synthesizer/vendor-keywords.ts
+- [x] [T051] [US3] [P] Implement x-gen.mongoType vendor keyword logic (original type annotation) → src/lib/synthesizer/vendor-keywords.ts
+- [x] [T052] [US3] [P] Implement x-gen.arrayLen vendor keyword logic (length constraints + strategy) → src/lib/synthesizer/vendor-keywords.ts
+- [x] [T053] [US3] Set minItems/maxItems for array schemas from profiler stats → src/lib/synthesizer/index.ts
+- [x] [T054] [US3] Generate required array (always includes "_id" + user-configured keys) → src/lib/synthesizer/index.ts
 
 ### Tasks (CLI infer command)
 
-- [ ] [T055] [US3] Create CLI index with commander setup → src/cli/index.ts
-- [ ] [T056] [US3] Implement infer command (args parsing, orchestration) → src/cli/commands/infer.ts
-- [ ] [T057] [US3] Implement configuration file parser (JSON/YAML support) → src/cli/config/parser.ts
-- [ ] [T058] [US3] Create CLI configuration types → src/cli/config/types.ts
+- [x] [T055] [US3] Create CLI index with commander setup → src/cli/index.ts
+- [x] [T056] [US3] Implement infer command (args parsing, orchestration) → src/cli/commands/infer.ts
+- [x] [T057] [US3] Implement configuration file parser (JSON/YAML support) → src/cli/config/parser.ts
+- [x] [T058] [US3] Create CLI configuration types → src/cli/config/types.ts
 
 **Dependencies**: Phase 2 complete (can run independently of US1/US2, but builds on foundation)
 
@@ -216,14 +216,14 @@ Tasks marked `[P]` within the same phase can be executed in parallel. Example:
 
 ### Tasks
 
-- [ ] [T059] [US4] Implement MongoDB bulk insert emitter (bulkWrite with configurable batch size) → src/lib/emitter/mongo-inserter.ts
-- [ ] [T060] [US4] Implement write concern configuration (majority, acknowledged, etc.) → src/lib/emitter/mongo-inserter.ts
-- [ ] [T061] [US4] [P] Implement ordered/unordered bulk insert modes → src/lib/emitter/mongo-inserter.ts
-- [ ] [T062] [US4] Implement target collection naming strategy (suffix support: "_synthetic") → src/lib/emitter/mongo-inserter.ts
-- [ ] [T063] [US4] Create emitter module index (orchestrates file writers + mongo inserter) → src/lib/emitter/index.ts
-- [ ] [T064] [US4] Add MongoDB insertion mode to generate command (--target-uri flags) → src/cli/commands/generate.ts
-- [ ] [T065] [US4] Implement backpressure handling for MongoDB writes in stream pipeline → src/lib/emitter/mongo-inserter.ts
-- [ ] [T066] [US4] Create integration test for MongoDB insertion (verify batch writes, count) → tests/integration/mongo-insertion.test.ts
+- [x] [T059] [US4] Implement MongoDB bulk insert emitter (bulkWrite with configurable batch size) → src/lib/emitter/mongo-inserter.ts
+- [x] [T060] [US4] Implement write concern configuration (majority, acknowledged, etc.) → src/lib/emitter/mongo-inserter.ts
+- [x] [T061] [US4] [P] Implement ordered/unordered bulk insert modes → src/lib/emitter/mongo-inserter.ts
+- [x] [T062] [US4] Implement target collection naming strategy (suffix support: "_synthetic") → src/lib/emitter/mongo-inserter.ts
+- [x] [T063] [US4] Create emitter module index (orchestrates file writers + mongo inserter) → src/lib/emitter/index.ts
+- [x] [T064] [US4] Add MongoDB insertion mode to generate command (--target-uri flags) → src/cli/commands/generate.ts
+- [x] [T065] [US4] Implement backpressure handling for MongoDB writes in stream pipeline → src/lib/emitter/mongo-inserter.ts
+- [x] [T066] [US4] Create integration test for MongoDB insertion (verify batch writes, count) → tests/integration/mongo-insertion.test.ts
 
 **Dependencies**: Phase 3 complete (requires generator stream), Phase 5 complete (requires CLI infrastructure)
 
@@ -240,15 +240,15 @@ Tasks marked `[P]` within the same phase can be executed in parallel. Example:
 
 ### Tasks
 
-- [ ] [T067] [US5] Implement custom generator registration API (path-based overrides) → src/lib/generator/custom-formats.ts
-- [ ] [T068] [US5] Implement type-based custom generator registration → src/lib/generator/custom-formats.ts
-- [ ] [T069] [US5] Implement precedence logic (path-specific > type-level > default) → src/lib/generator/custom-formats.ts
-- [ ] [T070] [US5] Create custom generator module loader (JavaScript file import) → src/cli/commands/generate.ts
-- [ ] [T071] [US5] Implement email custom format generator (valid email patterns) → src/lib/generator/custom-formats.ts
-- [ ] [T072] [US5] [P] Implement UUID custom format generator (v4 UUIDs) → src/lib/generator/custom-formats.ts
-- [ ] [T073] [US5] [P] Implement ObjectId with timestamp prefix custom generator → src/lib/generator/custom-formats.ts
-- [ ] [T074] [US5] Add --custom-generators flag to generate command → src/cli/commands/generate.ts
-- [ ] [T075] [US5] Create integration test for custom generators (verify override logic) → tests/integration/custom-generators.test.ts
+- [x] [T067] [US5] Implement custom generator registration API (path-based overrides) → src/lib/generator/custom-formats.ts
+- [x] [T068] [US5] Implement type-based custom generator registration → src/lib/generator/custom-formats.ts
+- [x] [T069] [US5] Implement precedence logic (path-specific > type-level > default) → src/lib/generator/custom-formats.ts
+- [x] [T070] [US5] Create custom generator module loader (JavaScript file import) → src/cli/commands/generate.ts
+- [x] [T071] [US5] Implement email custom format generator (valid email patterns) → src/lib/generator/custom-formats.ts
+- [x] [T072] [US5] [P] Implement UUID custom format generator (v4 UUIDs) → src/lib/generator/custom-formats.ts
+- [x] [T073] [US5] [P] Implement ObjectId with timestamp prefix custom generator → src/lib/generator/custom-formats.ts
+- [x] [T074] [US5] Add --custom-generators flag to generate command → src/cli/commands/generate.ts
+- [x] [T075] [US5] Create integration test for custom generators (verify override logic) → tests/integration/custom-generators.test.ts
 
 **Dependencies**: Phase 4 complete (requires generator core), Phase 5 complete (requires CLI)
 
@@ -265,24 +265,24 @@ Tasks marked `[P]` within the same phase can be executed in parallel. Example:
 
 ### Tasks (Schema Validation)
 
-- [ ] [T076] [US6] Implement Ajv-based JSON Schema validator integration → src/lib/validator/schema-validator.ts
-- [ ] [T077] [US6] Implement schema conformance checker (validate all docs, collect violations) → src/lib/validator/schema-validator.ts
-- [ ] [T078] [US6] Implement uniqueness checker for _id field → src/lib/validator/schema-validator.ts
-- [ ] [T079] [US6] [P] Implement uniqueness checker for additional key fields → src/lib/validator/schema-validator.ts
+- [x] [T076] [US6] Implement Ajv-based JSON Schema validator integration → src/lib/validator/schema-validator.ts
+- [x] [T077] [US6] Implement schema conformance checker (validate all docs, collect violations) → src/lib/validator/schema-validator.ts
+- [x] [T078] [US6] Implement uniqueness checker for _id field → src/lib/validator/schema-validator.ts
+- [x] [T079] [US6] [P] Implement uniqueness checker for additional key fields → src/lib/validator/schema-validator.ts
 
 ### Tasks (Quality Reporting)
 
-- [ ] [T080] [US6] Implement array length histogram comparison (sample vs generated) → src/lib/validator/quality-reporter.ts
-- [ ] [T081] [US6] Implement document size distribution comparison → src/lib/validator/quality-reporter.ts
-- [ ] [T082] [US6] Implement deviation calculation with tolerance thresholds (10% array, 20% size) → src/lib/validator/quality-reporter.ts
-- [ ] [T083] [US6] Create validator module index (orchestrates validation + quality reporting) → src/lib/validator/index.ts
+- [x] [T080] [US6] Implement array length histogram comparison (sample vs generated) → src/lib/validator/quality-reporter.ts
+- [x] [T081] [US6] Implement document size distribution comparison → src/lib/validator/quality-reporter.ts
+- [x] [T082] [US6] Implement deviation calculation with tolerance thresholds (10% array, 20% size) → src/lib/validator/quality-reporter.ts
+- [x] [T083] [US6] Create validator module index (orchestrates validation + quality reporting) → src/lib/validator/index.ts
 
 ### Tasks (CLI validate command)
 
-- [ ] [T084] [US6] Implement validate command (args parsing, orchestration) → src/cli/commands/validate.ts
-- [ ] [T085] [US6] Implement NDJSON input reader (file or stdin) → src/cli/commands/validate.ts
-- [ ] [T086] [US6] Implement validation report serializer (JSON output) → src/cli/commands/validate.ts
-- [ ] [T087] [US6] Create integration test for validation workflow (generate → validate) → tests/integration/validation-workflow.test.ts
+- [x] [T084] [US6] Implement validate command (args parsing, orchestration) → src/cli/commands/validate.ts
+- [x] [T085] [US6] Implement NDJSON input reader (file or stdin) → src/cli/commands/validate.ts
+- [x] [T086] [US6] Implement validation report serializer (JSON output) → src/cli/commands/validate.ts
+- [x] [T087] [US6] Create integration test for validation workflow (generate → validate) → tests/integration/validation-workflow.test.ts
 
 **Dependencies**: Phase 4 complete (requires generator + manifest), Phase 5 complete (requires CLI)
 

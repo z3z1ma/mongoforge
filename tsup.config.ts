@@ -15,7 +15,7 @@ export default defineConfig({
   outDir: 'dist',
   // Only add shebang to CLI entry point
   esbuildOptions(options, context) {
-    if (context.format === 'esm' && context.path.includes('cli')) {
+    if (context.format === 'esm' && context.path?.includes('cli')) {
       options.banner = {
         js: '#!/usr/bin/env node',
       };
