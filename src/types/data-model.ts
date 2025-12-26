@@ -4,6 +4,10 @@
  */
 
 import { ObjectId } from 'mongodb';
+import type { ArrayLengthStats, DynamicKeyMetadata, DynamicKeyValueSchema } from './dynamic-keys.js';
+
+// Re-export types from dynamic-keys to maintain compatibility
+export type { ArrayLengthStats };
 
 /**
  * SampleDocument - Raw document retrieved from MongoDB during discovery phase
@@ -58,21 +62,6 @@ export interface InferredSchemaField {
 export interface InferredSchema {
   count: number; // Number of documents analyzed
   fields: Record<string, InferredSchemaField>;
-}
-
-/**
- * ArrayLengthStats - Statistical summary of array lengths for a field
- */
-export interface ArrayLengthStats {
-  fieldPath: string;
-  observedLengths: number[];
-  minLen: number;
-  maxLen: number;
-  p50Len: number; // Median
-  p90Len: number;
-  p99Len: number;
-  mean: number;
-  stdDev: number;
 }
 
 /**
@@ -155,6 +144,11 @@ export interface GenerationSchemaProperty {
   minItems?: number;
   maxItems?: number;
   'x-gen'?: XGenExtensions;
+  'x-dynamic-keys'?: {
+    enabled: boolean;
+    metadata: DynamicKeyMetadata;
+    valueSchema: DynamicKeyValueSchema;
+  };
 }
 
 export interface GenerationSchema {

@@ -1,0 +1,157 @@
+[
+  {
+    "_id": "674d8f1a2b3c4d5e6f7a8ba5",
+    "userId": "u001",
+    "tags": ["javascript", "nodejs", "mongodb"],
+    "previousLogins": [
+      "2024-12-01T10:30:00Z",
+      "2024-12-05T14:20:00Z",
+      "2024-12-10T09:15:00Z",
+      "2024-12-15T16:45:00Z",
+      "2024-12-20T11:30:00Z"
+    ],
+    "purchaseHistory": [
+      { "item": "book", "price": 29.99, "date": "2024-11-01" },
+      { "item": "laptop", "price": 1299.99, "date": "2024-11-15" }
+    ]
+  },
+  {
+    "_id": "674d8f1a2b3c4d5e6f7a8ba6",
+    "userId": "u002",
+    "tags": ["python", "django", "postgresql", "docker", "kubernetes", "aws"],
+    "previousLogins": [
+      "2024-12-02T08:00:00Z"
+    ],
+    "purchaseHistory": [
+      { "item": "mouse", "price": 49.99, "date": "2024-10-20" },
+      { "item": "keyboard", "price": 129.99, "date": "2024-11-10" },
+      { "item": "monitor", "price": 399.99, "date": "2024-11-25" },
+      { "item": "desk", "price": 599.99, "date": "2024-12-01" },
+      { "item": "chair", "price": 299.99, "date": "2024-12-10" },
+      { "item": "lamp", "price": 79.99, "date": "2024-12-15" },
+      { "item": "webcam", "price": 149.99, "date": "2024-12-20" }
+    ]
+  },
+  {
+    "_id": "674d8f1a2b3c4d5e6f7a8ba7",
+    "userId": "u003",
+    "tags": ["rust"],
+    "previousLogins": [
+      "2024-12-01T07:30:00Z",
+      "2024-12-03T08:15:00Z",
+      "2024-12-05T09:00:00Z",
+      "2024-12-07T10:30:00Z",
+      "2024-12-09T11:45:00Z",
+      "2024-12-11T13:00:00Z",
+      "2024-12-13T14:15:00Z",
+      "2024-12-15T15:30:00Z",
+      "2024-12-17T16:45:00Z",
+      "2024-12-19T18:00:00Z",
+      "2024-12-21T19:15:00Z",
+      "2024-12-23T20:30:00Z",
+      "2024-12-25T21:45:00Z"
+    ],
+    "purchaseHistory": [
+      { "item": "headphones", "price": 199.99, "date": "2024-12-05" }
+    ]
+  },
+  {
+    "_id": "674d8f1a2b3c4d5e6f7a8ba8",
+    "userId": "u004",
+    "tags": ["java", "spring", "hibernate"],
+    "previousLogins": [
+      "2024-12-10T10:00:00Z",
+      "2024-12-15T11:30:00Z",
+      "2024-12-20T13:45:00Z",
+      "2024-12-22T15:00:00Z",
+      "2024-12-24T16:30:00Z",
+      "2024-12-25T18:00:00Z",
+      "2024-12-26T09:30:00Z"
+    ],
+    "purchaseHistory": []
+  },
+  {
+    "_id": "674d8f1a2b3c4d5e6f7a8ba9",
+    "userId": "u005",
+    "tags": ["go", "microservices", "grpc", "protobuf", "redis", "kafka", "elasticsearch", "prometheus", "grafana", "terraform"],
+    "previousLogins": [
+      "2024-12-26T08:00:00Z",
+      "2024-12-26T09:00:00Z"
+    ],
+    "purchaseHistory": [
+      { "item": "notebook", "price": 12.99, "date": "2024-11-01" },
+      { "item": "pen", "price": 2.99, "date": "2024-11-05" },
+      { "item": "backpack", "price": 89.99, "date": "2024-11-10" },
+      { "item": "water bottle", "price": 24.99, "date": "2024-11-15" }
+    ]
+  },
+  {
+    "_id": "674d8f1a2b3c4d5e6f7a8baa",
+    "userId": "u006",
+    "tags": ["typescript", "react", "nextjs", "tailwind"],
+    "previousLogins": [
+      "2024-12-01T12:00:00Z",
+      "2024-12-04T13:30:00Z",
+      "2024-12-08T14:45:00Z",
+      "2024-12-12T16:00:00Z",
+      "2024-12-16T17:15:00Z",
+      "2024-12-20T18:30:00Z",
+      "2024-12-23T19:45:00Z",
+      "2024-12-26T10:00:00Z"
+    ],
+    "purchaseHistory": [
+      { "item": "phone case", "price": 19.99, "date": "2024-12-01" },
+      { "item": "charger", "price": 29.99, "date": "2024-12-10" },
+      { "item": "screen protector", "price": 14.99, "date": "2024-12-15" }
+    ]
+  },
+  {
+    "_id": "674d8f1a2b3c4d5e6f7a8bab",
+    "userId": "u007",
+    "tags": [],
+    "previousLogins": [
+      "2024-12-05T08:30:00Z",
+      "2024-12-06T09:00:00Z",
+      "2024-12-07T09:30:00Z",
+      "2024-12-08T10:00:00Z",
+      "2024-12-09T10:30:00Z",
+      "2024-12-10T11:00:00Z",
+      "2024-12-11T11:30:00Z",
+      "2024-12-12T12:00:00Z",
+      "2024-12-13T12:30:00Z",
+      "2024-12-14T13:00:00Z",
+      "2024-12-15T13:30:00Z",
+      "2024-12-16T14:00:00Z",
+      "2024-12-17T14:30:00Z",
+      "2024-12-18T15:00:00Z",
+      "2024-12-19T15:30:00Z",
+      "2024-12-20T16:00:00Z",
+      "2024-12-21T16:30:00Z",
+      "2024-12-22T17:00:00Z",
+      "2024-12-23T17:30:00Z",
+      "2024-12-24T18:00:00Z"
+    ],
+    "purchaseHistory": [
+      { "item": "coffee mug", "price": 15.99, "date": "2024-11-20" },
+      { "item": "t-shirt", "price": 24.99, "date": "2024-11-25" },
+      { "item": "socks", "price": 9.99, "date": "2024-12-01" },
+      { "item": "hat", "price": 19.99, "date": "2024-12-05" },
+      { "item": "gloves", "price": 29.99, "date": "2024-12-10" },
+      { "item": "scarf", "price": 34.99, "date": "2024-12-15" }
+    ]
+  },
+  {
+    "_id": "674d8f1a2b3c4d5e6f7a8bac",
+    "userId": "u008",
+    "tags": ["c++", "cmake"],
+    "previousLogins": [
+      "2024-12-26T07:00:00Z",
+      "2024-12-26T08:30:00Z",
+      "2024-12-26T10:15:00Z",
+      "2024-12-26T12:00:00Z"
+    ],
+    "purchaseHistory": [
+      { "item": "usb drive", "price": 19.99, "date": "2024-12-20" }
+    ]
+  }
+]

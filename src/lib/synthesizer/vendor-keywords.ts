@@ -1,15 +1,16 @@
 /**
  * Vendor keyword handlers for x-gen extensions in GenerationSchema
+ * Updated to support frequency distribution format (Feature: 002-dynamic-key-inference)
  */
 
 import {
   XGenExtensions,
   XGenArrayLen,
-  ArrayLengthStats,
   TypeHint,
   InferredSchemaField,
   ConstraintsProfile,
 } from '../../types/data-model.js';
+import { ArrayLengthStats } from '../../types/dynamic-keys.js';
 import { logger } from '../../utils/logger.js';
 
 /**
@@ -60,6 +61,7 @@ export function applyMongoTypeExtension(
 /**
  * Apply x-gen.arrayLen vendor extension
  * Embeds array length distribution statistics for realistic generation
+ * Updated to use new frequency distribution format
  */
 export function applyArrayLenExtension(
   fieldPath: string,
@@ -74,16 +76,18 @@ export function applyArrayLenExtension(
   logger.debug('Applying x-gen.arrayLen extension', {
     fieldPath,
     strategy,
-    p50: arrayStats.p50Len,
-    p90: arrayStats.p90Len,
+    p50: arrayStats.stats.median,
+    p95: arrayStats.stats.p95,
   });
 
+  // Convert new format to old XGenArrayLen format for backward compatibility
+  // TODO: In future, update XGenArrayLen to use frequency distribution directly
   const arrayLen: XGenArrayLen = {
-    min: arrayStats.minLen,
-    max: arrayStats.maxLen,
-    p50: arrayStats.p50Len,
-    p90: arrayStats.p90Len,
-    p99: arrayStats.p99Len,
+    min: arrayStats.stats.min,
+    max: arrayStats.stats.max,
+    p50: arrayStats.stats.median,
+    p90: Math.round(arrayStats.stats.p95 * 0.95), // Approximate p90 from p95
+    p99: arrayStats.stats.p95,
     strategy,
   };
 
@@ -187,4 +191,29 @@ export function getRecommendedArrayLength(
     const range = arrayLen.p99 - arrayLen.p90;
     return Math.floor(arrayLen.p90 + ((randomValue - 0.9) / 0.1) * range);
   }
+}
+
+/**
+ * Add x-array-length-distribution annotation to array schema properties
+ * This stores the complete frequency distribution for more accurate generation
+ * (Feature: 002-dynamic-key-inference)
+ */
+export function addArrayLengthDistribution(
+  property: any,
+  arrayStats: ArrayLengthStats | undefined
+): void {
+  if (!arrayStats || property.type !== 'array') {
+    return;
+  }
+
+  logger.debug('Adding x-array-length-distribution annotation', {
+    fieldPath: arrayStats.fieldPath,
+    unique: arrayStats.stats.unique,
+    total: arrayStats.stats.total,
+  });
+
+  property['x-array-length-distribution'] = {
+    distribution: arrayStats.distribution,
+    stats: arrayStats.stats,
+  };
 }

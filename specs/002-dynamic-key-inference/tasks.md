@@ -57,22 +57,22 @@
 
 ### Implementation for User Story 1
 
-- [ ] T012 [P] [US1] Create dynamic key detector in src/lib/inferencer/dynamic-key-detector.ts with analyzeObjectKeys function
-- [ ] T013 [P] [US1] Implement key counting logic in src/lib/inferencer/dynamic-key-detector.ts with countUniqueKeys function
-- [ ] T014 [US1] Implement threshold check in src/lib/inferencer/dynamic-key-detector.ts that compares key count to configured threshold
-- [ ] T015 [US1] Implement pattern matching in src/lib/inferencer/dynamic-key-detector.ts that applies regex patterns to keys and calculates match ratios
-- [ ] T016 [US1] Implement confidence scoring in src/lib/inferencer/dynamic-key-detector.ts that computes confidence based on pattern match ratios
-- [ ] T017 [US1] Create DynamicKeyMetadata builder in src/lib/inferencer/dynamic-key-detector.ts that constructs metadata with pattern, confidence, countDistribution, exampleKeys
-- [ ] T018 [US1] Implement value type analyzer in src/lib/inferencer/dynamic-key-detector.ts that analyzes value types for dynamic keys and creates DynamicKeyValueSchema
-- [ ] T019 [US1] Integrate dynamic key detection into existing inferencer in src/lib/inferencer/index.ts as post-processing step after mongodb-schema inference
-- [ ] T020 [US1] Update schema synthesizer in src/lib/synthesizer/index.ts to add x-dynamic-keys annotation to JSON Schema when dynamic keys detected
-- [ ] T021 [US1] Update inferred.schema.json output in src/lib/inferencer/index.ts to exclude individual dynamic key properties
-- [ ] T022 [US1] Update generation.schema.json output in src/lib/synthesizer/index.ts to include x-dynamic-keys with metadata and valueSchema
-- [ ] T023 [US1] Add logging for dynamic key detection decisions in src/lib/inferencer/dynamic-key-detector.ts with debug information
-- [ ] T024 [US1] Handle edge case: exactly threshold number of keys in src/lib/inferencer/dynamic-key-detector.ts (treat as dynamic if pattern matches)
-- [ ] T025 [US1] Handle edge case: mixed static and dynamic keys in src/lib/inferencer/dynamic-key-detector.ts (detect per field path)
-- [ ] T026 [US1] Implement forceStaticPaths override logic in src/lib/inferencer/dynamic-key-detector.ts to skip detection for specific paths
-- [ ] T027 [US1] Implement forceDynamicPaths override logic in src/lib/inferencer/dynamic-key-detector.ts to force detection for specific paths
+- [X] T012 [P] [US1] Create dynamic key detector in src/lib/inferencer/dynamic-key-detector.ts with analyzeObjectKeys function
+- [X] T013 [P] [US1] Implement key counting logic in src/lib/inferencer/dynamic-key-detector.ts with countUniqueKeys function
+- [X] T014 [US1] Implement threshold check in src/lib/inferencer/dynamic-key-detector.ts that compares key count to configured threshold
+- [X] T015 [US1] Implement pattern matching in src/lib/inferencer/dynamic-key-detector.ts that applies regex patterns to keys and calculates match ratios
+- [X] T016 [US1] Implement confidence scoring in src/lib/inferencer/dynamic-key-detector.ts that computes confidence based on pattern match ratios
+- [X] T017 [US1] Create DynamicKeyMetadata builder in src/lib/inferencer/dynamic-key-detector.ts that constructs metadata with pattern, confidence, countDistribution, exampleKeys
+- [X] T018 [US1] Implement value type analyzer in src/lib/inferencer/dynamic-key-detector.ts that analyzes value types for dynamic keys and creates DynamicKeyValueSchema
+- [X] T019 [US1] Integrate dynamic key detection into existing inferencer in src/lib/inferencer/index.ts as post-processing step after mongodb-schema inference
+- [X] T020 [US1] Update schema synthesizer in src/lib/synthesizer/index.ts to add x-dynamic-keys annotation to JSON Schema when dynamic keys detected
+- [X] T021 [US1] Update inferred.schema.json output in src/lib/inferencer/index.ts to exclude individual dynamic key properties
+- [X] T022 [US1] Update generation.schema.json output in src/lib/synthesizer/index.ts to include x-dynamic-keys with metadata and valueSchema
+- [X] T023 [US1] Add logging for dynamic key detection decisions in src/lib/inferencer/dynamic-key-detector.ts with debug information
+- [X] T024 [US1] Handle edge case: exactly threshold number of keys in src/lib/inferencer/dynamic-key-detector.ts (treat as dynamic if pattern matches)
+- [X] T025 [US1] Handle edge case: mixed static and dynamic keys in src/lib/inferencer/dynamic-key-detector.ts (detect per field path)
+- [X] T026 [US1] Implement forceStaticPaths override logic in src/lib/inferencer/dynamic-key-detector.ts to skip detection for specific paths
+- [X] T027 [US1] Implement forceDynamicPaths override logic in src/lib/inferencer/dynamic-key-detector.ts to force detection for specific paths
 
 **Checkpoint**: At this point, User Story 1 should be fully functional - schema inference detects dynamic keys and produces compact schemas with x-dynamic-keys annotations
 
@@ -86,14 +86,14 @@
 
 ### Implementation for User Story 2
 
-- [ ] T028 [US2] Update array stats profiler in src/lib/profiler/array-stats.ts to use Map<number, number> for length storage instead of number[]
-- [ ] T029 [US2] Replace array length collection logic in src/lib/profiler/array-stats.ts with frequency map updates
-- [ ] T030 [US2] Update percentile calculation in src/lib/profiler/array-stats.ts to use frequency distribution with getPercentile utility
-- [ ] T031 [US2] Update serialization in src/lib/profiler/array-stats.ts to output ArrayLengthStats format with distribution and stats fields
-- [ ] T032 [US2] Update constraints.json schema in src/lib/profiler/index.ts to use new frequency map format for arrayLengths field
-- [ ] T033 [US2] Update schema synthesizer in src/lib/synthesizer/index.ts to add x-array-length-distribution annotation to JSON Schema for arrays
-- [ ] T034 [US2] Add backward compatibility check in src/lib/profiler/array-stats.ts for reading old array format (if needed for migration)
-- [ ] T035 [US2] Update array length sampling in src/lib/generator/index.ts to use sampleFromDistribution when generating arrays
+- [X] T028 [US2] Update array stats profiler in src/lib/profiler/array-stats.ts to use Map<number, number> for length storage instead of number[]
+- [X] T029 [US2] Replace array length collection logic in src/lib/profiler/array-stats.ts with frequency map updates
+- [X] T030 [US2] Update percentile calculation in src/lib/profiler/array-stats.ts to use frequency distribution with getPercentile utility
+- [X] T031 [US2] Update serialization in src/lib/profiler/array-stats.ts to output ArrayLengthStats format with distribution and stats fields
+- [X] T032 [US2] Update constraints.json schema in src/lib/profiler/index.ts to use new frequency map format for arrayLengths field
+- [X] T033 [US2] Update schema synthesizer in src/lib/synthesizer/index.ts to add x-array-length-distribution annotation to JSON Schema for arrays
+- [X] T034 [US2] Add backward compatibility check in src/lib/profiler/array-stats.ts for reading old array format (if needed for migration)
+- [X] T035 [US2] Update array length sampling in src/lib/generator/index.ts to use sampleFromDistribution when generating arrays
 
 **Checkpoint**: At this point, User Story 2 should be fully functional - array lengths stored as frequency maps with significant space savings
 
@@ -129,11 +129,11 @@
 
 **Purpose**: Improvements that affect multiple user stories
 
-- [ ] T049 [P] Add integration test fixtures in tests/fixtures/ for collections with dynamic keys (UUID-based, ObjectId-based, numeric IDs)
-- [ ] T050 [P] Add integration test fixtures in tests/fixtures/ for collections with variable-length arrays
-- [ ] T051 Create end-to-end integration test in tests/integration/dynamic-keys.test.ts that runs full inference + generation pipeline
-- [ ] T052 [P] Add unit tests in tests/unit/frequency-map.test.ts for frequency distribution utilities
-- [ ] T053 [P] Add unit tests in tests/unit/key-patterns.test.ts for pattern detection and matching
+- [X] T049 [P] Add integration test fixtures in tests/fixtures/ for collections with dynamic keys (UUID-based, ObjectId-based, numeric IDs)
+- [X] T050 [P] Add integration test fixtures in tests/fixtures/ for collections with variable-length arrays
+- [X] T051 Create end-to-end integration test in tests/integration/dynamic-keys.test.ts that runs full inference + generation pipeline
+- [X] T052 [P] Add unit tests in tests/unit/frequency-map.test.ts for frequency distribution utilities
+- [X] T053 [P] Add unit tests in tests/unit/key-patterns.test.ts for pattern detection and matching
 - [ ] T054 [P] Add unit tests in tests/unit/dynamic-key-detector.test.ts for dynamic key detection logic
 - [ ] T055 [P] Add unit tests in tests/unit/dynamic-key-generator.test.ts for synthetic key generation
 - [ ] T056 Update CLI help text in src/cli/commands/generate.ts and src/cli/commands/infer.ts with dynamic key options

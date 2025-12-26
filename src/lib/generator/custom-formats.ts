@@ -149,15 +149,16 @@ export function generateTimestampPrefixedObjectId(): string {
   const timestamp = Math.floor(Date.now() / 1000); // Unix timestamp
   const timestampHex = timestamp.toString(16).padStart(8, '0');
 
-  // Generate the remaining 16 random bytes
-  const randomBytes = Array.from({ length: 16 }, () =>
+  // Generate the remaining 8 random bytes (ObjectId is 12 bytes total = 24 hex chars)
+  // 4 bytes timestamp + 8 bytes random = 12 bytes = 24 hex characters
+  const randomBytes = Array.from({ length: 8 }, () =>
     faker.number.int({ min: 0, max: 255 })
   );
 
   const remainingBytes = Buffer.from(randomBytes);
   const fullObjectId = Buffer.concat([
     Buffer.from(timestampHex, 'hex'),
-    remainingBytes
+    remainingBytes,
   ]);
 
   return fullObjectId.toString('hex');

@@ -204,11 +204,11 @@ describe('Phase 5: Schema Discovery Integration', () => {
     // Verify array statistics
     const tagsStats = constraints.arrayStats.get('tags');
     expect(tagsStats).toBeDefined();
-    expect(tagsStats?.minLen).toBeGreaterThanOrEqual(0);
-    expect(tagsStats?.maxLen).toBeGreaterThan(0);
-    expect(tagsStats?.p50Len).toBeDefined();
-    expect(tagsStats?.p90Len).toBeDefined();
-    expect(tagsStats?.p99Len).toBeDefined();
+    expect(tagsStats?.stats.min).toBeGreaterThanOrEqual(0);
+    expect(tagsStats?.stats.max).toBeGreaterThan(0);
+    expect(tagsStats?.stats.median).toBeDefined();
+    expect(tagsStats?.stats.p95).toBeDefined();
+    expect(tagsStats?.distribution).toBeDefined();
 
     /**
      * STEP 6: Build x-gen vendor extensions

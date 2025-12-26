@@ -27,11 +27,11 @@ export function compareArrayLengths(
       // Field not present in generated documents - mark as failed
       comparison[fieldPath] = {
         sample: {
-          minLen: sampleStat.minLen,
-          maxLen: sampleStat.maxLen,
-          p50Len: sampleStat.p50Len,
-          p90Len: sampleStat.p90Len,
-          p99Len: sampleStat.p99Len,
+          minLen: sampleStat.stats.min,
+          maxLen: sampleStat.stats.max,
+          p50Len: sampleStat.stats.median,
+          p90Len: Math.round(sampleStat.stats.p95 * 0.95),
+          p99Len: sampleStat.stats.p95,
         },
         generated: {
           minLen: 0,
@@ -52,27 +52,31 @@ export function compareArrayLengths(
 
     // Calculate percentage deviations for each percentile
     // T082: Implement deviation calculation with tolerances (10% array)
-    const deviationP50 = calculatePercentageDeviation(sampleStat.p50Len, generatedStat.p50Len);
-    const deviationP90 = calculatePercentageDeviation(sampleStat.p90Len, generatedStat.p90Len);
-    const deviationP99 = calculatePercentageDeviation(sampleStat.p99Len, generatedStat.p99Len);
+    // Updated to use new frequency distribution format (Feature: 002-dynamic-key-inference)
+    const deviationP50 = calculatePercentageDeviation(sampleStat.stats.median, generatedStat.stats.median);
+    const deviationP90 = calculatePercentageDeviation(
+      Math.round(sampleStat.stats.p95 * 0.95),
+      Math.round(generatedStat.stats.p95 * 0.95)
+    );
+    const deviationP99 = calculatePercentageDeviation(sampleStat.stats.p95, generatedStat.stats.p95);
 
     // Check if deviations are within tolerance
     const passed = deviationP50 <= tolerance && deviationP90 <= tolerance && deviationP99 <= tolerance;
 
     comparison[fieldPath] = {
       sample: {
-        minLen: sampleStat.minLen,
-        maxLen: sampleStat.maxLen,
-        p50Len: sampleStat.p50Len,
-        p90Len: sampleStat.p90Len,
-        p99Len: sampleStat.p99Len,
+        minLen: sampleStat.stats.min,
+        maxLen: sampleStat.stats.max,
+        p50Len: sampleStat.stats.median,
+        p90Len: Math.round(sampleStat.stats.p95 * 0.95),
+        p99Len: sampleStat.stats.p95,
       },
       generated: {
-        minLen: generatedStat.minLen,
-        maxLen: generatedStat.maxLen,
-        p50Len: generatedStat.p50Len,
-        p90Len: generatedStat.p90Len,
-        p99Len: generatedStat.p99Len,
+        minLen: generatedStat.stats.min,
+        maxLen: generatedStat.stats.max,
+        p50Len: generatedStat.stats.median,
+        p90Len: Math.round(generatedStat.stats.p95 * 0.95),
+        p99Len: generatedStat.stats.p95,
       },
       deviation: {
         p50: deviationP50,

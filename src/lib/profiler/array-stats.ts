@@ -1,69 +1,47 @@
 /**
  * Array length statistics extraction
+ * Updated to use frequency distributions for compact storage (Feature: 002-dynamic-key-inference)
  */
 
-import { ArrayLengthStats } from '../../types/data-model.js';
-
-/**
- * Calculate percentile from sorted array
- */
-function percentile(sortedArray: number[], p: number): number {
-  if (sortedArray.length === 0) return 0;
-  const index = (p / 100) * (sortedArray.length - 1);
-  const lower = Math.floor(index);
-  const upper = Math.ceil(index);
-  const weight = index - lower;
-  return (sortedArray[lower] ?? 0) * (1 - weight) + (sortedArray[upper] ?? 0) * weight;
-}
-
-/**
- * Calculate mean
- */
-function mean(values: number[]): number {
-  if (values.length === 0) return 0;
-  return values.reduce((sum, val) => sum + val, 0) / values.length;
-}
-
-/**
- * Calculate standard deviation
- */
-function stdDev(values: number[], avg: number): number {
-  if (values.length === 0) return 0;
-  const variance = values.reduce((sum, val) => sum + Math.pow(val - avg, 2), 0) / values.length;
-  return Math.sqrt(variance);
-}
+import { ArrayLengthStats } from '../../types/dynamic-keys.js';
+import {
+  calculateFrequencies,
+  calculateDistributionStats,
+  getPercentile,
+} from '../../utils/frequency-map.js';
 
 /**
  * Extract array length statistics for a field path
+ * Uses frequency distribution for compact storage instead of exhaustive length arrays
  */
 export function calculateArrayStats(fieldPath: string, lengths: number[]): ArrayLengthStats {
   if (lengths.length === 0) {
     return {
       fieldPath,
-      observedLengths: [],
-      minLen: 0,
-      maxLen: 0,
-      p50Len: 0,
-      p90Len: 0,
-      p99Len: 0,
-      mean: 0,
-      stdDev: 0,
+      distribution: {},
+      stats: {
+        min: 0,
+        max: 0,
+        median: 0,
+        p95: 0,
+        total: 0,
+        unique: 0,
+      },
+      arraysAnalyzed: 0,
     };
   }
 
-  const sorted = [...lengths].sort((a, b) => a - b);
-  const avg = mean(sorted);
+  // Calculate frequency distribution
+  const distribution = calculateFrequencies(lengths);
+
+  // Calculate distribution statistics
+  const stats = calculateDistributionStats(distribution);
 
   return {
     fieldPath,
-    observedLengths: lengths,
-    minLen: sorted[0] ?? 0,
-    maxLen: sorted[sorted.length - 1] ?? 0,
-    p50Len: Math.round(percentile(sorted, 50)),
-    p90Len: Math.round(percentile(sorted, 90)),
-    p99Len: Math.round(percentile(sorted, 99)),
-    mean: avg,
-    stdDev: stdDev(sorted, avg),
+    distribution,
+    stats,
+    arraysAnalyzed: lengths.length,
   };
 }
 
@@ -116,4 +94,60 @@ export function calculateAllArrayStats(documents: any[]): Map<string, ArrayLengt
   }
 
   return stats;
+}
+
+/**
+ * Legacy format detection and conversion
+ * Supports reading old constraints.json format with observedLengths: number[]
+ */
+export interface LegacyArrayLengthStats {
+  fieldPath: string;
+  observedLengths: number[];
+  minLen: number;
+  maxLen: number;
+  p50Len: number;
+  p90Len: number;
+  p99Len: number;
+  mean: number;
+  stdDev: number;
+}
+
+/**
+ * Detect if stats object is in legacy format
+ */
+export function isLegacyFormat(stats: any): stats is LegacyArrayLengthStats {
+  return (
+    stats &&
+    typeof stats === 'object' &&
+    'observedLengths' in stats &&
+    Array.isArray(stats.observedLengths)
+  );
+}
+
+/**
+ * Convert legacy array stats format to new frequency distribution format
+ * Provides backward compatibility for old constraints.json files
+ */
+export function convertLegacyArrayStats(
+  legacy: LegacyArrayLengthStats
+): ArrayLengthStats {
+  const distribution = calculateFrequencies(legacy.observedLengths);
+  const stats = calculateDistributionStats(distribution);
+
+  return {
+    fieldPath: legacy.fieldPath,
+    distribution,
+    stats,
+    arraysAnalyzed: legacy.observedLengths.length,
+  };
+}
+
+/**
+ * Normalize array stats to new format (handles both legacy and new format)
+ */
+export function normalizeArrayStats(stats: any): ArrayLengthStats {
+  if (isLegacyFormat(stats)) {
+    return convertLegacyArrayStats(stats);
+  }
+  return stats as ArrayLengthStats;
 }

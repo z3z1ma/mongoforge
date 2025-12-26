@@ -1,0 +1,179 @@
+[
+  {
+    "_id": "674d8f1a2b3c4d5e6f7a8b9f",
+    "projectId": "proj_001",
+    "taskOwners": {
+      "507f1f77bcf86cd799439011": {
+        "name": "Alice Johnson",
+        "role": "engineer",
+        "hoursLogged": 120
+      },
+      "507f1f77bcf86cd799439012": {
+        "name": "Bob Smith",
+        "role": "designer",
+        "hoursLogged": 85
+      },
+      "507f1f77bcf86cd799439013": {
+        "name": "Carol Williams",
+        "role": "manager",
+        "hoursLogged": 60
+      },
+      "507f1f77bcf86cd799439014": {
+        "name": "David Brown",
+        "role": "engineer",
+        "hoursLogged": 95
+      },
+      "507f1f77bcf86cd799439015": {
+        "name": "Eve Davis",
+        "role": "qa",
+        "hoursLogged": 70
+      },
+      "507f1f77bcf86cd799439016": {
+        "name": "Frank Miller",
+        "role": "engineer",
+        "hoursLogged": 110
+      },
+      "507f1f77bcf86cd799439017": {
+        "name": "Grace Wilson",
+        "role": "designer",
+        "hoursLogged": 90
+      },
+      "507f1f77bcf86cd799439018": {
+        "name": "Henry Moore",
+        "role": "engineer",
+        "hoursLogged": 105
+      },
+      "507f1f77bcf86cd799439019": {
+        "name": "Ivy Taylor",
+        "role": "manager",
+        "hoursLogged": 55
+      },
+      "507f1f77bcf86cd79943901a": {
+        "name": "Jack Anderson",
+        "role": "qa",
+        "hoursLogged": 75
+      }
+    },
+    "metadata": {
+      "createdAt": "2024-11-15T09:00:00Z"
+    }
+  },
+  {
+    "_id": "674d8f1a2b3c4d5e6f7a8ba0",
+    "projectId": "proj_002",
+    "taskOwners": {
+      "607f1f77bcf86cd799439021": {
+        "name": "Karen Lee",
+        "role": "engineer",
+        "hoursLogged": 130
+      },
+      "607f1f77bcf86cd799439022": {
+        "name": "Larry White",
+        "role": "designer",
+        "hoursLogged": 80
+      },
+      "607f1f77bcf86cd799439023": {
+        "name": "Mary Harris",
+        "role": "engineer",
+        "hoursLogged": 100
+      },
+      "607f1f77bcf86cd799439024": {
+        "name": "Nancy Martin",
+        "role": "qa",
+        "hoursLogged": 65
+      },
+      "607f1f77bcf86cd799439025": {
+        "name": "Oscar Thompson",
+        "role": "manager",
+        "hoursLogged": 50
+      },
+      "607f1f77bcf86cd799439026": {
+        "name": "Paula Garcia",
+        "role": "engineer",
+        "hoursLogged": 115
+      },
+      "607f1f77bcf86cd799439027": {
+        "name": "Quinn Martinez",
+        "role": "designer",
+        "hoursLogged": 85
+      },
+      "607f1f77bcf86cd799439028": {
+        "name": "Rachel Robinson",
+        "role": "qa",
+        "hoursLogged": 70
+      },
+      "607f1f77bcf86cd799439029": {
+        "name": "Steve Clark",
+        "role": "engineer",
+        "hoursLogged": 125
+      },
+      "607f1f77bcf86cd79943902a": {
+        "name": "Tina Rodriguez",
+        "role": "manager",
+        "hoursLogged": 60
+      },
+      "607f1f77bcf86cd79943902b": {
+        "name": "Uma Lewis",
+        "role": "engineer",
+        "hoursLogged": 95
+      },
+      "607f1f77bcf86cd79943902c": {
+        "name": "Victor Walker",
+        "role": "qa",
+        "hoursLogged": 75
+      }
+    },
+    "metadata": {
+      "createdAt": "2024-11-20T10:30:00Z"
+    }
+  },
+  {
+    "_id": "674d8f1a2b3c4d5e6f7a8ba1",
+    "projectId": "proj_003",
+    "taskOwners": {
+      "707f1f77bcf86cd799439031": {
+        "name": "Wendy Hall",
+        "role": "engineer",
+        "hoursLogged": 140
+      },
+      "707f1f77bcf86cd799439032": {
+        "name": "Xavier Allen",
+        "role": "designer",
+        "hoursLogged": 90
+      },
+      "707f1f77bcf86cd799439033": {
+        "name": "Yolanda Young",
+        "role": "engineer",
+        "hoursLogged": 110
+      },
+      "707f1f77bcf86cd799439034": {
+        "name": "Zachary King",
+        "role": "manager",
+        "hoursLogged": 55
+      },
+      "707f1f77bcf86cd799439035": {
+        "name": "Amy Wright",
+        "role": "qa",
+        "hoursLogged": 80
+      },
+      "707f1f77bcf86cd799439036": {
+        "name": "Brian Lopez",
+        "role": "engineer",
+        "hoursLogged": 120
+      },
+      "707f1f77bcf86cd799439037": {
+        "name": "Cathy Hill",
+        "role": "designer",
+        "hoursLogged": 85
+      },
+      "707f1f77bcf86cd799439038": {
+        "name": "Daniel Scott",
+        "role": "engineer",
+        "hoursLogged": 105
+      }
+    },
+    "metadata": {
+      "createdAt": "2024-11-25T12:15:00Z"
+    }
+  }
+]

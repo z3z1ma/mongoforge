@@ -1,0 +1,179 @@
+[
+  {
+    "_id": "674d8f1a2b3c4d5e6f7a8ba2",
+    "storeId": "store_nyc_001",
+    "productInventory": {
+      "100001": {
+        "name": "Widget A",
+        "quantity": 45,
+        "price": 19.99
+      },
+      "100002": {
+        "name": "Widget B",
+        "quantity": 23,
+        "price": 24.99
+      },
+      "100003": {
+        "name": "Gadget C",
+        "quantity": 67,
+        "price": 34.99
+      },
+      "100004": {
+        "name": "Gadget D",
+        "quantity": 12,
+        "price": 44.99
+      },
+      "100005": {
+        "name": "Tool E",
+        "quantity": 89,
+        "price": 15.99
+      },
+      "100006": {
+        "name": "Tool F",
+        "quantity": 34,
+        "price": 29.99
+      },
+      "100007": {
+        "name": "Device G",
+        "quantity": 56,
+        "price": 99.99
+      },
+      "100008": {
+        "name": "Device H",
+        "quantity": 78,
+        "price": 149.99
+      },
+      "100009": {
+        "name": "Accessory I",
+        "quantity": 120,
+        "price": 9.99
+      },
+      "100010": {
+        "name": "Accessory J",
+        "quantity": 95,
+        "price": 12.99
+      }
+    },
+    "metadata": {
+      "lastUpdated": "2024-12-26T10:00:00Z"
+    }
+  },
+  {
+    "_id": "674d8f1a2b3c4d5e6f7a8ba3",
+    "storeId": "store_la_002",
+    "productInventory": {
+      "200001": {
+        "name": "Product Alpha",
+        "quantity": 55,
+        "price": 22.99
+      },
+      "200002": {
+        "name": "Product Beta",
+        "quantity": 38,
+        "price": 31.99
+      },
+      "200003": {
+        "name": "Product Gamma",
+        "quantity": 72,
+        "price": 18.99
+      },
+      "200004": {
+        "name": "Product Delta",
+        "quantity": 19,
+        "price": 45.99
+      },
+      "200005": {
+        "name": "Product Epsilon",
+        "quantity": 91,
+        "price": 27.99
+      },
+      "200006": {
+        "name": "Product Zeta",
+        "quantity": 43,
+        "price": 36.99
+      },
+      "200007": {
+        "name": "Product Eta",
+        "quantity": 65,
+        "price": 52.99
+      },
+      "200008": {
+        "name": "Product Theta",
+        "quantity": 88,
+        "price": 41.99
+      },
+      "200009": {
+        "name": "Product Iota",
+        "quantity": 110,
+        "price": 14.99
+      },
+      "200010": {
+        "name": "Product Kappa",
+        "quantity": 76,
+        "price": 19.99
+      },
+      "200011": {
+        "name": "Product Lambda",
+        "quantity": 52,
+        "price": 33.99
+      },
+      "200012": {
+        "name": "Product Mu",
+        "quantity": 29,
+        "price": 48.99
+      }
+    },
+    "metadata": {
+      "lastUpdated": "2024-12-26T11:30:00Z"
+    }
+  },
+  {
+    "_id": "674d8f1a2b3c4d5e6f7a8ba4",
+    "storeId": "store_chi_003",
+    "productInventory": {
+      "300001": {
+        "name": "Item One",
+        "quantity": 62,
+        "price": 25.99
+      },
+      "300002": {
+        "name": "Item Two",
+        "quantity": 41,
+        "price": 39.99
+      },
+      "300003": {
+        "name": "Item Three",
+        "quantity": 85,
+        "price": 16.99
+      },
+      "300004": {
+        "name": "Item Four",
+        "quantity": 27,
+        "price": 54.99
+      },
+      "300005": {
+        "name": "Item Five",
+        "quantity": 94,
+        "price": 21.99
+      },
+      "300006": {
+        "name": "Item Six",
+        "quantity": 58,
+        "price": 42.99
+      },
+      "300007": {
+        "name": "Item Seven",
+        "quantity": 73,
+        "price": 37.99
+      },
+      "300008": {
+        "name": "Item Eight",
+        "quantity": 105,
+        "price": 11.99
+      }
+    },
+    "metadata": {
+      "lastUpdated": "2024-12-26T09:45:00Z"
+    }
+  }
+]
