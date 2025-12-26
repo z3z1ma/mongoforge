@@ -17,7 +17,7 @@ const pipelineAsync = promisify(pipeline);
  */
 export function createGenerateCommand(): Command {
   return new Command('generate')
-    .description('Generate synthetic documents')
+    .description('Generate synthetic documents with support for dynamic key patterns')
     .option('--generation-schema <path>', 'Path to generation schema file', './schemas/generation.schema.json')
     .option('--constraints <path>', 'Path to constraints file', './schemas/constraints.json')
     .option('--doc-count <number>', 'Number of documents to generate', '10000')
@@ -31,8 +31,15 @@ export function createGenerateCommand(): Command {
     .option('--batch-size <number>', 'Batch size for MongoDB bulk inserts', '1000')
     .option('--write-concern <concern>', 'Write concern for MongoDB inserts', 'majority')
     .option('--ordered-inserts', 'Use ordered bulk inserts', false)
-    .option('--dynamic-key-threshold <number>', 'Minimum unique keys to trigger dynamic key detection', (val) => parseInt(val, 10))
-    .option('--no-dynamic-keys', 'Disable dynamic key detection and generation')
+    .option(
+      '--dynamic-key-threshold <number>',
+      'Minimum unique keys for dynamic key generation (default: 50)',
+      (val) => parseInt(val, 10)
+    )
+    .option(
+      '--no-dynamic-keys',
+      'Disable dynamic key generation for objects with variable key patterns'
+    )
     .action(async (opts) => {
       try {
         const docCount = parseInt(opts.docCount, 10);

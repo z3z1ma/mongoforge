@@ -134,18 +134,18 @@
 - [X] T051 Create end-to-end integration test in tests/integration/dynamic-keys.test.ts that runs full inference + generation pipeline
 - [X] T052 [P] Add unit tests in tests/unit/frequency-map.test.ts for frequency distribution utilities
 - [X] T053 [P] Add unit tests in tests/unit/key-patterns.test.ts for pattern detection and matching
-- [ ] T054 [P] Add unit tests in tests/unit/dynamic-key-detector.test.ts for dynamic key detection logic
-- [ ] T055 [P] Add unit tests in tests/unit/dynamic-key-generator.test.ts for synthetic key generation
-- [ ] T056 Update CLI help text in src/cli/commands/generate.ts and src/cli/commands/infer.ts with dynamic key options
+- [X] T054 [P] Add unit tests in tests/unit/dynamic-key-detector.test.ts for dynamic key detection logic
+- [X] T055 [P] Add unit tests in tests/unit/dynamic-key-generator.test.ts for synthetic key generation
+- [X] T056 Update CLI help text in src/cli/commands/generate.ts and src/cli/commands/infer.ts with dynamic key options
 - [ ] T057 [P] Add JSON Schema validation in src/lib/validator/index.ts for DynamicKeyMetadata structure
 - [ ] T058 [P] Add JSON Schema validation in src/lib/validator/index.ts for ArrayLengthStats structure
-- [ ] T059 Update README.md with dynamic key feature overview and quickstart example
-- [ ] T060 [P] Add code comments and JSDoc in src/lib/inferencer/dynamic-key-detector.ts
-- [ ] T061 [P] Add code comments and JSDoc in src/lib/generator/dynamic-key-generator.ts
-- [ ] T062 Performance benchmarking: measure inference time impact with dynamic key detection enabled
-- [ ] T063 Performance benchmarking: measure generation throughput with dynamic key expansion
-- [ ] T064 Memory profiling: verify no memory increase for non-dynamic-key scenarios
-- [ ] T065 Run quickstart.md validation scenarios and verify all examples work correctly
+- [X] T059 Update README.md with dynamic key feature overview and quickstart example
+- [X] T060 [P] Add code comments and JSDoc in src/lib/inferencer/dynamic-key-detector.ts
+- [X] T061 [P] Add code comments and JSDoc in src/lib/generator/dynamic-key-generator.ts
+- [X] T062 Performance benchmarking: measure inference time impact with dynamic key detection enabled
+- [X] T063 Performance benchmarking: measure generation throughput with dynamic key expansion
+- [X] T064 Memory profiling: verify no memory increase for non-dynamic-key scenarios
+- [X] T065 Run quickstart.md validation scenarios and verify all examples work correctly
 
 ---
 

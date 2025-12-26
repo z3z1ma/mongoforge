@@ -292,7 +292,9 @@ export function createInferCommand(): Command {
   const command = new Command('infer');
 
   command
-    .description('Sample MongoDB collection, infer schema, and produce discovery artifacts')
+    .description(
+      'Sample MongoDB collection, infer schema with dynamic key detection, and produce discovery artifacts'
+    )
     .option('--source-uri <uri>', 'MongoDB connection URI')
     .option('--source-db <database>', 'Source database name')
     .option('--source-collection <collection>', 'Source collection name')
@@ -307,8 +309,15 @@ export function createInferCommand(): Command {
     .option('--key-fields <fields>', 'Additional key fields (comma-separated)', '')
     .option('--enforce-unique-keys', 'Enforce uniqueness for key fields', false)
     .option('--uniqueness-scope <scope>', 'Uniqueness scope: batch, run', 'run')
-    .option('--dynamic-key-threshold <number>', 'Minimum unique keys to trigger dynamic key detection', (val) => parseInt(val, 10))
-    .option('--no-dynamic-keys', 'Disable dynamic key detection and inference')
+    .option(
+      '--dynamic-key-threshold <number>',
+      'Minimum unique keys to trigger dynamic key detection (default: 50)',
+      (val) => parseInt(val, 10)
+    )
+    .option(
+      '--no-dynamic-keys',
+      'Disable dynamic key detection and inference for objects with highly variable keys'
+    )
     .option('--config <path>', 'Path to configuration file (JSON/YAML)')
     .option('--log-level <level>', 'Logging verbosity: error, warn, info, debug', 'info')
     .action(executeInfer);

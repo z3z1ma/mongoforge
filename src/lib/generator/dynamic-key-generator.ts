@@ -3,7 +3,12 @@
  * Feature: 002-dynamic-key-inference
  *
  * Generates synthetic keys matching detected patterns (UUID, ObjectId, etc.)
- * and corresponding values based on inferred type distributions
+ * and corresponding values based on inferred type distributions.
+ *
+ * Supports pattern-specific generation with uniqueness guarantees and
+ * deterministic seeded generation for reproducible synthetic data.
+ *
+ * @module lib/generator/dynamic-key-generator
  */
 
 import { faker } from '@faker-js/faker';
@@ -18,7 +23,26 @@ import { logger } from '../../utils/logger.js';
 
 /**
  * Dynamic key generator with uniqueness guarantee
- * Uses deterministic seeded generation with counter
+ *
+ * Generates synthetic keys matching specific patterns (UUID, ObjectId, ULID, etc.)
+ * with guaranteed uniqueness within a generation session. Uses an internal counter
+ * combined with optional seeding for deterministic output.
+ *
+ * @class DynamicKeyGenerator
+ *
+ * @example
+ * ```typescript
+ * const generator = new DynamicKeyGenerator();
+ *
+ * // Generate single key
+ * const uuid = generator.generateKey('UUID');
+ *
+ * // Generate multiple keys
+ * const objectIds = generator.generateKeys(10, 'MONGODB_OBJECTID');
+ *
+ * // Deterministic generation with seed
+ * const deterministicKeys = generator.generateKeys(5, 'UUID', undefined, 12345);
+ * ```
  */
 export class DynamicKeyGenerator {
   private counter = 0;
@@ -33,10 +57,23 @@ export class DynamicKeyGenerator {
   /**
    * Generate a single dynamic key matching the pattern
    *
-   * @param pattern - Detected pattern type
-   * @param customPattern - Optional custom regex pattern (for CUSTOM type)
-   * @param seed - Optional seed for deterministic generation
-   * @returns Generated key string
+   * Generates a key conforming to the specified pattern format. Increments internal
+   * counter to ensure uniqueness. Optionally uses seed for deterministic output.
+   *
+   * @param pattern - Pattern type (UUID, MONGODB_OBJECTID, ULID, NUMERIC_ID, PREFIXED_ID, CUSTOM)
+   * @param customPattern - Optional custom regex pattern (only used for CUSTOM pattern type)
+   * @param seed - Optional seed for deterministic generation (combined with counter)
+   * @returns Generated key string matching the pattern format
+   *
+   * @example
+   * ```typescript
+   * const gen = new DynamicKeyGenerator();
+   * const uuid = gen.generateKey('UUID');
+   * // Returns: "550e8400-e29b-41d4-a716-446655440000"
+   *
+   * const objectId = gen.generateKey('MONGODB_OBJECTID');
+   * // Returns: "507f1f77bcf86cd799439011"
+   * ```
    */
   generateKey(
     pattern: DynamicKeyPattern,
@@ -56,13 +93,29 @@ export class DynamicKeyGenerator {
   }
 
   /**
-   * Generate multiple dynamic keys
+   * Generate multiple dynamic keys with uniqueness guarantee
+   *
+   * Generates an array of unique keys matching the specified pattern. Uses a defensive
+   * approach with collision detection (though collisions are extremely unlikely for most patterns).
    *
    * @param count - Number of keys to generate
-   * @param pattern - Detected pattern type
-   * @param customPattern - Optional custom regex pattern
-   * @param seed - Optional seed for deterministic generation
-   * @returns Array of generated keys
+   * @param pattern - Pattern type (UUID, MONGODB_OBJECTID, etc.)
+   * @param customPattern - Optional custom regex pattern (for CUSTOM type)
+   * @param seed - Optional seed for deterministic bulk generation
+   * @returns Array of unique generated keys (length exactly matches count)
+   *
+   * @example
+   * ```typescript
+   * const gen = new DynamicKeyGenerator();
+   * const uuids = gen.generateKeys(10, 'UUID');
+   * // Returns array of 10 unique UUIDs
+   *
+   * // Deterministic generation
+   * const keys1 = gen.generateKeys(5, 'UUID', undefined, 12345);
+   * gen.reset();
+   * const keys2 = gen.generateKeys(5, 'UUID', undefined, 12345);
+   * // keys1 === keys2 (byte-identical)
+   * ```
    */
   generateKeys(
     count: number,
@@ -178,9 +231,36 @@ export class DynamicKeyGenerator {
 /**
  * Generate values for dynamic keys based on value schema
  *
- * @param valueSchema - Schema describing value types and probabilities
- * @param keyName - The generated key name (for logging/debugging)
- * @returns Generated value matching the schema
+ * Samples a value type based on probability distribution and generates a value
+ * matching the sampled type's schema. Handles uniform types (optimization) and
+ * mixed types (probabilistic sampling).
+ *
+ * @param valueSchema - Schema with types, probabilities, and JSON schemas
+ * @param keyName - Optional key name for logging/debugging purposes
+ * @returns Generated value matching one of the schema's type definitions
+ *
+ * @example
+ * ```typescript
+ * // Uniform type (all strings)
+ * const value1 = generateDynamicKeyValue({
+ *   types: ['string'],
+ *   typeProbabilities: [1.0],
+ *   schemas: [{ type: 'string', minLength: 5 }],
+ *   isUniformType: true,
+ *   dominantType: 'string'
+ * });
+ * // Returns: string with length >= 5
+ *
+ * // Mixed types
+ * const value2 = generateDynamicKeyValue({
+ *   types: ['string', 'integer'],
+ *   typeProbabilities: [0.7, 0.3],
+ *   schemas: [{ type: 'string' }, { type: 'integer' }],
+ *   isUniformType: false,
+ *   dominantType: 'string'
+ * });
+ * // Returns: string (70% probability) or integer (30% probability)
+ * ```
  */
 export function generateDynamicKeyValue(
   valueSchema: DynamicKeyValueSchema,
@@ -382,8 +462,18 @@ function generateArrayValue(schema: any): any[] {
 /**
  * Select key count from frequency distribution
  *
- * @param countDistribution - Frequency distribution of key counts
- * @returns Sampled key count
+ * Samples a key count from the observed distribution using weighted random selection.
+ * Falls back to default value (10) if distribution is empty or sampling fails.
+ *
+ * @param countDistribution - Frequency distribution mapping count to frequency
+ * @returns Sampled key count (integer)
+ *
+ * @example
+ * ```typescript
+ * const distribution = { '5': 25, '10': 50, '15': 25 };
+ * const count = selectKeyCount(distribution);
+ * // Returns: 5 (25%), 10 (50%), or 15 (25%)
+ * ```
  */
 export function selectKeyCount(countDistribution: FrequencyDistribution): number {
   try {
@@ -397,12 +487,26 @@ export function selectKeyCount(countDistribution: FrequencyDistribution): number
 }
 
 /**
- * Validate that generated keys match expected pattern
+ * Validate that generated keys match expected pattern format
  *
- * @param keys - Generated keys to validate
- * @param pattern - Expected pattern type
- * @param customPattern - Optional custom regex pattern
- * @returns Validation result with details
+ * Tests each key against the pattern's regex to verify correct format. Useful for
+ * quality assurance and debugging generation logic.
+ *
+ * @param keys - Array of generated keys to validate
+ * @param pattern - Expected pattern type (UUID, MONGODB_OBJECTID, etc.)
+ * @param customPattern - Optional custom regex pattern (for CUSTOM type)
+ * @returns Validation result with valid flag, invalid keys list, and match rate
+ *
+ * @example
+ * ```typescript
+ * const keys = generateKeys(10, 'UUID');
+ * const result = validateGeneratedKeys(keys, 'UUID');
+ *
+ * if (!result.valid) {
+ *   console.error(`Invalid keys: ${result.invalidKeys}`);
+ *   console.log(`Match rate: ${result.matchRate * 100}%`);
+ * }
+ * ```
  */
 export function validateGeneratedKeys(
   keys: string[],

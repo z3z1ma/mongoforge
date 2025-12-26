@@ -4,6 +4,8 @@
  *
  * Detects objects with highly variable string keys and represents them
  * as dynamic key patterns instead of exhaustive key enumerations.
+ *
+ * @module lib/inferencer/dynamic-key-detector
  */
 
 import type {
@@ -61,9 +63,22 @@ interface ValueTypeObservation {
 /**
  * Count unique keys in an object field across documents
  *
+ * Traverses documents using dot-notation field paths and collects all unique
+ * string keys from object values. Ignores non-object values (arrays, primitives, null).
+ *
  * @param documents - Array of documents to analyze
- * @param fieldPath - Dot-notation path to the object field
- * @returns Set of unique keys observed
+ * @param fieldPath - Dot-notation path to the object field (e.g., "user.preferences")
+ * @returns Set of unique keys observed across all documents
+ *
+ * @example
+ * ```typescript
+ * const docs = [
+ *   { data: { key1: 1, key2: 2 } },
+ *   { data: { key2: 2, key3: 3 } }
+ * ];
+ * const keys = countUniqueKeys(docs, 'data');
+ * // Returns Set { 'key1', 'key2', 'key3' }
+ * ```
  */
 export function countUniqueKeys(
   documents: any[],
@@ -126,10 +141,25 @@ function collectKeyCountsPerDocument(
 /**
  * Analyze value types for dynamic keys
  *
+ * Examines the values associated with dynamic keys across all documents to determine
+ * type distribution and generate a schema. Calculates type probabilities based on
+ * observation frequency and creates sample schemas for each type.
+ *
  * @param documents - Array of documents to analyze
  * @param fieldPath - Dot-notation path to the object field
  * @param keys - Set of dynamic keys to analyze
- * @returns Value schema describing the types of values
+ * @returns Value schema describing types, probabilities, and sample schemas
+ *
+ * @example
+ * ```typescript
+ * const docs = [
+ *   { data: { uuid1: 'value', uuid2: 123 } },
+ *   { data: { uuid3: 'another', uuid4: 456 } }
+ * ];
+ * const keys = new Set(['uuid1', 'uuid2', 'uuid3', 'uuid4']);
+ * const schema = analyzeValueTypes(docs, 'data', keys);
+ * // Returns: { types: ['string', 'integer'], typeProbabilities: [0.5, 0.5], ... }
+ * ```
  */
 export function analyzeValueTypes(
   documents: any[],
@@ -257,11 +287,26 @@ function inferValueSchema(value: any, type: string): any {
 /**
  * Build DynamicKeyMetadata from detection results
  *
+ * Constructs complete metadata including pattern information, confidence scores,
+ * key count distributions, and statistical summaries. Calculates frequency distribution
+ * from per-document key counts and computes statistical percentiles.
+ *
  * @param detection - Detection result from pattern matching
- * @param keyCounts - Array of key counts per document
+ * @param keyCounts - Array of key counts per document (one count per document)
  * @param documentsAnalyzed - Total number of documents analyzed
- * @param valueSchema - Value type schema
- * @returns Complete dynamic key metadata
+ * @param valueSchema - Value type schema for dynamic key values
+ * @returns Complete dynamic key metadata with all fields populated
+ *
+ * @example
+ * ```typescript
+ * const metadata = buildDynamicKeyMetadata(
+ *   { detected: true, pattern: 'UUID', confidence: 0.95, ... },
+ *   [10, 12, 11, 10], // 4 documents with varying key counts
+ *   4,
+ *   { types: ['string'], ... }
+ * );
+ * // Returns complete DynamicKeyMetadata object
+ * ```
  */
 export function buildDynamicKeyMetadata(
   detection: DetectionResult,
@@ -332,12 +377,39 @@ function matchesPathPattern(fieldPath: string, pattern: string): boolean {
 /**
  * Analyze object keys for dynamic key patterns
  *
- * Main entry point for dynamic key detection at a specific field path.
+ * Main entry point for dynamic key detection at a specific field path. Performs:
+ * 1. Path override checking (forceStaticPaths/forceDynamicPaths)
+ * 2. Unique key counting across documents
+ * 3. Threshold validation
+ * 4. Pattern matching against built-in patterns
+ * 5. Value type analysis
+ * 6. Metadata construction
  *
  * @param documents - Array of documents to analyze
- * @param fieldPath - Dot-notation path to the object field
- * @param config - Dynamic key detection configuration
- * @returns Analysis result with detection and metadata
+ * @param fieldPath - Dot-notation path to the object field (e.g., "user.sessions")
+ * @param config - Dynamic key detection configuration (threshold, patterns, overrides)
+ * @returns Analysis result with detection status, metadata, and value schema
+ *
+ * @example
+ * ```typescript
+ * const analysis = analyzeObjectKeys(
+ *   documents,
+ *   'user.preferences',
+ *   {
+ *     threshold: 50,
+ *     patterns: [...],
+ *     minPatternMatch: 0.8,
+ *     confidenceThreshold: 0.7,
+ *     forceStaticPaths: [],
+ *     forceDynamicPaths: []
+ *   }
+ * );
+ *
+ * if (analysis.isDynamic) {
+ *   console.log(`Detected ${analysis.metadata.pattern} pattern`);
+ *   console.log(`Confidence: ${analysis.metadata.confidence}`);
+ * }
+ * ```
  */
 export function analyzeObjectKeys(
   documents: any[],
