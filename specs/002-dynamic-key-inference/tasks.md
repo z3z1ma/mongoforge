@@ -37,13 +37,13 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T005 Implement key pattern detection regex library in src/utils/key-patterns.ts with patterns for UUID, MONGODB_OBJECTID, ULID, NUMERIC_ID, PREFIXED_ID
-- [ ] T006 [P] Implement pattern matching algorithm in src/utils/key-patterns.ts with detectDynamicKeys, calculatePatternMatch, computeConfidenceScore functions
-- [ ] T007 [P] Implement distribution statistics calculator in src/utils/frequency-map.ts with calculateDistributionStats function (min, max, median, p95, total, unique)
-- [ ] T008 Create configuration loader in src/utils/config-loader.ts to load DynamicKeyDetectionConfig from CLI flags and config files
-- [ ] T009 Add CLI flag --dynamic-key-threshold to src/cli/commands/generate.ts and src/cli/commands/infer.ts
-- [ ] T010 [P] Add CLI flag --no-dynamic-keys to src/cli/commands/generate.ts and src/cli/commands/infer.ts
-- [ ] T011 [P] Update programmatic API types in src/lib/inferencer/types.ts to include dynamicKeyDetection option
+- [X] T005 Implement key pattern detection regex library in src/utils/key-patterns.ts with patterns for UUID, MONGODB_OBJECTID, ULID, NUMERIC_ID, PREFIXED_ID
+- [X] T006 [P] Implement pattern matching algorithm in src/utils/key-patterns.ts with detectDynamicKeys, calculatePatternMatch, computeConfidenceScore functions
+- [X] T007 [P] Implement distribution statistics calculator in src/utils/frequency-map.ts with calculateDistributionStats function (min, max, median, p95, total, unique)
+- [X] T008 Create configuration loader in src/utils/config-loader.ts to load DynamicKeyDetectionConfig from CLI flags and config files
+- [X] T009 Add CLI flag --dynamic-key-threshold to src/cli/commands/generate.ts and src/cli/commands/infer.ts
+- [X] T010 [P] Add CLI flag --no-dynamic-keys to src/cli/commands/generate.ts and src/cli/commands/infer.ts
+- [X] T011 [P] Update programmatic API types in src/lib/inferencer/types.ts to include dynamicKeyDetection option
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
