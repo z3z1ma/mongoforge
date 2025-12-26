@@ -8,16 +8,46 @@ describe.sequential('MongoDB Insertion', () => {
   let mongoServer: MongoMemoryServer;
   let mongoUri: string;
   let client: MongoClient;
+  const mongoVersion = process.env.MONGOMS_VERSION ?? '6.0.5';
+  process.env.MONGOMS_PLATFORM ??= 'linux';
+  process.env.MONGOMS_ARCH ??= 'x64';
+  process.env.MONGOMS_DOWNLOAD_URL ??= `https://fastdl.mongodb.org/linux/mongodb-linux-x86_64-${mongoVersion}.tgz`;
+  const mongoBinaryOptions = { binary: { version: mongoVersion, platform: 'linux' } };
+
+  const createServerWithRetry = async (attempts = 3, delayMs = 1000): Promise<void> => {
+    let lastError: unknown;
+
+    for (let attempt = 1; attempt <= attempts; attempt += 1) {
+      try {
+        mongoServer = await MongoMemoryServer.create(mongoBinaryOptions);
+        mongoUri = mongoServer.getUri();
+        client = new MongoClient(mongoUri);
+        await client.connect();
+        return;
+      } catch (error) {
+        lastError = error;
+
+        if (attempt < attempts) {
+          console.warn(
+            `MongoMemoryServer startup failed (attempt ${attempt}/${attempts}), retrying in ${delayMs}ms...`,
+            error
+          );
+          await new Promise(resolve => setTimeout(resolve, delayMs));
+        }
+      }
+    }
+
+    throw lastError instanceof Error ? lastError : new Error('Failed to start MongoMemoryServer');
+  };
 
   beforeAll(async () => {
-    mongoServer = await MongoMemoryServer.create();
-    mongoUri = mongoServer.getUri();
-    client = new MongoClient(mongoUri);
-    await client.connect();
+    await createServerWithRetry();
   });
 
   afterAll(async () => {
-    await client.close();
+    if (client) {
+      await client.close();
+    }
     if (mongoServer) {
       await mongoServer.stop();
     }

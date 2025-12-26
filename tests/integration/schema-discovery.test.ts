@@ -19,14 +19,42 @@ describe('Phase 5: Schema Discovery Integration', () => {
   let mongoUri: string;
   let client: MongoClient;
   let db: Db;
+  const mongoVersion = process.env.MONGOMS_VERSION ?? '6.0.5';
+  process.env.MONGOMS_PLATFORM ??= 'linux';
+  process.env.MONGOMS_ARCH ??= 'x64';
+  process.env.MONGOMS_DOWNLOAD_URL ??= `https://fastdl.mongodb.org/linux/mongodb-linux-x86_64-${mongoVersion}.tgz`;
+  const mongoBinaryOptions = { binary: { version: mongoVersion, platform: 'linux' } };
+
+  const createServerWithRetry = async (attempts = 3, delayMs = 1000): Promise<void> => {
+    let lastError: unknown;
+
+    for (let attempt = 1; attempt <= attempts; attempt += 1) {
+      try {
+        mongoServer = await MongoMemoryServer.create(mongoBinaryOptions);
+        mongoUri = mongoServer.getUri();
+        client = new MongoClient(mongoUri);
+        await client.connect();
+        db = client.db('testdb');
+        return;
+      } catch (error) {
+        lastError = error;
+
+        if (attempt < attempts) {
+          console.warn(
+            `MongoMemoryServer startup failed (attempt ${attempt}/${attempts}), retrying in ${delayMs}ms...`,
+            error
+          );
+          await new Promise(resolve => setTimeout(resolve, delayMs));
+        }
+      }
+    }
+
+    throw lastError instanceof Error ? lastError : new Error('Failed to start MongoMemoryServer');
+  };
 
   beforeAll(async () => {
     // Start in-memory MongoDB
-    mongoServer = await MongoMemoryServer.create();
-    mongoUri = mongoServer.getUri();
-    client = new MongoClient(mongoUri);
-    await client.connect();
-    db = client.db('testdb');
+    await createServerWithRetry();
 
     // Insert sample documents
     await db.collection('users').insertMany([
@@ -94,8 +122,12 @@ describe('Phase 5: Schema Discovery Integration', () => {
   });
 
   afterAll(async () => {
-    await client.close();
-    await mongoServer.stop();
+    if (client) {
+      await client.close();
+    }
+    if (mongoServer) {
+      await mongoServer.stop();
+    }
   });
 
   it('demonstrates complete schema discovery workflow', async () => {
