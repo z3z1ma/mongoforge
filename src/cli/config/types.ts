@@ -143,6 +143,8 @@ export interface InferCommandOptions {
   keyFields?: string; // Comma-separated
   enforceUniqueKeys?: boolean;
   uniquenessScope?: UniquenessScope;
+  dynamicKeyThreshold?: number;
+  noDynamicKeys?: boolean;
   config?: string;
   logLevel?: string;
 }

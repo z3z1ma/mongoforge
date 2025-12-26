@@ -13,6 +13,7 @@ import { Inferencer } from '../../lib/inferencer/index.js';
 import { Profiler } from '../../lib/profiler/index.js';
 import { Synthesizer } from '../../lib/synthesizer/index.js';
 import { logger } from '../../utils/logger.js';
+import { loadDynamicKeyConfig } from '../../utils/config-loader.js';
 
 /**
  * Merge CLI options with config file
@@ -185,21 +186,33 @@ async function executeInfer(options: InferCommandOptions): Promise<void> {
       uniqueTypeHints: typeHints.size,
     });
 
-    // Step 3: Infer schema
+    // Step 3: Load dynamic key detection configuration
+    const dynamicKeyCliOptions = {
+      dynamicKeyThreshold: options.dynamicKeyThreshold,
+      noDynamicKeys: options.noDynamicKeys,
+    };
+    const dynamicKeyConfigSection = configFile ? (configFile as any).dynamicKeys : undefined;
+    const dynamicKeyConfig = loadDynamicKeyConfig(dynamicKeyCliOptions, dynamicKeyConfigSection);
+
+    // Step 4: Infer schema with dynamic key detection
     logger.info('Inferring schema');
     const inferencer = new Inferencer({
       semanticTypes: false,
       storeValues: false,
+      dynamicKeyDetection: dynamicKeyConfig,
     });
-    const { schema: inferredSchema, metadata: inferMeta } = await inferencer.infer(normalized);
+    const { schema: inferredSchema, metadata: inferMeta, dynamicKeyAnalyses } = await inferencer.infer(normalized);
 
-    logger.info('Schema inference complete', inferMeta);
+    logger.info('Schema inference complete', {
+      ...inferMeta,
+      dynamicKeysDetected: inferMeta.dynamicKeysDetected || 0,
+    });
 
     // Write inferred schema
     const inferredSchemaPath = resolve(config.output.dir, 'inferred.schema.json');
     writeFileSync(inferredSchemaPath, JSON.stringify(inferredSchema, null, 2), 'utf-8');
 
-    // Step 4: Profile constraints
+    // Step 5: Profile constraints
     logger.info('Profiling constraints');
     const profiler = new Profiler({
       arrayLenPolicy: config.constraints.arrayLenPolicy,
@@ -230,7 +243,7 @@ async function executeInfer(options: InferCommandOptions): Promise<void> {
     };
     writeFileSync(constraintsPath, JSON.stringify(constraintsJson, null, 2), 'utf-8');
 
-    // Step 5: Synthesize generation schema
+    // Step 6: Synthesize generation schema
     logger.info('Synthesizing generation schema');
     const synthesizer = new Synthesizer({
       enforceRequired: true,
@@ -239,7 +252,8 @@ async function executeInfer(options: InferCommandOptions): Promise<void> {
     const { schema: generationSchema, metadata: synthMeta } = synthesizer.synthesize(
       inferredSchema,
       constraints,
-      typeHints
+      typeHints,
+      dynamicKeyAnalyses
     );
 
     logger.info('Generation schema synthesized', synthMeta);
@@ -263,6 +277,7 @@ async function executeInfer(options: InferCommandOptions): Promise<void> {
         sampledDocuments: samples.length,
         fieldsInferred: inferMeta.fieldsDiscovered,
         arrayPathsTracked: profileMeta.arrayFieldsFound,
+        dynamicKeysDetected: inferMeta.dynamicKeysDetected || 0,
         durationMs: duration,
       },
     };
