@@ -1,0 +1,77 @@
+{
+  "name": "mongoforge",
+  "version": "0.1.0",
+  "description": "Schema-driven synthetic MongoDB document generation for high-volume CDC and load testing",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "mongoforge": "./dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./cli": {
+      "import": "./dist/cli.js",
+      "require": "./dist/cli.cjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsx watch src/cli/index.ts",
+    "test": "vitest",
+    "test:coverage": "vitest --coverage",
+    "test:ui": "vitest --ui",
+    "lint": "tsc --noEmit",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "mongodb",
+    "synthetic-data",
+    "test-data",
+    "load-testing",
+    "cdc",
+    "schema-inference",
+    "data-generation"
+  ],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@faker-js/faker": "^9.3.0",
+    "ajv": "^8.17.1",
+    "commander": "^12.1.0",
+    "json-schema-faker": "^0.5.6",
+    "mongodb": "^6.12.0",
+    "mongodb-schema": "^12.2.0",
+    "ndjson": "^2.0.0",
+    "yaml": "^2.8.2"
+  },
+  "devDependencies": {
+    "@types/ndjson": "^2.0.4",
+    "@types/node": "^22.10.2",
+    "@vitest/coverage-v8": "^2.1.8",
+    "@vitest/ui": "^2.1.8",
+    "mongodb-memory-server": "^10.1.2",
+    "prettier": "^3.4.2",
+    "tsup": "^8.3.5",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}
