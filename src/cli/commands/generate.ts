@@ -38,8 +38,8 @@ export function createGenerateCommand(): Command {
         // Load generation schema
         const schema = await loadGenerationSchema(opts.generationSchema, opts.constraints);
 
-        // Create document generation stream
-        const documentStream = createGeneratorStream(schema, docCount, batchSize);
+        // Create document generation stream with optional seed for deterministic generation
+        const documentStream = createGeneratorStream(schema, docCount, batchSize, opts.seed);
 
         let insertionMetrics = null;
 

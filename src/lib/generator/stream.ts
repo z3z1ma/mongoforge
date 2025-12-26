@@ -4,7 +4,8 @@
 
 import { Readable } from 'stream';
 import { GenerationSchema, SyntheticDocument } from '../../types/data-model.js';
-import { generate } from './faker-engine.js';
+import { generate, initializeFaker } from './faker-engine.js';
+import { registerCustomFormats } from './custom-formats.js';
 import { logger } from '../../utils/logger.js';
 
 /**
@@ -15,17 +16,39 @@ export class DocumentGeneratorStream extends Readable {
   private totalCount: number;
   private generatedCount: number;
   private batchSize: number;
+  private initialized = false;
+  private seed?: string | number;
 
-  constructor(schema: GenerationSchema, count: number, batchSize = 100) {
+  constructor(schema: GenerationSchema, count: number, batchSize = 100, seed?: string | number) {
     super({ objectMode: true });
     this.schema = schema;
     this.totalCount = count;
     this.generatedCount = 0;
     this.batchSize = batchSize;
+    this.seed = seed;
+  }
+
+  /**
+   * Initialize faker with seed (lazy initialization on first read)
+   */
+  private initialize(): void {
+    if (this.initialized) return;
+
+    // Initialize faker with seed
+    initializeFaker(this.seed);
+
+    // Register custom formats
+    registerCustomFormats();
+
+    this.initialized = true;
+    logger.debug('DocumentGeneratorStream initialized', { seed: this.seed });
   }
 
   async _read(): Promise<void> {
     try {
+      // Initialize on first read
+      this.initialize();
+
       if (this.generatedCount >= this.totalCount) {
         this.push(null); // End stream
         return;
@@ -56,9 +79,10 @@ export class DocumentGeneratorStream extends Readable {
 export function createGeneratorStream(
   schema: GenerationSchema,
   count: number,
-  batchSize?: number
+  batchSize?: number,
+  seed?: string | number
 ): Readable {
-  return new DocumentGeneratorStream(schema, count, batchSize);
+  return new DocumentGeneratorStream(schema, count, batchSize, seed);
 }
 
 /**
