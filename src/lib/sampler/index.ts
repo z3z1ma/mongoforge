@@ -1,0 +1,93 @@
+/**
+ * Sampler module - orchestrates MongoDB document sampling
+ */
+
+import { MongoConnector, createConnector } from './connector.js';
+import {
+  createStrategy,
+  TimeWindowOptions,
+  SamplingStrategy,
+} from './strategies.js';
+import { SamplerOptions, SamplerResult } from './types.js';
+import { SampleDocument } from '../../types/data-model.js';
+import { logger } from '../../utils/logger.js';
+
+export * from './types.js';
+export * from './connector.js';
+export * from './strategies.js';
+
+/**
+ * Main sampler class
+ */
+export class Sampler {
+  private connector: MongoConnector | null = null;
+  private strategy: SamplingStrategy;
+
+  constructor(options: SamplerOptions) {
+    this.strategy = createStrategy(options.strategy);
+  }
+
+  /**
+   * Execute sampling operation
+   */
+  async sample(options: SamplerOptions): Promise<SamplerResult> {
+    const startTime = Date.now();
+
+    try {
+      // Connect to MongoDB
+      this.connector = await createConnector({
+        uri: options.uri,
+        database: options.database,
+        collection: options.collection,
+      });
+
+      logger.info('Starting document sampling', {
+        collection: options.collection,
+        strategy: options.strategy,
+        sampleSize: options.sampleSize,
+      });
+
+      // Get collection
+      const collection = this.connector.getCollection(options.collection);
+
+      // Execute sampling strategy
+      const documents = await this.strategy.sample(
+        collection,
+        options.sampleSize,
+        options.timeWindow
+      );
+
+      const duration = Date.now() - startTime;
+
+      logger.info('Sampling completed', {
+        documentsRetrieved: documents.length,
+        durationMs: duration,
+      });
+
+      return {
+        documents,
+        metadata: {
+          totalSampled: documents.length,
+          collectionName: options.collection,
+          sampledAt: new Date(),
+        },
+      };
+    } catch (error) {
+      logger.error('Sampling failed', error);
+      throw error;
+    } finally {
+      // Always close connection
+      if (this.connector) {
+        await this.connector.close();
+      }
+    }
+  }
+}
+
+/**
+ * Convenience function for one-off sampling
+ */
+export async function sampleCollection(options: SamplerOptions): Promise<SamplerResult> {
+  const sampler = new Sampler(options);
+  return sampler.sample(options);
+}

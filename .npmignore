@@ -1,0 +1,32 @@
+# Source files
+src/
+tests/
+fixtures/
+
+# Development files
+*.test.ts
+*.spec.ts
+vitest.config.ts
+tsup.config.ts
+tsconfig.json
+.prettierrc
+.eslintrc*
+
+# Documentation (keep only README)
+specs/
+.specify/
+
+# Development artifacts
+coverage/
+.vscode/
+.idea/
+*.log
+.env*
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Build artifacts (keep dist/)
+node_modules/
