@@ -43,11 +43,14 @@ function createProgram(): Command {
 async function main(): Promise<void> {
   const program = createProgram();
 
-  // Set log level from global options
-  const opts = program.opts();
-  if (opts.logLevel) {
-    process.env.LOG_LEVEL = opts.logLevel;
-  }
+  // Set log level from global options AFTER parsing but BEFORE action execution
+  // Using hook ensures opts() returns the parsed values, not defaults
+  program.hook('preAction', (thisCommand) => {
+    const opts = thisCommand.opts();
+    if (opts.logLevel) {
+      process.env.LOG_LEVEL = opts.logLevel;
+    }
+  });
 
   // Parse arguments
   await program.parseAsync(process.argv);
