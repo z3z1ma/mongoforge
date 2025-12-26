@@ -17,15 +17,27 @@ export class RunReporter {
   private _manifest: RunManifest;
 
   constructor(seed: string, version: string = '1.0.0') {
+    const timestamp = new Date().toISOString();
     this._manifest = {
       version,
-      seed,
-      timestamp: new Date().toISOString(),
-      artifacts: {
-        schemaHash: '',
-        constraintsHash: '',
-        outputHash: '',
+      tool: {
+        name: 'mongoforge',
+        version
       },
+      run: {
+        id: crypto.randomBytes(8).toString('hex'),
+        timestamp,
+        phase: 'generation'
+      },
+      config: {
+        generation: {
+          docCount: 0, // Will be updated later
+          seed,
+          schemaHash: '',
+          constraintsHash: ''
+        }
+      },
+      artifacts: {},
     };
   }
 
@@ -38,31 +50,39 @@ export class RunReporter {
   }
 
   /**
-   * Update schema artifact hash
+   * Update inferred schema artifact
    */
-  async updateSchemaHash(schemaPath: string): Promise<void> {
-    this._manifest.artifacts.schemaHash = await this.calculateFileHash(schemaPath);
-    logger.debug('Schema hash updated', { hash: this._manifest.artifacts.schemaHash });
+  async updateInferredSchemaArtifact(schemaPath: string): Promise<void> {
+    const hash = await this.calculateFileHash(schemaPath);
+    this._manifest.artifacts.inferredSchema = { path: schemaPath, hash };
+    logger.debug('Inferred schema artifact updated', { path: schemaPath, hash });
   }
 
   /**
-   * Update constraints artifact hash
+   * Update generation schema artifact
    */
-  async updateConstraintsHash(constraintsPath: string): Promise<void> {
-    this._manifest.artifacts.constraintsHash = await this.calculateFileHash(
-      constraintsPath
-    );
-    logger.debug('Constraints hash updated', {
-      hash: this._manifest.artifacts.constraintsHash,
-    });
+  async updateGenerationSchemaArtifact(schemaPath: string): Promise<void> {
+    const hash = await this.calculateFileHash(schemaPath);
+    this._manifest.artifacts.generationSchema = { path: schemaPath, hash };
+    logger.debug('Generation schema artifact updated', { path: schemaPath, hash });
   }
 
   /**
-   * Update output artifact hash
+   * Update constraints artifact
    */
-  async updateOutputHash(outputPath: string): Promise<void> {
-    this._manifest.artifacts.outputHash = await this.calculateFileHash(outputPath);
-    logger.debug('Output hash updated', { hash: this._manifest.artifacts.outputHash });
+  async updateConstraintsArtifact(constraintsPath: string): Promise<void> {
+    const hash = await this.calculateFileHash(constraintsPath);
+    this._manifest.artifacts.constraints = { path: constraintsPath, hash };
+    logger.debug('Constraints artifact updated', { path: constraintsPath, hash });
+  }
+
+  /**
+   * Update output artifact
+   */
+  async updateOutputArtifact(outputPath: string, size?: number): Promise<void> {
+    const hash = await this.calculateFileHash(outputPath);
+    this._manifest.artifacts.output = { path: outputPath, hash, size };
+    logger.debug('Output artifact updated', { path: outputPath, hash, size });
   }
 
   /**

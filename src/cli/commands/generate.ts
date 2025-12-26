@@ -2,7 +2,8 @@ import { Command } from 'commander';
 import { Readable } from 'stream';
 import { createReadStream, createWriteStream } from 'fs';
 import { createMongoInserter } from '../../lib/emitter/mongo-inserter.js';
-import { generateDocuments } from '../../lib/generator/stream.js';
+import { createGeneratorStream } from '../../lib/generator/stream.js';
+import { loadGenerationSchema } from '../../lib/generator/schema-loader.js';
 import { logger } from '../../utils/logger.js';
 
 /**
@@ -31,13 +32,11 @@ export function configureGenerateCommand(program: Command): void {
         const docCount = parseInt(opts.docCount, 10);
         const batchSize = parseInt(opts.batchSize, 10);
 
+        // Load generation schema
+        const schema = await loadGenerationSchema(opts.generationSchema, opts.constraints);
+
         // Create document generation stream
-        const documentStream = generateDocuments({
-          generationSchemaPath: opts.generationSchema,
-          constraintsPath: opts.constraints,
-          count: docCount,
-          seed: opts.seed
-        });
+        const documentStream = createGeneratorStream(schema, docCount, batchSize);
 
         let insertionMetrics = null;
 
@@ -53,7 +52,7 @@ export function configureGenerateCommand(program: Command): void {
             orderedInserts: opts.orderedInserts
           });
 
-          insertionMetrics = await inserter.bulkInsert(documentStream as Readable);
+          insertionMetrics = await inserter.bulkInsert(documentStream);
         }
         // File/Stdout Output Mode
         else {

@@ -17,7 +17,7 @@ export async function loadCustomGenerators(modulePath: string): Promise<CustomGe
     if (module.pathGenerators && typeof module.pathGenerators === 'object') {
       for (const [path, generator] of Object.entries(module.pathGenerators)) {
         if (typeof generator === 'function') {
-          pathGenerators.set(path, generator);
+          pathGenerators.set(path, generator as () => any);
         }
       }
     }
@@ -25,13 +25,13 @@ export async function loadCustomGenerators(modulePath: string): Promise<CustomGe
     if (module.typeGenerators && typeof module.typeGenerators === 'object') {
       for (const [type, generator] of Object.entries(module.typeGenerators)) {
         if (typeof generator === 'function') {
-          typeGenerators.set(type, generator);
+          typeGenerators.set(type, generator as () => any);
         }
       }
     }
 
     return { pathGenerators, typeGenerators };
   } catch (error) {
-    throw new Error(`Failed to load custom generators module: ${error.message}`);
+    throw new Error(`Failed to load custom generators module: ${(error as Error).message}`);
   }
 }

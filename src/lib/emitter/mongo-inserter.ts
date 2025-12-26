@@ -32,7 +32,7 @@ export interface InsertionMetrics {
 export class MongoInserter {
   private client: MongoClient;
   private config: MongoInserterConfig;
-  private collection: Collection;
+  private collection!: Collection; // Definite assignment assertion - initialized in connect()
 
   constructor(config: MongoInserterConfig) {
     this.config = {
@@ -43,7 +43,7 @@ export class MongoInserter {
     };
 
     this.client = new MongoClient(this.config.uri, {
-      writeConcern: this.config.writeConcern,
+      writeConcern: { w: (this.config.writeConcern || 'majority') as number | 'majority' },
       maxPoolSize: 20,
       minPoolSize: 5,
       serverSelectionTimeoutMS: 10000,

@@ -42,7 +42,7 @@ describe('Document Generation Repeatability', () => {
     const output1Content = docs1.map((doc) => JSON.stringify(doc)).join('\n');
     await fs.writeFile(path.join(outputPath1, 'output.ndjson'), output1Content);
 
-    await reporter1.updateOutputHash(path.join(outputPath1, 'output.ndjson'));
+    await reporter1.updateOutputArtifact(path.join(outputPath1, 'output.ndjson'));
     await reporter1.save(outputPath1);
 
     // Second generation with same seed
@@ -56,7 +56,7 @@ describe('Document Generation Repeatability', () => {
     const output2Content = docs2.map((doc) => JSON.stringify(doc)).join('\n');
     await fs.writeFile(path.join(outputPath2, 'output.ndjson'), output2Content);
 
-    await reporter2.updateOutputHash(path.join(outputPath2, 'output.ndjson'));
+    await reporter2.updateOutputArtifact(path.join(outputPath2, 'output.ndjson'));
     await reporter2.save(outputPath2);
 
     // Compare documents directly
@@ -69,8 +69,8 @@ describe('Document Generation Repeatability', () => {
     const manifest1 = reporter1.getManifest();
     const manifest2 = reporter2.getManifest();
 
-    expect(manifest1.seed).toEqual(manifest2.seed);
-    expect(manifest1.artifacts.outputHash).toEqual(manifest2.artifacts.outputHash);
+    expect(manifest1.config.generation?.seed).toEqual(manifest2.config.generation?.seed);
+    expect(manifest1.artifacts.output?.hash).toEqual(manifest2.artifacts.output?.hash);
   });
 
   it('should generate different documents with different seeds', async () => {

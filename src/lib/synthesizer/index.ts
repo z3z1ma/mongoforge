@@ -48,11 +48,10 @@ function mapTypeToJsonSchema(mongoSchemaType: string | string[]): string | strin
   };
 
   if (Array.isArray(mongoSchemaType)) {
-    const mapped = mongoSchemaType
-      .map((t) => typeMap[t] || t.toLowerCase() || 'string')
-      .filter((t): t is string => Boolean(t));
+    const mapped = mongoSchemaType.map((t) => typeMap[t] || (t ? t.toLowerCase() : '') || 'string');
     if (mapped.length === 0) return 'string';
-    return mapped.length === 1 ? mapped[0] : mapped;
+    const first = mapped[0];
+    return mapped.length === 1 ? (first || 'string') : mapped;
   }
 
   const lowerType = typeof mongoSchemaType === 'string' ? mongoSchemaType.toLowerCase() : '';
