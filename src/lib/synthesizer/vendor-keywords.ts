@@ -12,6 +12,10 @@ import {
 } from "../../types/data-model.js";
 import { ArrayLengthStats } from "../../types/dynamic-keys.js";
 import { logger } from "../../utils/logger.js";
+import {
+  calculateFrequencies,
+  sampleFromDistribution,
+} from "../../utils/frequency-map.js";
 
 /**
  * Apply x-gen.key vendor extension
@@ -80,8 +84,6 @@ export function applyArrayLenExtension(
     p95: arrayStats.stats.p95,
   });
 
-  // Convert new format to old XGenArrayLen format for backward compatibility
-  // TODO: In future, update XGenArrayLen to use frequency distribution directly
   const arrayLen: XGenArrayLen = {
     min: arrayStats.stats.min,
     max: arrayStats.stats.max,
@@ -89,6 +91,7 @@ export function applyArrayLenExtension(
     p90: Math.round(arrayStats.stats.p95 * 0.95), // Approximate p90 from p95
     p99: arrayStats.stats.p95,
     strategy,
+    distribution: arrayStats.distribution,
   };
 
   return {
@@ -176,6 +179,17 @@ export function getRecommendedArrayLength(
   arrayLen: XGenArrayLen,
   randomValue = Math.random(),
 ): number {
+  // If full frequency distribution is available, use it for exact weighted sampling
+  if (arrayLen.distribution && Object.keys(arrayLen.distribution).length > 0) {
+    try {
+      return sampleFromDistribution(arrayLen.distribution, randomValue);
+    } catch (error) {
+      logger.warn("Failed to sample from array length distribution", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
   if (arrayLen.strategy === "minmax") {
     // Uniform distribution between min and max
     return Math.floor(

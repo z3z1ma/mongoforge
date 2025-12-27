@@ -170,6 +170,7 @@ export interface XGenArrayLen {
   p90: number;
   p99: number;
   strategy: "minmax" | "percentile";
+  distribution?: FrequencyDistribution;
 }
 
 export interface XGenNumericRange {

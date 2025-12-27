@@ -47,6 +47,7 @@ export function updateFrequencies(
  * Uses weighted random selection based on frequencies
  *
  * @param distribution - Frequency distribution to sample from
+ * @param randomValue - Optional random value between 0 and 1 (defaults to Math.random())
  * @returns Sampled numeric value
  *
  * @example
@@ -55,6 +56,7 @@ export function updateFrequencies(
  */
 export function sampleFromDistribution(
   distribution: FrequencyDistribution,
+  randomValue = Math.random(),
 ): number {
   const entries = Object.entries(distribution);
 
@@ -65,8 +67,8 @@ export function sampleFromDistribution(
   // Calculate total frequency
   const total = entries.reduce((sum, [, count]) => sum + count, 0);
 
-  // Generate random number between 0 and total
-  const random = Math.random() * total;
+  // Use provided random value or generate a new one
+  const random = randomValue * total;
 
   // Find the value corresponding to this random number
   let cumulative = 0;
