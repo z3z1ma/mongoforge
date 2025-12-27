@@ -13,6 +13,7 @@ import { Inferencer } from '../../lib/inferencer/index.js';
 import { Profiler } from '../../lib/profiler/index.js';
 import { Synthesizer } from '../../lib/synthesizer/index.js';
 import { logger } from '../../utils/logger.js';
+import { loadDynamicKeyConfig } from '../../utils/config-loader.js';
 
 /**
  * Merge CLI options with config file
@@ -185,21 +186,33 @@ async function executeInfer(options: InferCommandOptions): Promise<void> {
       uniqueTypeHints: typeHints.size,
     });
 
-    // Step 3: Infer schema
+    // Step 3: Load dynamic key detection configuration
+    const dynamicKeyCliOptions = {
+      dynamicKeyThreshold: options.dynamicKeyThreshold,
+      noDynamicKeys: options.noDynamicKeys,
+    };
+    const dynamicKeyConfigSection = configFile ? (configFile as any).dynamicKeys : undefined;
+    const dynamicKeyConfig = loadDynamicKeyConfig(dynamicKeyCliOptions, dynamicKeyConfigSection);
+
+    // Step 4: Infer schema with dynamic key detection
     logger.info('Inferring schema');
     const inferencer = new Inferencer({
-      semanticTypes: false,
-      storeValues: false,
+      semanticTypes: true,
+      storeValues: true,
+      dynamicKeyDetection: dynamicKeyConfig,
     });
-    const { schema: inferredSchema, metadata: inferMeta } = await inferencer.infer(normalized);
+    const { schema: inferredSchema, metadata: inferMeta, dynamicKeyAnalyses } = await inferencer.infer(normalized);
 
-    logger.info('Schema inference complete', inferMeta);
+    logger.info('Schema inference complete', {
+      ...inferMeta,
+      dynamicKeysDetected: inferMeta.dynamicKeysDetected || 0,
+    });
 
     // Write inferred schema
     const inferredSchemaPath = resolve(config.output.dir, 'inferred.schema.json');
     writeFileSync(inferredSchemaPath, JSON.stringify(inferredSchema, null, 2), 'utf-8');
 
-    // Step 4: Profile constraints
+    // Step 5: Profile constraints
     logger.info('Profiling constraints');
     const profiler = new Profiler({
       arrayLenPolicy: config.constraints.arrayLenPolicy,
@@ -210,6 +223,34 @@ async function executeInfer(options: InferCommandOptions): Promise<void> {
     const { profile: constraints, metadata: profileMeta } = profiler.profile(normalized);
 
     logger.info('Profiling complete', profileMeta);
+
+    // Strip array stats for paths nested under dynamic key fields to prevent bloat
+    // For fields with dynamic keys, storing stats for individual nested keys is wasteful
+    if (dynamicKeyAnalyses && dynamicKeyAnalyses.size > 0) {
+      const dynamicKeyPaths = new Set(
+        Array.from(dynamicKeyAnalyses.entries())
+          .filter(([_, analysis]) => analysis.isDynamic)
+          .map(([path, _]) => path)
+      );
+
+      let removedCount = 0;
+      for (const [arrayPath, _] of constraints.arrayStats) {
+        for (const dynamicPath of dynamicKeyPaths) {
+          if (arrayPath.startsWith(dynamicPath + '.')) {
+            constraints.arrayStats.delete(arrayPath);
+            removedCount++;
+            break;
+          }
+        }
+      }
+
+      if (removedCount > 0) {
+        logger.info('Stripped array stats nested under dynamic key fields', {
+          removedEntries: removedCount,
+          remainingEntries: constraints.arrayStats.size,
+        });
+      }
+    }
 
     // Apply additional key field configuration
     for (const keyField of config.keys.keyFields) {
@@ -227,10 +268,11 @@ async function executeInfer(options: InferCommandOptions): Promise<void> {
     const constraintsJson = {
       ...constraints,
       arrayStats: Object.fromEntries(constraints.arrayStats),
+      numericRanges: Object.fromEntries(constraints.numericRanges),
     };
     writeFileSync(constraintsPath, JSON.stringify(constraintsJson, null, 2), 'utf-8');
 
-    // Step 5: Synthesize generation schema
+    // Step 6: Synthesize generation schema
     logger.info('Synthesizing generation schema');
     const synthesizer = new Synthesizer({
       enforceRequired: true,
@@ -239,7 +281,8 @@ async function executeInfer(options: InferCommandOptions): Promise<void> {
     const { schema: generationSchema, metadata: synthMeta } = synthesizer.synthesize(
       inferredSchema,
       constraints,
-      typeHints
+      typeHints,
+      dynamicKeyAnalyses
     );
 
     logger.info('Generation schema synthesized', synthMeta);
@@ -263,6 +306,7 @@ async function executeInfer(options: InferCommandOptions): Promise<void> {
         sampledDocuments: samples.length,
         fieldsInferred: inferMeta.fieldsDiscovered,
         arrayPathsTracked: profileMeta.arrayFieldsFound,
+        dynamicKeysDetected: inferMeta.dynamicKeysDetected || 0,
         durationMs: duration,
       },
     };
@@ -292,7 +336,9 @@ export function createInferCommand(): Command {
   const command = new Command('infer');
 
   command
-    .description('Sample MongoDB collection, infer schema, and produce discovery artifacts')
+    .description(
+      'Sample MongoDB collection, infer schema with dynamic key detection, and produce discovery artifacts'
+    )
     .option('--source-uri <uri>', 'MongoDB connection URI')
     .option('--source-db <database>', 'Source database name')
     .option('--source-collection <collection>', 'Source collection name')
@@ -307,6 +353,15 @@ export function createInferCommand(): Command {
     .option('--key-fields <fields>', 'Additional key fields (comma-separated)', '')
     .option('--enforce-unique-keys', 'Enforce uniqueness for key fields', false)
     .option('--uniqueness-scope <scope>', 'Uniqueness scope: batch, run', 'run')
+    .option(
+      '--dynamic-key-threshold <number>',
+      'Minimum unique keys to trigger dynamic key detection (default: 50)',
+      (val) => parseInt(val, 10)
+    )
+    .option(
+      '--no-dynamic-keys',
+      'Disable dynamic key detection and inference for objects with highly variable keys'
+    )
     .option('--config <path>', 'Path to configuration file (JSON/YAML)')
     .option('--log-level <level>', 'Logging verbosity: error, warn, info, debug', 'info')
     .action(executeInfer);

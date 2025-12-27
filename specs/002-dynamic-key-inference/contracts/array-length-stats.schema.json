@@ -1,0 +1,80 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mongoforge.dev/schemas/array-length-stats.json",
+  "title": "Array Length Statistics",
+  "description": "Frequency distribution and statistics for array lengths",
+  "type": "object",
+  "required": [
+    "fieldPath",
+    "distribution",
+    "stats",
+    "arraysAnalyzed"
+  ],
+  "properties": {
+    "fieldPath": {
+      "type": "string",
+      "description": "Field path (e.g., 'users.orders.items')",
+      "minLength": 1,
+      "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*(\\.[a-zA-Z_][a-zA-Z0-9_]*)*$"
+    },
+    "distribution": {
+      "$ref": "#/definitions/frequencyDistribution",
+      "description": "Distribution of array lengths (length → count)"
+    },
+    "stats": {
+      "$ref": "#/definitions/distributionStats",
+      "description": "Statistical summary of array length distribution"
+    },
+    "arraysAnalyzed": {
+      "type": "integer",
+      "description": "Number of arrays analyzed",
+      "minimum": 1
+    }
+  },
+  "definitions": {
+    "frequencyDistribution": {
+      "type": "object",
+      "description": "Mapping of values to occurrence counts",
+      "patternProperties": {
+        "^[0-9]+$": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "additionalProperties": false,
+      "minProperties": 1
+    },
+    "distributionStats": {
+      "type": "object",
+      "required": ["min", "max", "median", "p95", "total", "unique"],
+      "properties": {
+        "min": {
+          "type": "number",
+          "description": "Minimum observed value"
+        },
+        "max": {
+          "type": "number",
+          "description": "Maximum observed value"
+        },
+        "median": {
+          "type": "number",
+          "description": "Median value (50th percentile)"
+        },
+        "p95": {
+          "type": "number",
+          "description": "95th percentile value"
+        },
+        "total": {
+          "type": "integer",
+          "description": "Total number of observations",
+          "minimum": 0
+        },
+        "unique": {
+          "type": "integer",
+          "description": "Number of unique values",
+          "minimum": 0
+        }
+      }
+    }
+  }
+}

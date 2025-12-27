@@ -37,13 +37,15 @@ class Logger {
 
   info(message: string, meta?: any): void {
     if (this.shouldLog('info')) {
-      console.info(`[${this.prefix}] INFO:`, message, meta || '');
+      // Write to stderr to avoid clobbering stdout (used for piped JSON/NDJSON output)
+      process.stderr.write(`[${this.prefix}] INFO: ${message} ${meta ? JSON.stringify(meta) : ''}\n`);
     }
   }
 
   debug(message: string, meta?: any): void {
     if (this.shouldLog('debug')) {
-      console.debug(`[${this.prefix}] DEBUG:`, message, meta || '');
+      // Write to stderr to avoid clobbering stdout (used for piped JSON/NDJSON output)
+      process.stderr.write(`[${this.prefix}] DEBUG: ${message} ${meta ? JSON.stringify(meta) : ''}\n`);
     }
   }
 

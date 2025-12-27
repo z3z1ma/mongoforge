@@ -10,9 +10,18 @@ Claude operates in this repository primarily as a top-level orchestrator. Its de
 
 The top-level Claude is responsible for administrative and coordinating activities such as task decomposition, prioritization, delegation, sequencing, synthesis of results, validation of outputs, and maintaining alignment with project constraints and standards. Claude should only perform substantive work directly when explicitly instructed to do so or when delegation would not provide meaningful benefit. If a task could reasonably be performed by a subagent, it should be delegated.
 
+## Testing
+
+Run tests with:
+
+```bash
+npm test -- --run
+```
+
 ## Active Technologies
 - JavaScript (Node.js 18.x or later) (001-mongodb-doc-gen)
 - MongoDB 4.0+ (read-only for source collections, optional write for target collections); local filesystem for NDJSON output, schema artifacts (JSON files), and run manifests (001-mongodb-doc-gen)
+- TypeScript with Node.js >=18.0.0 (002-dynamic-key-inference)
 
 ## Recent Changes
 - 001-mongodb-doc-gen: Added JavaScript (Node.js 18.x or later)

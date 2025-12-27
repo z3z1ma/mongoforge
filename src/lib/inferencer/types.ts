@@ -2,11 +2,14 @@
  * Inferencer module types
  */
 
-import { InferredSchema, NormalizedDocument } from '../../types/data-model';
+import { InferredSchema, NormalizedDocument } from '../../types/data-model.js';
+import { DynamicKeyDetectionConfig } from '../../types/dynamic-keys.js';
+import type { ObjectKeysAnalysis } from './dynamic-key-detector.js';
 
 export interface InferencerOptions {
   semanticTypes?: boolean;
   storeValues?: boolean;
+  dynamicKeyDetection?: DynamicKeyDetectionConfig | boolean;
 }
 
 export interface InferencerResult {
@@ -14,5 +17,7 @@ export interface InferencerResult {
   metadata: {
     documentsAnalyzed: number;
     fieldsDiscovered: number;
+    dynamicKeysDetected?: number;
   };
+  dynamicKeyAnalyses?: Map<string, ObjectKeysAnalysis>;
 }

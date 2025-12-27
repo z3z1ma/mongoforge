@@ -9,6 +9,7 @@ import { readFile, writeFile } from 'fs/promises';
 import * as readline from 'readline';
 import { validateDocuments } from '../../lib/validator/index.js';
 import { GenerationSchema, ConstraintsProfile, ValidationReport } from '../../types/data-model.js';
+import { normalizeArrayStats } from '../../lib/profiler/array-stats.js';
 
 /**
  * T085: Implement NDJSON input reader
@@ -132,10 +133,15 @@ export function createValidateCommand(): Command {
         const schema = await loadJSONFile<GenerationSchema>(options.generationSchema, 'Generation schema');
         const constraintsRaw = await loadJSONFile<any>(options.constraints, 'Constraints profile');
 
-        // Convert constraints (handle Map serialization)
+        // Convert constraints (handle Map serialization and normalize legacy formats)
         const constraints: ConstraintsProfile = {
           ...constraintsRaw,
-          arrayStats: new Map(Object.entries(constraintsRaw.arrayStats || {})),
+          arrayStats: new Map(
+            Object.entries(constraintsRaw.arrayStats || {}).map(([path, stats]) => [
+              path,
+              normalizeArrayStats(stats),
+            ])
+          ),
         };
 
         // Read input documents

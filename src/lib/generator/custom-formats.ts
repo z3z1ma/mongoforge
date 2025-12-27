@@ -51,20 +51,19 @@ function generateBase64(): string {
  * Register all custom formats with json-schema-faker
  */
 export function registerCustomFormats(): void {
-  // ObjectId format
+  // MongoDB type formats
   jsf.format('objectid', generateObjectId);
-
-  // Date-time format (override default)
   jsf.format('date-time', generateDateTime);
-
-  // UUID format
   jsf.format('uuid', generateUUID);
-
-  // Decimal format
   jsf.format('decimal', generateDecimal);
-
-  // Base64 format
   jsf.format('base64', generateBase64);
+
+  // Semantic type formats
+  jsf.format('email', () => faker.internet.email());
+  jsf.format('url', () => faker.internet.url());
+  jsf.format('phone', () => faker.phone.number());
+  jsf.format('person-name', () => faker.person.fullName());
+  jsf.format('ipv4', () => faker.internet.ipv4());
 }
 
 /**
@@ -149,15 +148,16 @@ export function generateTimestampPrefixedObjectId(): string {
   const timestamp = Math.floor(Date.now() / 1000); // Unix timestamp
   const timestampHex = timestamp.toString(16).padStart(8, '0');
 
-  // Generate the remaining 16 random bytes
-  const randomBytes = Array.from({ length: 16 }, () =>
+  // Generate the remaining 8 random bytes (ObjectId is 12 bytes total = 24 hex chars)
+  // 4 bytes timestamp + 8 bytes random = 12 bytes = 24 hex characters
+  const randomBytes = Array.from({ length: 8 }, () =>
     faker.number.int({ min: 0, max: 255 })
   );
 
   const remainingBytes = Buffer.from(randomBytes);
   const fullObjectId = Buffer.concat([
     Buffer.from(timestampHex, 'hex'),
-    remainingBytes
+    remainingBytes,
   ]);
 
   return fullObjectId.toString('hex');

@@ -4,6 +4,10 @@
  */
 
 import { ObjectId } from 'mongodb';
+import type { ArrayLengthStats, DynamicKeyMetadata, DynamicKeyValueSchema, FrequencyDistribution } from './dynamic-keys.js';
+
+// Re-export types from dynamic-keys to maintain compatibility
+export type { ArrayLengthStats, FrequencyDistribution };
 
 /**
  * SampleDocument - Raw document retrieved from MongoDB during discovery phase
@@ -50,29 +54,16 @@ export interface InferredSchemaField {
     probability: number;
     unique?: number;
     values?: any[];
+    semanticType?: string; // 'Email', 'URL', 'UUID', 'Phone', 'PersonName', etc.
+    semanticConfidence?: number; // 0.0 - 1.0
   }>;
-  lengths?: number[]; // For arrays
+  lengthDistribution?: FrequencyDistribution; // For arrays: length → count mapping
   fields?: Record<string, InferredSchemaField>; // For nested documents
 }
 
 export interface InferredSchema {
   count: number; // Number of documents analyzed
   fields: Record<string, InferredSchemaField>;
-}
-
-/**
- * ArrayLengthStats - Statistical summary of array lengths for a field
- */
-export interface ArrayLengthStats {
-  fieldPath: string;
-  observedLengths: number[];
-  minLen: number;
-  maxLen: number;
-  p50Len: number; // Median
-  p90Len: number;
-  p99Len: number;
-  mean: number;
-  stdDev: number;
 }
 
 /**
@@ -113,8 +104,45 @@ export interface AdditionalKeyConfig {
   uniquenessScope: UniquenessScope;
 }
 
+/**
+ * NumericRangeStats - Statistics about numeric values for a field path
+ */
+export interface NumericRangeStats {
+  /** Field path (e.g., 'age', 'profile.score') */
+  fieldPath: string;
+
+  /** Distribution of observed numeric values */
+  distribution: FrequencyDistribution;
+
+  /** Statistical summary */
+  stats: {
+    min: number;
+    max: number;
+    median: number;
+    p95: number;
+    total: number;
+    unique: number;
+  };
+
+  /** Number of numeric values analyzed */
+  valuesAnalyzed: number;
+
+  /** Value type: 'integer' or 'float' */
+  valueType: 'integer' | 'float';
+
+  /** Whether all observed values are positive (>= 0) */
+  allPositive: boolean;
+
+  /** Mean value */
+  mean: number;
+
+  /** Standard deviation */
+  stdDev: number;
+}
+
 export interface ConstraintsProfile {
   arrayStats: Map<string, ArrayLengthStats>;
+  numericRanges: Map<string, NumericRangeStats>;
   sizeBuckets: DocumentSizeBucket[];
   keyFields: {
     _id: KeyFieldConfig;
@@ -139,22 +167,39 @@ export interface XGenArrayLen {
   strategy: 'minmax' | 'percentile';
 }
 
+export interface XGenNumericRange {
+  mean: number;
+  median: number;
+  p95: number;
+  type: 'integer' | 'float';
+  allPositive: boolean;
+}
+
 export interface XGenExtensions {
   key?: boolean;
   mongoType?: string;
   arrayLen?: XGenArrayLen;
+  numericRange?: XGenNumericRange;
   sizeWeight?: number;
 }
 
 export interface GenerationSchemaProperty {
   type: string | string[];
   format?: string;
+  minimum?: number;
+  maximum?: number;
   items?: GenerationSchemaProperty;
   properties?: Record<string, GenerationSchemaProperty>;
   required?: string[];
+  additionalProperties?: boolean;
   minItems?: number;
   maxItems?: number;
   'x-gen'?: XGenExtensions;
+  'x-dynamic-keys'?: {
+    enabled: boolean;
+    metadata: DynamicKeyMetadata;
+    valueSchema: DynamicKeyValueSchema;
+  };
 }
 
 export interface GenerationSchema {

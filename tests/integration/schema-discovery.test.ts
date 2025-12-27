@@ -178,10 +178,14 @@ describe('Phase 5: Schema Discovery Integration', () => {
     expect(fieldPaths.has('profile.bio')).toBe(true);
     expect(fieldPaths.has('profile.location')).toBe(true);
 
-    // Get array field paths with observed lengths
+    // Get array field paths with length frequency distributions
     const arrayPaths = getArrayFieldPaths(inferredSchema);
     expect(arrayPaths.has('tags')).toBe(true);
-    expect(arrayPaths.get('tags')).toBeDefined();
+    const tagsDistribution = arrayPaths.get('tags');
+    expect(tagsDistribution).toBeDefined();
+    // Verify it's a frequency distribution (length → count mapping)
+    expect(typeof tagsDistribution).toBe('object');
+    expect(Object.keys(tagsDistribution!).length).toBeGreaterThan(0);
 
     /**
      * STEP 5: Profile constraints (array stats, size buckets)
@@ -204,11 +208,11 @@ describe('Phase 5: Schema Discovery Integration', () => {
     // Verify array statistics
     const tagsStats = constraints.arrayStats.get('tags');
     expect(tagsStats).toBeDefined();
-    expect(tagsStats?.minLen).toBeGreaterThanOrEqual(0);
-    expect(tagsStats?.maxLen).toBeGreaterThan(0);
-    expect(tagsStats?.p50Len).toBeDefined();
-    expect(tagsStats?.p90Len).toBeDefined();
-    expect(tagsStats?.p99Len).toBeDefined();
+    expect(tagsStats?.stats.min).toBeGreaterThanOrEqual(0);
+    expect(tagsStats?.stats.max).toBeGreaterThan(0);
+    expect(tagsStats?.stats.median).toBeDefined();
+    expect(tagsStats?.stats.p95).toBeDefined();
+    expect(tagsStats?.distribution).toBeDefined();
 
     /**
      * STEP 6: Build x-gen vendor extensions
@@ -291,6 +295,19 @@ describe('Phase 5: Schema Discovery Integration', () => {
     expect(profileProperty.properties?.bio).toBeDefined();
     expect(profileProperty.properties?.location).toBeDefined();
 
+    // Verify age numeric field has minimum/maximum constraints and x-gen.numericRange extension
+    const ageProperty = generationSchema.properties.age;
+    expect(ageProperty).toBeDefined();
+    expect(ageProperty.type).toBe('number');
+    expect(ageProperty.minimum).toBeDefined();
+    expect(ageProperty.maximum).toBeDefined();
+    expect(ageProperty.minimum).toBe(25); // Min age from test data
+    expect(ageProperty.maximum).toBe(35); // Max age from test data
+    expect(ageProperty['x-gen']?.numericRange).toBeDefined();
+    expect(ageProperty['x-gen']?.numericRange?.mean).toBeGreaterThan(0);
+    expect(ageProperty['x-gen']?.numericRange?.type).toBe('integer');
+    expect(ageProperty['x-gen']?.numericRange?.allPositive).toBe(true);
+
     /**
      * STEP 8: Verify complete workflow produces valid artifacts
      */
@@ -301,7 +318,7 @@ describe('Phase 5: Schema Discovery Integration', () => {
     // Verify generation schema is ready for json-schema-faker
     expect(generationSchema.properties._id.format).toBe('objectid');
     expect(generationSchema.properties.email.type).toBe('string');
-    expect(generationSchema.additionalProperties).toBe(true);
+    expect(generationSchema.additionalProperties).toBe(false); // Prevent random properties
   });
 
   it('demonstrates CLI programmatic usage', async () => {

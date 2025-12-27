@@ -8,6 +8,7 @@ MongoForge generates high-volume synthetic MongoDB documents that preserve struc
 
 **Key Features**:
 - Generate millions of test documents without exposing production data
+- **Dynamic key detection** for objects with highly variable keys (UUID-indexed, feature flags, etc.)
 - Preserve document size and array length distributions for realistic load testing
 - Reproducible generation with seed control (byte-identical output)
 - High throughput (10,000+ docs/second)
@@ -126,6 +127,92 @@ mongoforge generate \
   --custom-generators ./custom-generators.js
 ```
 
+## Dynamic Key Detection
+
+MongoForge automatically detects objects with highly variable string keys (like UUID-indexed objects or dynamic configuration maps) and represents them compactly instead of enumerating every possible key.
+
+### When to Use Dynamic Keys
+
+Dynamic key detection is ideal for:
+- **UUID/ObjectId-indexed objects**: `{ "550e8400-...": {...}, "a1b2c3d4-...": {...} }`
+- **User-generated keys**: Session storage, feature flags, user preferences
+- **Highly variable keys**: Objects where key names change frequently across documents
+- **Large key sets**: Objects with 50+ unique keys across your dataset
+
+### Benefits
+
+- **Compact schemas**: Avoid massive JSON schemas with thousands of enumerated properties
+- **Realistic generation**: Generate documents with appropriate key counts matching your production distribution
+- **Pattern preservation**: Synthetic keys match the format of your production keys (UUID, ObjectId, numeric IDs, etc.)
+
+### Quick Example
+
+**Inference with Dynamic Keys**:
+```bash
+mongoforge infer \
+  --source-uri mongodb://localhost:27017 \
+  --source-db production \
+  --source-collection sessions \
+  --sample-size 10000 \
+  --dynamic-key-threshold 50 \
+  --output-dir ./schemas
+```
+
+The inferencer will detect objects with 50+ unique keys and create an `x-dynamic-keys` annotation in the schema instead of enumerating all keys.
+
+**Generation with Dynamic Keys**:
+```bash
+mongoforge generate \
+  --generation-schema ./schemas/generation.schema.json \
+  --constraints ./schemas/constraints.json \
+  --doc-count 100000 \
+  --output-path ./output/synthetic-sessions.ndjson
+```
+
+Generated documents will have:
+- Realistic key counts (sampled from observed distribution)
+- Synthetic key names matching detected patterns (UUID, ObjectId, etc.)
+- Values matching the inferred value schema
+
+### Configuration
+
+**Adjust Detection Threshold**:
+```bash
+# Detect dynamic keys with only 20+ unique keys
+mongoforge infer ... --dynamic-key-threshold 20
+
+# Disable dynamic key detection entirely
+mongoforge infer ... --no-dynamic-keys
+```
+
+**Supported Key Patterns**:
+- UUID (v4): `550e8400-e29b-41d4-a716-446655440000`
+- MongoDB ObjectId: `507f1f77bcf86cd799439011`
+- ULID: `01ARZ3NDEKTSV4RRFFQ69G5FAV`
+- Numeric IDs: `123456789`
+- Prefixed IDs: `user_abc123`, `order_xyz456`
+- Custom patterns: Detected via regex matching
+
+**Schema Annotation Example**:
+```json
+{
+  "type": "object",
+  "x-dynamic-keys": {
+    "enabled": true,
+    "metadata": {
+      "pattern": "UUID",
+      "confidence": 0.95,
+      "countDistribution": { "10": 45, "15": 35, "20": 20 },
+      "exampleKeys": ["550e8400-...", "a1b2c3d4-..."]
+    },
+    "valueSchema": {
+      "types": ["object"],
+      "schemas": [{ "type": "object", "properties": {...} }]
+    }
+  }
+}
+```
+
 ## MongoDB Type Mappings
 
 MongoForge normalizes MongoDB-specific types to JSON Schema-compatible formats during inference, then restores them during generation:
@@ -144,10 +231,16 @@ MongoForge normalizes MongoDB-specific types to JSON Schema-compatible formats d
 
 ## Documentation
 
+### Feature 001: MongoDB Document Generation
 - **Quickstart Guide**: [specs/001-mongodb-doc-gen/quickstart.md](specs/001-mongodb-doc-gen/quickstart.md)
 - **CLI Reference**: [specs/001-mongodb-doc-gen/contracts/cli-commands.md](specs/001-mongodb-doc-gen/contracts/cli-commands.md)
 - **Data Model**: [specs/001-mongodb-doc-gen/data-model.md](specs/001-mongodb-doc-gen/data-model.md)
 - **Implementation Plan**: [specs/001-mongodb-doc-gen/plan.md](specs/001-mongodb-doc-gen/plan.md)
+
+### Feature 002: Dynamic Key Inference
+- **Specification**: [specs/002-dynamic-key-inference/spec.md](specs/002-dynamic-key-inference/spec.md)
+- **Implementation Plan**: [specs/002-dynamic-key-inference/plan.md](specs/002-dynamic-key-inference/plan.md)
+- **Data Model**: [specs/002-dynamic-key-inference/data-model.md](specs/002-dynamic-key-inference/data-model.md)
 
 ## Requirements
 

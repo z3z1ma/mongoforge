@@ -1,0 +1,77 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mongoforge.dev/schemas/dynamic-key-value-schema.json",
+  "title": "Dynamic Key Value Schema",
+  "description": "Schema information for values associated with dynamic keys",
+  "type": "object",
+  "required": [
+    "types",
+    "typeProbabilities",
+    "schemas",
+    "isUniformType",
+    "dominantType"
+  ],
+  "properties": {
+    "types": {
+      "type": "array",
+      "description": "Observed value types (e.g., 'string', 'number', 'object', 'array')",
+      "items": {
+        "type": "string",
+        "enum": ["null", "boolean", "number", "string", "array", "object"]
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "typeProbabilities": {
+      "type": "array",
+      "description": "Probability of each type (same order as types array, must sum to 1.0)",
+      "items": {
+        "type": "number",
+        "minimum": 0.0,
+        "maximum": 1.0,
+        "exclusiveMinimum": 0.0
+      },
+      "minItems": 1
+    },
+    "schemas": {
+      "type": "array",
+      "description": "JSON Schema for each type (same order as types array)",
+      "items": {
+        "type": "object",
+        "description": "JSON Schema draft-07 object"
+      },
+      "minItems": 1
+    },
+    "isUniformType": {
+      "type": "boolean",
+      "description": "Whether all observed values were of the same type"
+    },
+    "dominantType": {
+      "type": "string",
+      "description": "Most common type (the type with highest probability)",
+      "enum": ["null", "boolean", "number", "string", "array", "object"]
+    }
+  },
+  "allOf": [
+    {
+      "description": "Arrays must be same length",
+      "if": {
+        "properties": {
+          "types": {
+            "minItems": 1
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "typeProbabilities": {
+            "minItems": 1
+          },
+          "schemas": {
+            "minItems": 1
+          }
+        }
+      }
+    }
+  ]
+}
