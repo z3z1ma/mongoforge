@@ -38,6 +38,7 @@ validation-report.json
 constraints.json
 generation.schema.json
 inferred.schema.json
+mongoforge.local.yaml
 
 # Logs
 *.log
