@@ -86,21 +86,29 @@ const PERSON_NAME_DETECTOR: SemanticDetector = {
 };
 
 /**
- * IP Address detector
+ * IPv4 Address detector
  */
-const IP_ADDRESS_DETECTOR: SemanticDetector = {
-  name: "IPAddress",
-  fieldPatterns: [/ip_?addr/i, /ip_?address/i, /client_ip/i],
-  valueValidator: (v) => {
-    if (typeof v !== "string") return false;
-    // IPv4: 192.168.1.1
-    const ipv4 = /^(\d{1,3}\.){3}\d{1,3}$/;
-    // IPv6: 2001:db8::1
-    const ipv6 = /^([0-9a-f]{1,4}:){7}[0-9a-f]{1,4}$/i;
-    return ipv4.test(v) || ipv6.test(v);
-  },
+const IPV4_DETECTOR: SemanticDetector = {
+  name: "IPv4",
+  fieldPatterns: [/ip_?addr/i, /ip_?address/i, /ipv4/i, /client_ip/i],
+  valueValidator: (v) => typeof v === "string" && /^(\d{1,3}\.){3}\d{1,3}$/.test(v),
   minConfidence: 0.9,
   priority: 6,
+};
+
+/**
+ * IPv6 Address detector
+ */
+const IPV6_DETECTOR: SemanticDetector = {
+  name: "IPv6",
+  fieldPatterns: [/ip_?addr/i, /ip_?address/i, /ipv6/i, /client_ip/i],
+  valueValidator: (v) =>
+    typeof v === "string" &&
+    /^(?:(?:[a-fA-F\d]{1,4}:){7}(?:[a-fA-F\d]{1,4}|:)|(?:[a-fA-F\d]{1,4}:){6}(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]\d|\d)(?:\.(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]\d|\d)){3}|:[a-fA-F\d]{1,4}|:)|(?:[a-fA-F\d]{1,4}:){5}(?::(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]\d|\d)(?:\.(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]\d|\d)){3}|(?::[a-fA-F\d]{1,4}){1,2}|:)|(?:[a-fA-F\d]{1,4}:){4}(?:(?::[a-fA-F\d]{1,4}){0,1}:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]\d|\d)(?:\.(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]\d|\d)){3}|(?::[a-fA-F\d]{1,4}){1,3}|:)|(?:[a-fA-F\d]{1,4}:){3}(?:(?::[a-fA-F\d]{1,4}){0,2}:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]\d|\d)(?:\.(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]\d|\d)){3}|(?::[a-fA-F\d]{1,4}){1,4}|:)|(?:[a-fA-F\d]{1,4}:){2}(?:(?::[a-fA-F\d]{1,4}){0,3}:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]\d|\d)(?:\.(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]\d|\d)){3}|(?::[a-fA-F\d]{1,4}){1,5}|:)|(?:[a-fA-F\d]{1,4}:){1}(?:(?::[a-fA-F\d]{1,4}){0,4}:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]\d|\d)(?:\.(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]\d|\d)){3}|(?::[a-fA-F\d]{1,4}){1,6}|:)|(?::(?:(?::[a-fA-F\d]{1,4}){0,5}:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]\d|\d)(?:\.(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]\d|\d)){3}|(?::[a-fA-F\d]{1,4}){1,7}|:)))(?:%[0-9a-zA-Z]{1,})?$/i.test(
+      v,
+    ),
+  minConfidence: 0.9,
+  priority: 7,
 };
 
 /**
@@ -112,7 +120,8 @@ export const BUILTIN_DETECTORS: SemanticDetector[] = [
   UUID_DETECTOR,
   PHONE_DETECTOR,
   PERSON_NAME_DETECTOR,
-  IP_ADDRESS_DETECTOR,
+  IPV4_DETECTOR,
+  IPV6_DETECTOR,
 ];
 
 /**

@@ -18,10 +18,14 @@ import { createSizeBuckets } from "../profiler/size-buckets.js";
  */
 export function compareArrayLengths(
   sampleStats: Map<string, ArrayLengthStats>,
-  generatedDocuments: any[],
+  generatedDocuments: any[] | Map<string, ArrayLengthStats>,
   tolerance: number = 0.1, // 10% tolerance
 ): Record<string, ArrayLengthComparison> {
-  const generatedStats = calculateAllArrayStats(generatedDocuments);
+  const generatedStats =
+    generatedDocuments instanceof Map
+      ? generatedDocuments
+      : calculateAllArrayStats(generatedDocuments as any[]);
+
   const comparison: Record<string, ArrayLengthComparison> = {};
 
   // Compare each array field from sample
@@ -57,7 +61,6 @@ export function compareArrayLengths(
 
     // Calculate percentage deviations for each percentile
     // T082: Implement deviation calculation with tolerances (10% array)
-    // Updated to use new frequency distribution format (Feature: 002-dynamic-key-inference)
     const deviationP50 = calculatePercentageDeviation(
       sampleStat.stats.median,
       generatedStat.stats.median,
@@ -110,23 +113,30 @@ export function compareArrayLengths(
  */
 export function compareDocumentSizes(
   sampleBuckets: DocumentSizeBucket[],
-  generatedDocuments: any[],
+  generatedDocuments: any[] | DocumentSizeBucket[],
   tolerance: number = 0.2, // 20% tolerance
 ): {
   buckets: SizeBucketComparison[];
 } {
-  // Extract size buckets from generated documents using same proxy type and bucket configuration
-  const sizeProxy = sampleBuckets[0]?.sizeProxy ?? "leafFieldCount";
-  const bucketConfig = sampleBuckets.map((b) => ({
-    id: b.bucketId,
-    min: b.sizeRange.min,
-    max: b.sizeRange.max,
-  }));
-  const generatedBuckets = createSizeBuckets(
-    generatedDocuments,
-    sizeProxy,
-    bucketConfig,
-  );
+  let generatedBuckets: DocumentSizeBucket[];
+
+  if (
+    Array.isArray(generatedDocuments) &&
+    generatedDocuments.length > 0 &&
+    "bucketId" in (generatedDocuments[0] as any)
+  ) {
+    generatedBuckets = generatedDocuments as DocumentSizeBucket[];
+  } else {
+    // Extract size buckets from generated documents using same proxy type and bucket configuration
+    const docs = generatedDocuments as any[];
+    const sizeProxy = sampleBuckets[0]?.sizeProxy ?? "leafFieldCount";
+    const bucketConfig = sampleBuckets.map((b) => ({
+      id: b.bucketId,
+      min: b.sizeRange.min,
+      max: b.sizeRange.max,
+    }));
+    generatedBuckets = createSizeBuckets(docs, sizeProxy, bucketConfig);
+  }
 
   const comparisons: SizeBucketComparison[] = [];
 

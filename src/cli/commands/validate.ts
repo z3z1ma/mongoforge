@@ -7,7 +7,7 @@ import { Command } from "commander";
 import { createReadStream } from "fs";
 import { readFile, writeFile } from "fs/promises";
 import * as readline from "readline";
-import { validateDocuments } from "../../lib/validator/index.js";
+import { validateDocumentStream } from "../../lib/validator/index.js";
 import {
   GenerationSchema,
   ConstraintsProfile,
@@ -15,13 +15,18 @@ import {
 } from "../../types/data-model.js";
 import { normalizeArrayStats } from "../../lib/profiler/array-stats.js";
 
-/**
- * T085: Implement NDJSON input reader
- * Reads NDJSON documents from file or stdin
- */
-async function readNDJSONDocuments(inputPath: string): Promise<any[]> {
-  const documents: any[] = [];
+import {
+  MongoForgeError,
+  ErrorCode,
+  FileIOError,
+  ValidationError,
+} from "../../utils/errors.js";
 
+/**
+ * T085: Implement NDJSON input reader as an async generator
+ * Yields documents from file or stdin
+ */
+async function* streamNDJSONDocuments(inputPath: string): AsyncIterableIterator<any> {
   // Handle stdin vs file
   const input =
     inputPath === "stdin" || inputPath === "-"
@@ -38,16 +43,16 @@ async function readNDJSONDocuments(inputPath: string): Promise<any[]> {
     if (trimmed === "") continue; // Skip empty lines
 
     try {
-      const doc = JSON.parse(trimmed);
-      documents.push(doc);
+      yield JSON.parse(trimmed);
     } catch (err) {
-      throw new Error(
-        `Failed to parse NDJSON line: ${trimmed.substring(0, 100)}... - ${err instanceof Error ? err.message : String(err)}`,
+      throw new MongoForgeError(
+        ErrorCode.INPUT_READ_ERROR,
+        `Failed to parse NDJSON line: ${trimmed.substring(0, 100)}...`,
+        undefined,
+        { cause: err },
       );
     }
   }
-
-  return documents;
 }
 
 /**
@@ -58,30 +63,15 @@ async function loadJSONFile<T>(path: string, description: string): Promise<T> {
     const content = await readFile(path, "utf8");
     return JSON.parse(content) as T;
   } catch (err) {
-    if (err instanceof Error && "code" in err && err.code === "ENOENT") {
-      throw new Error(`${description} not found at: ${path}`);
+    if (err instanceof Error && "code" in (err as any) && (err as any).code === "ENOENT") {
+      throw new FileIOError(`${description} not found at: ${path}`, undefined, { cause: err });
     }
-    throw new Error(
-      `Failed to load ${description} from ${path}: ${err instanceof Error ? err.message : String(err)}`,
+    throw new FileIOError(
+      `Failed to load ${description} from ${path}`,
+      undefined,
+      { cause: err },
     );
   }
-}
-
-/**
- * T086: Implement validation report serializer (JSON output)
- * Serializes ValidationReport to JSON, handling Map objects
- */
-function serializeValidationReport(report: ValidationReport): string {
-  // Convert Map to plain object for JSON serialization
-  const serializable = {
-    ...report,
-    keyUniqueness: {
-      _id: report.keyUniqueness._id,
-      additionalKeys: Object.fromEntries(report.keyUniqueness.additionalKeys),
-    },
-  };
-
-  return JSON.stringify(serializable, null, 2);
 }
 
 /**
@@ -109,27 +99,12 @@ function createSuccessResponse(report: ValidationReport): any {
     phase: "validation",
     report: {
       ...report,
+      keyUniqueness: {
+        _id: report.keyUniqueness._id,
+        additionalKeys: Object.fromEntries(report.keyUniqueness.additionalKeys),
+      },
       // Add overall pass/fail flag
       overallPassed,
-    },
-  };
-}
-
-/**
- * Create error response for CLI output
- */
-function createErrorResponse(
-  code: string,
-  message: string,
-  details?: string,
-): any {
-  return {
-    status: "error",
-    phase: "validation",
-    error: {
-      code,
-      message,
-      ...(details ? { details } : {}),
     },
   };
 }
@@ -185,23 +160,21 @@ export function createValidateCommand(): Command {
           ),
         };
 
-        // Read input documents
-        const documents = await readNDJSONDocuments(options.inputPath);
-
-        if (documents.length === 0) {
-          throw new Error("No documents found in input");
-        }
-
         // Parse tolerances
         const arrayLengthTolerance =
           parseFloat(options.toleranceArrayLen) / 100;
         const sizeBucketTolerance = parseFloat(options.toleranceDocSize) / 100;
 
-        // Validate documents
-        const report = validateDocuments(documents, schema, constraints, {
+        // Stream and validate documents
+        const documentStream = streamNDJSONDocuments(options.inputPath);
+        const report = await validateDocumentStream(documentStream, schema, constraints, {
           arrayLengthTolerance,
           sizeBucketTolerance,
         });
+
+        if (report.schemaConformance.totalDocuments === 0) {
+          throw new Error("No documents found in input");
+        }
 
         // Create success response
         const response = createSuccessResponse(report);
@@ -219,25 +192,27 @@ export function createValidateCommand(): Command {
         const overallPassed = response.report.overallPassed;
         process.exit(overallPassed ? 0 : 1);
       } catch (error) {
-        const err = error as Error;
+        let forgeError: MongoForgeError;
 
-        // Determine error code
-        let errorCode = "GENERAL_ERROR";
-        let exitCode = 1;
-
-        if (err.message.includes("not found")) {
-          errorCode = "FILE_IO_ERROR";
-          exitCode = 4;
-        } else if (err.message.includes("Failed to load")) {
-          errorCode = "SCHEMA_LOAD_ERROR";
-          exitCode = 4;
-        } else if (err.message.includes("Failed to parse")) {
-          errorCode = "INPUT_READ_ERROR";
-          exitCode = 4;
+        if (error instanceof MongoForgeError) {
+          forgeError = error;
+        } else {
+          forgeError = new MongoForgeError(
+            ErrorCode.GENERAL_ERROR,
+            error instanceof Error ? error.message : String(error),
+            undefined,
+            { cause: error },
+          );
         }
 
-        const errorResponse = createErrorResponse(errorCode, err.message);
+        const errorResponse = forgeError.toResponse("validation");
         console.error(JSON.stringify(errorResponse, null, 2));
+
+        // Determine exit code
+        let exitCode = 1;
+        if (forgeError.code === ErrorCode.FILE_IO_ERROR) exitCode = 4;
+        if (forgeError.code === ErrorCode.INPUT_READ_ERROR) exitCode = 4;
+
         process.exit(exitCode);
       }
     });

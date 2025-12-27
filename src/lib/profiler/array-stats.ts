@@ -8,7 +8,84 @@ import {
   calculateFrequencies,
   calculateDistributionStats,
   getPercentile,
+  updateFrequencies,
 } from "../../utils/frequency-map.js";
+import { FrequencyDistribution } from "../../types/dynamic-keys.js";
+
+/**
+ * Accumulator for incremental array length statistics profiling
+ */
+export class ArrayStatsAccumulator {
+  private arrayDistributions = new Map<string, FrequencyDistribution>();
+  private arraysAnalyzed = new Map<string, number>();
+
+  /**
+   * Add a document to the accumulation
+   */
+  addDocument(doc: any): void {
+    this.traverse(doc);
+  }
+
+  /**
+   * Recursive traversal to find arrays and record their lengths
+   */
+  private traverse(obj: any, pathPrefix = ""): void {
+    if (obj === null || typeof obj !== "object") return;
+
+    for (const [key, value] of Object.entries(obj)) {
+      const fieldPath = pathPrefix ? `${pathPrefix}.${key}` : key;
+
+      // Skip metadata fields
+      if (key.startsWith("__")) continue;
+
+      if (Array.isArray(value)) {
+        // Record array length
+        let distribution = this.arrayDistributions.get(fieldPath);
+        if (!distribution) {
+          distribution = {};
+          this.arrayDistributions.set(fieldPath, distribution);
+        }
+        updateFrequencies(distribution, value.length);
+        this.arraysAnalyzed.set(
+          fieldPath,
+          (this.arraysAnalyzed.get(fieldPath) || 0) + 1,
+        );
+
+        // Traverse array elements if they are objects
+        value.forEach((item) => {
+          if (
+            typeof item === "object" &&
+            item !== null &&
+            !Array.isArray(item)
+          ) {
+            this.traverse(item, `${fieldPath}[]`);
+          }
+        });
+      } else if (typeof value === "object" && value !== null) {
+        // Traverse nested objects
+        this.traverse(value, fieldPath);
+      }
+    }
+  }
+
+  /**
+   * Get calculated statistics for all tracked array fields
+   */
+  getStats(): Map<string, ArrayLengthStats> {
+    const stats = new Map<string, ArrayLengthStats>();
+
+    for (const [fieldPath, distribution] of this.arrayDistributions.entries()) {
+      stats.set(fieldPath, {
+        fieldPath,
+        distribution,
+        stats: calculateDistributionStats(distribution),
+        arraysAnalyzed: this.arraysAnalyzed.get(fieldPath) || 0,
+      });
+    }
+
+    return stats;
+  }
+}
 
 /**
  * Extract array length statistics for a field path

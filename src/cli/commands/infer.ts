@@ -12,8 +12,18 @@ import { Normalizer } from "../../lib/normalizer/index.js";
 import { Inferencer } from "../../lib/inferencer/index.js";
 import { Profiler } from "../../lib/profiler/index.js";
 import { Synthesizer } from "../../lib/synthesizer/index.js";
+import {
+  GenerationSchema,
+  ConstraintsProfile,
+  TypeHint,
+} from "../../types/data-model.js";
 import { logger } from "../../utils/logger.js";
 import { loadDynamicKeyConfig } from "../../utils/config-loader.js";
+import {
+  MongoForgeError,
+  ErrorCode,
+  ConfigError,
+} from "../../utils/errors.js";
 
 /**
  * Merge CLI options with config file
@@ -138,6 +148,187 @@ function validateInferConfig(config: InferConfig): void {
 }
 
 /**
+ * Step 1: Sample documents from MongoDB
+ */
+async function sampleFromMongo(config: InferConfig): Promise<any[]> {
+  logger.info("Sampling documents from MongoDB");
+
+  // Map CLI strategy to sampler strategy
+  const samplingStrategy =
+    config.sampling.strategy === "first-n"
+      ? ("firstN" as const)
+      : config.sampling.strategy === "time-windowed"
+        ? ("timeWindowed" as const)
+        : ("random" as const);
+
+  const samplerOptions = {
+    uri: config.source.uri,
+    database: config.source.database,
+    collection: config.source.collection,
+    sampleSize: config.sampling.sampleSize,
+    strategy: samplingStrategy,
+    timeWindow: config.sampling.timeField
+      ? {
+          field: config.sampling.timeField,
+          start: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // Default: last 30 days
+          end: new Date(),
+        }
+      : undefined,
+  };
+
+  const sampler = new Sampler(samplerOptions);
+  const samplerResult = await sampler.sample(samplerOptions);
+
+  logger.info("Sampling complete", { count: samplerResult.documents.length });
+  return samplerResult.documents;
+}
+
+/**
+ * Step 2: Normalize documents
+ */
+function normalizeDocuments(samples: any[]): {
+  normalized: any[];
+  typeHints: Map<string, TypeHint>;
+} {
+  logger.info("Normalizing documents");
+  const normalizer = new Normalizer();
+  const { documents: normalized, typeHints } = normalizer.normalize(samples);
+
+  logger.info("Normalization complete", {
+    count: normalized.length,
+    uniqueTypeHints: typeHints.size,
+  });
+
+  return { normalized, typeHints };
+}
+
+/**
+ * Step 3: Infer schema with dynamic key detection
+ */
+async function performSchemaInference(
+  normalized: any[],
+  dynamicKeyConfig: any,
+): Promise<any> {
+  logger.info("Inferring schema");
+  const inferencer = new Inferencer({
+    semanticTypes: true,
+    storeValues: true,
+    dynamicKeyDetection: dynamicKeyConfig,
+  });
+
+  const result = await inferencer.infer(normalized);
+
+  logger.info("Schema inference complete", {
+    ...result.metadata,
+    dynamicKeysDetected: result.metadata.dynamicKeysDetected || 0,
+  });
+
+  return result;
+}
+
+/**
+ * Step 4: Profile constraints and handle dynamic key stripping
+ */
+function profileConstraints(
+  normalized: any[],
+  config: InferConfig,
+  dynamicKeyAnalyses?: Map<string, any>,
+): any {
+  logger.info("Profiling constraints");
+  const profiler = new Profiler({
+    arrayLenPolicy: config.constraints.arrayLenPolicy,
+    percentiles: config.constraints.percentiles,
+    clampRange: config.constraints.clampRange,
+    sizeProxy: config.constraints.sizeProxy,
+  });
+
+  const { profile: constraints, metadata } = profiler.profile(normalized);
+
+  // Strip array stats for paths nested under dynamic key fields to prevent bloat
+  if (dynamicKeyAnalyses && dynamicKeyAnalyses.size > 0) {
+    const dynamicKeyPaths = new Set(
+      Array.from(dynamicKeyAnalyses.entries())
+        .filter(([_, analysis]) => analysis.isDynamic)
+        .map(([path, _]) => path),
+    );
+
+    let removedCount = 0;
+    for (const [arrayPath, _] of constraints.arrayStats) {
+      for (const dynamicPath of dynamicKeyPaths) {
+        if (arrayPath.startsWith(dynamicPath + ".")) {
+          constraints.arrayStats.delete(arrayPath);
+          removedCount++;
+          break;
+        }
+      }
+    }
+
+    if (removedCount > 0) {
+      logger.info("Stripped array stats nested under dynamic key fields", {
+        removedEntries: removedCount,
+        remainingEntries: constraints.arrayStats.size,
+      });
+    }
+  }
+
+  // Apply additional key field configuration
+  for (const keyField of config.keys.keyFields) {
+    constraints.keyFields.additionalKeys.push({
+      fieldPath: keyField,
+      type: "string",
+      enforceUniqueness: config.keys.enforceUniqueKeys,
+      uniquenessScope: config.keys.uniquenessScope,
+    });
+  }
+
+  logger.info("Profiling complete", metadata);
+  return { constraints, metadata };
+}
+
+/**
+ * Step 5: Synthesize generation schema
+ */
+function synthesizeGenerationSchema(
+  inferredSchema: any,
+  constraints: any,
+  typeHints: Map<string, TypeHint>,
+  dynamicKeyAnalyses?: Map<string, any>,
+): any {
+  logger.info("Synthesizing generation schema");
+  const synthesizer = new Synthesizer({
+    enforceRequired: true,
+    includeMetadata: true,
+  });
+
+  const result = synthesizer.synthesize(
+    inferredSchema,
+    constraints,
+    typeHints,
+    dynamicKeyAnalyses,
+  );
+
+  logger.info("Generation schema synthesized", result.metadata);
+  return result;
+}
+
+/**
+ * Helper to write JSON artifact to disk
+ */
+function writeJsonArtifact(path: string, data: any): void {
+  // Handle Map and other non-JSON objects
+  const serializable = JSON.parse(
+    JSON.stringify(data, (key, value) => {
+      if (value instanceof Map) {
+        return Object.fromEntries(value);
+      }
+      return value;
+    }),
+  );
+
+  writeFileSync(path, JSON.stringify(serializable, null, 2), "utf-8");
+}
+
+/**
  * Execute infer command
  */
 async function executeInfer(options: InferCommandOptions): Promise<void> {
@@ -156,7 +347,7 @@ async function executeInfer(options: InferCommandOptions): Promise<void> {
       configFile = fullConfig.infer as InferConfig;
     }
 
-    // Merge configurations
+    // Merge and validate configurations
     const config = mergeInferConfig(options, configFile);
     validateInferConfig(config);
 
@@ -165,49 +356,16 @@ async function executeInfer(options: InferCommandOptions): Promise<void> {
     // Create output directory
     mkdirSync(config.output.dir, { recursive: true });
 
-    // Step 1: Sample documents from MongoDB
-    logger.info("Sampling documents from MongoDB");
+    // Step 1: Sampling
+    const samples = await sampleFromMongo(config);
+    if (samples.length === 0) {
+      throw new Error("No documents found in the source collection");
+    }
 
-    // Map CLI strategy to sampler strategy
-    const samplingStrategy =
-      config.sampling.strategy === "first-n"
-        ? ("firstN" as const)
-        : config.sampling.strategy === "time-windowed"
-          ? ("timeWindowed" as const)
-          : ("random" as const);
+    // Step 2: Normalization
+    const { normalized, typeHints } = normalizeDocuments(samples);
 
-    const samplerOptions = {
-      uri: config.source.uri,
-      database: config.source.database,
-      collection: config.source.collection,
-      sampleSize: config.sampling.sampleSize,
-      strategy: samplingStrategy,
-      timeWindow: config.sampling.timeField
-        ? {
-            field: config.sampling.timeField,
-            start: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // Default: last 30 days
-            end: new Date(),
-          }
-        : undefined,
-    };
-
-    const sampler = new Sampler(samplerOptions);
-    const samplerResult = await sampler.sample(samplerOptions);
-
-    const samples = samplerResult.documents;
-    logger.info("Sampling complete", { count: samples.length });
-
-    // Step 2: Normalize documents
-    logger.info("Normalizing documents");
-    const normalizer = new Normalizer();
-    const { documents: normalized, typeHints } = normalizer.normalize(samples);
-
-    logger.info("Normalization complete", {
-      count: normalized.length,
-      uniqueTypeHints: typeHints.size,
-    });
-
-    // Step 3: Load dynamic key detection configuration
+    // Step 3: Schema Inference
     const dynamicKeyCliOptions = {
       dynamicKeyThreshold: options.dynamicKeyThreshold,
       noDynamicKeys: options.noDynamicKeys,
@@ -220,126 +378,42 @@ async function executeInfer(options: InferCommandOptions): Promise<void> {
       dynamicKeyConfigSection,
     );
 
-    // Step 4: Infer schema with dynamic key detection
-    logger.info("Inferring schema");
-    const inferencer = new Inferencer({
-      semanticTypes: true,
-      storeValues: true,
-      dynamicKeyDetection: dynamicKeyConfig,
-    });
     const {
       schema: inferredSchema,
       metadata: inferMeta,
       dynamicKeyAnalyses,
-    } = await inferencer.infer(normalized);
+    } = await performSchemaInference(normalized, dynamicKeyConfig);
 
-    logger.info("Schema inference complete", {
-      ...inferMeta,
-      dynamicKeysDetected: inferMeta.dynamicKeysDetected || 0,
-    });
-
-    // Write inferred schema
     const inferredSchemaPath = resolve(
       config.output.dir,
       "inferred.schema.json",
     );
-    writeFileSync(
-      inferredSchemaPath,
-      JSON.stringify(inferredSchema, null, 2),
-      "utf-8",
+    writeJsonArtifact(inferredSchemaPath, inferredSchema);
+
+    // Step 4: Constraints Profiling
+    const { constraints, metadata: profileMeta } = profileConstraints(
+      normalized,
+      config,
+      dynamicKeyAnalyses,
     );
 
-    // Step 5: Profile constraints
-    logger.info("Profiling constraints");
-    const profiler = new Profiler({
-      arrayLenPolicy: config.constraints.arrayLenPolicy,
-      percentiles: config.constraints.percentiles,
-      clampRange: config.constraints.clampRange,
-      sizeProxy: config.constraints.sizeProxy,
-    });
-    const { profile: constraints, metadata: profileMeta } =
-      profiler.profile(normalized);
-
-    logger.info("Profiling complete", profileMeta);
-
-    // Strip array stats for paths nested under dynamic key fields to prevent bloat
-    // For fields with dynamic keys, storing stats for individual nested keys is wasteful
-    if (dynamicKeyAnalyses && dynamicKeyAnalyses.size > 0) {
-      const dynamicKeyPaths = new Set(
-        Array.from(dynamicKeyAnalyses.entries())
-          .filter(([_, analysis]) => analysis.isDynamic)
-          .map(([path, _]) => path),
-      );
-
-      let removedCount = 0;
-      for (const [arrayPath, _] of constraints.arrayStats) {
-        for (const dynamicPath of dynamicKeyPaths) {
-          if (arrayPath.startsWith(dynamicPath + ".")) {
-            constraints.arrayStats.delete(arrayPath);
-            removedCount++;
-            break;
-          }
-        }
-      }
-
-      if (removedCount > 0) {
-        logger.info("Stripped array stats nested under dynamic key fields", {
-          removedEntries: removedCount,
-          remainingEntries: constraints.arrayStats.size,
-        });
-      }
-    }
-
-    // Apply additional key field configuration
-    for (const keyField of config.keys.keyFields) {
-      constraints.keyFields.additionalKeys.push({
-        fieldPath: keyField,
-        type: "string", // Infer from schema if needed
-        enforceUniqueness: config.keys.enforceUniqueKeys,
-        uniquenessScope: config.keys.uniquenessScope,
-      });
-    }
-
-    // Write constraints
     const constraintsPath = resolve(config.output.dir, "constraints.json");
-    // Convert Map to plain object for JSON serialization
-    const constraintsJson = {
-      ...constraints,
-      arrayStats: Object.fromEntries(constraints.arrayStats),
-      numericRanges: Object.fromEntries(constraints.numericRanges),
-    };
-    writeFileSync(
-      constraintsPath,
-      JSON.stringify(constraintsJson, null, 2),
-      "utf-8",
-    );
+    writeJsonArtifact(constraintsPath, constraints);
 
-    // Step 6: Synthesize generation schema
-    logger.info("Synthesizing generation schema");
-    const synthesizer = new Synthesizer({
-      enforceRequired: true,
-      includeMetadata: true,
-    });
+    // Step 5: Synthesis
     const { schema: generationSchema, metadata: synthMeta } =
-      synthesizer.synthesize(
+      synthesizeGenerationSchema(
         inferredSchema,
         constraints,
         typeHints,
         dynamicKeyAnalyses,
       );
 
-    logger.info("Generation schema synthesized", synthMeta);
-
-    // Write generation schema
     const generationSchemaPath = resolve(
       config.output.dir,
       "generation.schema.json",
     );
-    writeFileSync(
-      generationSchemaPath,
-      JSON.stringify(generationSchema, null, 2),
-      "utf-8",
-    );
+    writeJsonArtifact(generationSchemaPath, generationSchema);
 
     const duration = Date.now() - startTime;
 
@@ -364,26 +438,28 @@ async function executeInfer(options: InferCommandOptions): Promise<void> {
     console.log(JSON.stringify(result, null, 2));
     process.exit(0);
   } catch (error) {
-    const errorResult = {
-      status: "error",
-      phase: "discovery",
-      error: {
-        code:
-          error instanceof Error && error.message.includes("MongoDB")
-            ? "MONGO_CONNECTION_ERROR"
-            : "GENERAL_ERROR",
-        message: error instanceof Error ? error.message : String(error),
-        details:
-          error instanceof Error && error.cause
-            ? String(error.cause)
-            : undefined,
-      },
-    };
+    let forgeError: MongoForgeError;
 
-    console.error(JSON.stringify(errorResult, null, 2));
-    process.exit(
-      error instanceof Error && error.message.includes("config") ? 2 : 1,
-    );
+    if (error instanceof MongoForgeError) {
+      forgeError = error;
+    } else {
+      const isMongo = error instanceof Error && error.message.includes("MongoDB");
+      forgeError = new MongoForgeError(
+        isMongo ? ErrorCode.MONGO_CONNECTION_ERROR : ErrorCode.GENERAL_ERROR,
+        error instanceof Error ? error.message : String(error),
+        undefined,
+        { cause: error },
+      );
+    }
+
+    const errorResponse = forgeError.toResponse("discovery");
+    console.error(JSON.stringify(errorResponse, null, 2));
+
+    // Determine exit code
+    let exitCode = 1;
+    if (forgeError.code === ErrorCode.CONFIG_ERROR) exitCode = 2;
+
+    process.exit(exitCode);
   }
 }
 

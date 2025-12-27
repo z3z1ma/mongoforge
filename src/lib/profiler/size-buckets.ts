@@ -88,6 +88,56 @@ export function calculateSizeProxy(doc: any, proxyType: SizeProxyType): number {
 }
 
 /**
+ * Accumulator for incremental document size bucket profiling
+ */
+export class SizeBucketAccumulator {
+  private buckets: DocumentSizeBucket[];
+  private totalDocuments = 0;
+  private proxyType: SizeProxyType;
+
+  constructor(
+    proxyType: SizeProxyType,
+    bucketConfig: Array<{ id: string; min: number; max: number }>,
+  ) {
+    this.proxyType = proxyType;
+    this.buckets = bucketConfig.map((config) => ({
+      bucketId: config.id,
+      sizeRange: { min: config.min, max: config.max },
+      sizeProxy: proxyType,
+      count: 0,
+      probability: 0,
+    }));
+  }
+
+  /**
+   * Add a document to the accumulation
+   */
+  addDocument(doc: any): void {
+    const size = calculateSizeProxy(doc, this.proxyType);
+    this.totalDocuments++;
+
+    for (const bucket of this.buckets) {
+      if (size >= bucket.sizeRange.min && size <= bucket.sizeRange.max) {
+        bucket.count++;
+        break;
+      }
+    }
+  }
+
+  /**
+   * Get calculated buckets with updated probabilities
+   */
+  getBuckets(): DocumentSizeBucket[] {
+    if (this.totalDocuments === 0) return this.buckets;
+
+    return this.buckets.map((bucket) => ({
+      ...bucket,
+      probability: bucket.count / this.totalDocuments,
+    }));
+  }
+}
+
+/**
  * Create size buckets from documents
  */
 export function createSizeBuckets(

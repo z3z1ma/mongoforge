@@ -203,3 +203,92 @@ function getNestedValue(obj: any, path: string): any {
 
   return current;
 }
+
+/**
+ * Accumulator for incremental key uniqueness checking
+ */
+export class UniquenessAccumulator {
+  private idSet = new Set<string>();
+  private totalIds = 0;
+  private keySets = new Map<string, Set<string>>();
+  private totalKeys = new Map<string, number>();
+  private additionalKeyPaths: string[];
+
+  constructor(additionalKeyPaths: string[] = []) {
+    this.additionalKeyPaths = additionalKeyPaths;
+    for (const path of additionalKeyPaths) {
+      this.keySets.set(path, new Set<string>());
+      this.totalKeys.set(path, 0);
+    }
+  }
+
+  /**
+   * Add a document to the accumulation
+   */
+  addDocument(doc: any): void {
+    // Check _id
+    const id = doc._id;
+    if (id !== undefined && id !== null) {
+      this.totalIds++;
+      this.idSet.add(String(id));
+    }
+
+    // Check additional keys
+    for (const path of this.additionalKeyPaths) {
+      const value = getNestedValue(doc, path);
+      if (value !== undefined && value !== null) {
+        this.totalKeys.set(path, (this.totalKeys.get(path) || 0) + 1);
+        this.keySets.get(path)!.add(String(value));
+      }
+    }
+  }
+
+  /**
+   * Get uniqueness results
+   */
+  getResults(): {
+    _id: {
+      totalKeys: number;
+      uniqueKeys: number;
+      duplicates: number;
+      passed: boolean;
+    };
+    additionalKeys: Map<
+      string,
+      {
+        totalKeys: number;
+        uniqueKeys: number;
+        duplicates: number;
+        passed: boolean;
+      }
+    >;
+  } {
+    const additionalKeysResults = new Map();
+
+    for (const path of this.additionalKeyPaths) {
+      const total = this.totalKeys.get(path) || 0;
+      const unique = this.keySets.get(path)!.size;
+      const duplicates = total - unique;
+
+      additionalKeysResults.set(path, {
+        totalKeys: total,
+        uniqueKeys: unique,
+        duplicates,
+        passed: duplicates === 0,
+      });
+    }
+
+    const idUnique = this.idSet.size;
+    const idDuplicates = this.totalIds - idUnique;
+
+    return {
+      _id: {
+        totalKeys: this.totalIds,
+        uniqueKeys: idUnique,
+        duplicates: idDuplicates,
+        passed: idDuplicates === 0,
+      },
+      additionalKeys: additionalKeysResults,
+    };
+  }
+}

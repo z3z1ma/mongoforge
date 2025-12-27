@@ -8,13 +8,10 @@ import { ObjectId } from "mongodb";
 
 /**
  * Generate valid ObjectId string (24-char hex) deterministically using faker
+ * Uses timestamp-prefixed format for more realistic data
  */
 function generateObjectId(): string {
-  // Generate 12 random bytes using faker for determinism
-  const bytes = Array.from({ length: 12 }, () =>
-    faker.number.int({ min: 0, max: 255 }),
-  );
-  return Buffer.from(bytes).toString("hex");
+  return generateTimestampPrefixedObjectId();
 }
 
 /**
@@ -160,7 +157,9 @@ export function generateValidEmail(): string {
 
 // Custom ObjectId with Timestamp Prefix
 export function generateTimestampPrefixedObjectId(): string {
-  const timestamp = Math.floor(Date.now() / 1000); // Unix timestamp
+  // Use faker to get a date to keep it deterministic with faker.seed()
+  const date = faker.date.recent();
+  const timestamp = Math.floor(date.getTime() / 1000); // Unix timestamp
   const timestampHex = timestamp.toString(16).padStart(8, "0");
 
   // Generate the remaining 8 random bytes (ObjectId is 12 bytes total = 24 hex chars)

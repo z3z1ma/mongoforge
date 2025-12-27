@@ -22,11 +22,24 @@ export function calculateFrequencies(values: number[]): FrequencyDistribution {
   const distribution: FrequencyDistribution = {};
 
   for (const value of values) {
-    const key = String(value);
-    distribution[key] = (distribution[key] || 0) + 1;
+    updateFrequencies(distribution, value);
   }
 
   return distribution;
+}
+
+/**
+ * Update a frequency distribution with a new value
+ *
+ * @param distribution - Frequency distribution to update
+ * @param value - New numeric value to add
+ */
+export function updateFrequencies(
+  distribution: FrequencyDistribution,
+  value: number,
+): void {
+  const key = String(value);
+  distribution[key] = (distribution[key] || 0) + 1;
 }
 
 /**

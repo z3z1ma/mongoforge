@@ -11,6 +11,7 @@
  * @module lib/generator/dynamic-key-generator
  */
 
+import jsf from "json-schema-faker";
 import { faker } from "@faker-js/faker";
 import { sampleFromDistribution } from "../../utils/frequency-map.js";
 import { generateTimestampPrefixedObjectId } from "./custom-formats.js";
@@ -46,6 +47,11 @@ import { logger } from "../../utils/logger.js";
  */
 export class DynamicKeyGenerator {
   private counter = 0;
+
+  constructor() {
+    // Ensure jsf is configured to use faker
+    jsf.extend("faker", () => faker);
+  }
 
   /**
    * Reset counter (useful for testing or new document batches)
@@ -337,128 +343,22 @@ function sampleTypeFromProbabilities(
 
 /**
  * Generate value from JSON Schema
- * Simple implementation - returns basic values based on type
+ * Delegates to json-schema-faker for robust schema-to-value generation
  */
 function generateValueFromSchema(schema: any): any {
   if (!schema || !schema.type) {
     return null;
   }
 
-  switch (schema.type) {
-    case "string":
-      return generateStringValue(schema);
-
-    case "number":
-    case "integer":
-      return generateNumberValue(schema);
-
-    case "boolean":
-      return faker.datatype.boolean();
-
-    case "object":
-      return generateObjectValue(schema);
-
-    case "array":
-      return generateArrayValue(schema);
-
-    case "null":
-      return null;
-
-    default:
-      logger.warn("Unknown schema type, returning null", { type: schema.type });
-      return null;
+  try {
+    return jsf.generate(schema);
+  } catch (error) {
+    logger.warn("Failed to generate value from schema using jsf", {
+      type: schema.type,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return null;
   }
-}
-
-/**
- * Generate string value from schema
- */
-function generateStringValue(schema: any): string {
-  // Handle format hints
-  if (schema.format) {
-    switch (schema.format) {
-      case "email":
-        return faker.internet.email();
-      case "uuid":
-        return faker.string.uuid();
-      case "date-time":
-        return faker.date.recent().toISOString();
-      case "uri":
-        return faker.internet.url();
-      default:
-        // Fall through to default string
-        break;
-    }
-  }
-
-  // Handle enum
-  if (schema.enum && schema.enum.length > 0) {
-    return faker.helpers.arrayElement(schema.enum);
-  }
-
-  // Default string
-  const minLength = schema.minLength || 1;
-  const maxLength = schema.maxLength || 50;
-  const length = faker.number.int({ min: minLength, max: maxLength });
-
-  return faker.string.alphanumeric(length);
-}
-
-/**
- * Generate number value from schema
- */
-function generateNumberValue(schema: any): number {
-  const minimum = schema.minimum ?? 0;
-  const maximum = schema.maximum ?? 1000;
-
-  if (schema.type === "integer") {
-    return faker.number.int({ min: minimum, max: maximum });
-  }
-
-  return faker.number.float({
-    min: minimum,
-    max: maximum,
-    fractionDigits: 2,
-  });
-}
-
-/**
- * Generate object value from schema
- */
-function generateObjectValue(schema: any): any {
-  const obj: any = {};
-
-  if (!schema.properties) {
-    return obj;
-  }
-
-  // Generate each property
-  for (const [key, propSchema] of Object.entries(schema.properties)) {
-    obj[key] = generateValueFromSchema(propSchema);
-  }
-
-  return obj;
-}
-
-/**
- * Generate array value from schema
- */
-function generateArrayValue(schema: any): any[] {
-  const minItems = schema.minItems || 0;
-  const maxItems = schema.maxItems || 5;
-  const length = faker.number.int({ min: minItems, max: maxItems });
-
-  const items: any[] = [];
-
-  for (let i = 0; i < length; i++) {
-    if (schema.items) {
-      items.push(generateValueFromSchema(schema.items));
-    } else {
-      items.push(null);
-    }
-  }
-
-  return items;
 }
 
 /**

@@ -83,6 +83,8 @@ function mapTypeToJsonSchema(
     UUID: "string",
     Phone: "string",
     IPAddress: "string",
+    IPv4: "string",
+    IPv6: "string",
   };
 
   if (Array.isArray(mongoSchemaType)) {
@@ -109,7 +111,8 @@ const SEMANTIC_TYPE_TO_FORMAT: Record<string, string> = {
   UUID: "uuid",
   Phone: "phone",
   PersonName: "person-name",
-  IPAddress: "ipv4",
+  IPv4: "ipv4",
+  IPv6: "ipv6",
 };
 
 /**
@@ -146,6 +149,7 @@ function getJsonSchemaFormat(
   // Priority 3: MongoDB types
   const formatMap: Record<string, string> = {
     ObjectID: "objectid",
+    ObjectId: "objectid",
     Date: "date-time",
     Decimal128: "decimal",
   };
