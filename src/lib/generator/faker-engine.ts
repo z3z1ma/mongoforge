@@ -13,19 +13,14 @@ import {
   preprocessSchema as preprocessDynamicKeys,
   countDynamicKeySchemas,
 } from "./schema-preprocessor.js";
-
-// Polyfill for json-schema-faker's browser-specific code in Node.js
-// jsf tries to access location.href which doesn't exist in Node.js
-if (typeof (globalThis as any).location === "undefined") {
-  (globalThis as any).location = { href: "" };
-}
+import { DynamicKeyGenerator } from "./dynamic-key-generator.js";
 
 /**
  * Initialize json-schema-faker with faker.js provider
  */
 export function initializeFaker(seed?: string | number): void {
-  // Configure jsf to use faker
-  jsf.extend("faker", () => faker);
+  // Static JSF initialization
+  DynamicKeyGenerator.initializeJSF();
 
   // Set seed if provided
   if (seed !== undefined) {
@@ -48,6 +43,8 @@ export function initializeFaker(seed?: string | number): void {
     // Allow deep schemas but protect against true infinite recursion
     refDepthMax: 100,
     resolveJsonPath: true,
+    // Ensure properties are filled based on schema
+    fillProperties: true,
   });
 
   logger.debug("json-schema-faker initialized");
@@ -106,8 +103,7 @@ function preprocessSchemaExtensions(
           error: error instanceof Error ? error.message : String(error),
         },
       );
-    }
-  }
+    }  }
 
   // Recursively process nested properties
   if (processed.properties) {
@@ -142,7 +138,7 @@ function preprocessSchemaExtensions(
  * Optionally uses frequency distributions for more realistic array lengths
  * and expands dynamic keys
  */
-export async function generate(
+export function generate(
   schema: any,
   options: {
     useFrequencyDistributions?: boolean;
@@ -150,14 +146,16 @@ export async function generate(
     seed?: number;
     hasDynamicKeys?: boolean; // Optimization: pre-calculated
     hasDistributions?: boolean; // Optimization: pre-calculated
+    dynamicKeyGenerator?: DynamicKeyGenerator; // Efficiency
   } = {},
-): Promise<any> {
+): any {
   const {
     useFrequencyDistributions = true,
     useDynamicKeys = true,
     seed,
     hasDynamicKeys: precomputedHasDynamicKeys,
     hasDistributions: precomputedHasDistributions,
+    dynamicKeyGenerator,
   } = options;
 
   let processedSchema = schema;
@@ -171,10 +169,22 @@ export async function generate(
         : countDynamicKeySchemas(schema) > 0;
 
     if (shouldProcess) {
-      processedSchema = preprocessDynamicKeys(processedSchema, {
-        seed,
-        validateKeys: true,
-      });
+      // Use provided generator or create a transient one
+      const generator = dynamicKeyGenerator || new DynamicKeyGenerator();
+
+      // Reset generator counter for deterministic results if seed is provided
+      if (seed !== undefined) {
+        generator.reset();
+      }
+
+      processedSchema = preprocessDynamicKeys(
+        processedSchema,
+        {
+          seed,
+          validateKeys: true,
+        },
+        generator,
+      );
     }
   }
 
@@ -192,7 +202,13 @@ export async function generate(
     }
   }
 
-  return jsf.resolve(processedSchema);
+  // Ensure faker is seeded for JSF generation if seed is provided
+  if (seed !== undefined) {
+    faker.seed(seed);
+  }
+
+  // Use synchronous jsf.generate for better performance (we don't use $ref)
+  return jsf.generate(processedSchema);
 }
 
 /**
@@ -219,7 +235,7 @@ export async function generateMany(
 
     // Use seed + i for deterministic but varied generation
     const docSeed = options.seed !== undefined ? options.seed + i : undefined;
-    const doc = await generate(schema, { ...options, seed: docSeed });
+    const doc = generate(schema, { ...options, seed: docSeed });
     documents.push(doc);
   }
 

@@ -8,6 +8,7 @@ import { generate, initializeFaker } from "./faker-engine.js";
 import { registerCustomFormats } from "./custom-formats.js";
 import { logger } from "../../utils/logger.js";
 import { countDynamicKeySchemas } from "./schema-preprocessor.js";
+import { DynamicKeyGenerator } from "./dynamic-key-generator.js";
 
 /**
  * Create a readable stream that yields synthetic documents
@@ -23,6 +24,7 @@ export class DocumentGeneratorStream extends Readable {
   // Performance optimizations
   private hasDynamicKeys = false;
   private hasDistributions = false;
+  private dynamicKeyGenerator = new DynamicKeyGenerator();
 
   constructor(
     schema: GenerationSchema,
@@ -116,9 +118,10 @@ export class DocumentGeneratorStream extends Readable {
         }
 
         // Pass precomputed flags to generate() for optimization
-        const doc = await generate(this.schema, {
+        const doc = generate(this.schema, {
           hasDynamicKeys: this.hasDynamicKeys,
           hasDistributions: this.hasDistributions,
+          dynamicKeyGenerator: this.dynamicKeyGenerator,
         });
         this.push(doc);
         this.generatedCount++;
@@ -158,7 +161,7 @@ export async function* generateDocuments(
       await new Promise((resolve) => setImmediate(resolve));
     }
 
-    const doc = (await generate(schema)) as SyntheticDocument;
+    const doc = generate(schema) as SyntheticDocument;
     yield doc;
 
     if ((i + 1) % 1000 === 0) {

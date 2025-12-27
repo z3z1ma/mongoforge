@@ -48,13 +48,28 @@ import { logger } from "../../utils/logger.js";
 export class DynamicKeyGenerator {
   private counter = 0;
 
-  constructor() {
-    // Ensure jsf is configured to use faker if not already
+  /**
+   * Static initialization for json-schema-faker
+   * Should be called once during module load or app start
+   */
+  static initializeJSF(): void {
     try {
       jsf.extend("faker", () => faker);
     } catch (e) {
       // Ignore if already extended
     }
+
+    // Set consistent options for schema-to-value generation
+    jsf.option({
+      alwaysFakeOptionals: true,
+      fillProperties: true,
+      failOnInvalidTypes: false,
+      failOnInvalidFormat: false,
+    });
+  }
+
+  constructor() {
+    // No-op - moved to initializeJSF
   }
 
   /**

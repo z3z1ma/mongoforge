@@ -34,16 +34,18 @@ export interface PreprocessOptions {
  *
  * @param schema - JSON Schema with optional x-dynamic-keys annotations
  * @param options - Preprocessing options
+ * @param sharedGenerator - Optional shared generator instance for efficiency
  * @returns Preprocessed schema with expanded static properties
  */
 export function preprocessSchema(
   schema: any,
   options: PreprocessOptions = {},
+  sharedGenerator?: DynamicKeyGenerator,
 ): any {
-  const { seed, validateKeys = true, maxDepth = 10 } = options;
+  const { seed, validateKeys = true, maxDepth = 100 } = options;
 
-  // Create generator instance for this preprocessing session
-  const generator = new DynamicKeyGenerator();
+  // Use shared generator or create a transient one
+  const generator = sharedGenerator || new DynamicKeyGenerator();
 
   // Start recursive preprocessing
   return preprocessSchemaRecursive(
@@ -65,7 +67,7 @@ function preprocessSchemaRecursive(
   depth: number,
   maxDepth: number,
 ): any {
-  // Prevent infinite recursion
+  // Prevent infinite recursion, but allow deep valid ones
   if (depth > maxDepth) {
     logger.warn("Maximum preprocessing depth reached, stopping recursion", {
       depth,
@@ -79,28 +81,47 @@ function preprocessSchemaRecursive(
     return schema;
   }
 
-  // Clone to avoid mutating original
-  const processed = { ...schema };
-
-  // Check for x-dynamic-keys annotation
-  if (processed["x-dynamic-keys"]) {
-    return expandDynamicKeys(processed, generator, options);
+  // Check for x-dynamic-keys annotation first (highest priority)
+  if (schema["x-dynamic-keys"]) {
+    return expandDynamicKeys(schema, generator, options);
   }
+
+  // Optimization: Quick check if we need to recurse at all
+  // If no properties, items, or combiners, just return schema
+  if (
+    !schema.properties &&
+    !schema.items &&
+    !schema.oneOf &&
+    !schema.anyOf &&
+    !schema.allOf &&
+    !schema.additionalProperties
+  ) {
+    return schema;
+  }
+
+  // Clone only when we know we might mutate (recurse)
+  const processed = { ...schema };
 
   // Recursively process nested properties
   if (processed.properties) {
-    processed.properties = Object.fromEntries(
-      Object.entries(processed.properties).map(([key, value]) => [
-        key,
-        preprocessSchemaRecursive(
-          value,
-          generator,
-          options,
-          depth + 1,
-          maxDepth,
-        ),
-      ]),
-    );
+    let changed = false;
+    const newProps: any = {};
+
+    for (const [key, value] of Object.entries(processed.properties)) {
+      const newVal = preprocessSchemaRecursive(
+        value,
+        generator,
+        options,
+        depth + 1,
+        maxDepth,
+      );
+      newProps[key] = newVal;
+      if (newVal !== value) changed = true;
+    }
+
+    if (changed) {
+      processed.properties = newProps;
+    }
   }
 
   // Recursively process array items
@@ -118,13 +139,16 @@ function preprocessSchemaRecursive(
       );
     } else {
       // Single item schema
-      processed.items = preprocessSchemaRecursive(
+      const newItem = preprocessSchemaRecursive(
         processed.items,
         generator,
         options,
         depth + 1,
         maxDepth,
       );
+      if (newItem !== processed.items) {
+        processed.items = newItem;
+      }
     }
   }
 
@@ -133,13 +157,16 @@ function preprocessSchemaRecursive(
     processed.additionalProperties &&
     typeof processed.additionalProperties === "object"
   ) {
-    processed.additionalProperties = preprocessSchemaRecursive(
+    const newAP = preprocessSchemaRecursive(
       processed.additionalProperties,
       generator,
       options,
       depth + 1,
       maxDepth,
     );
+    if (newAP !== processed.additionalProperties) {
+      processed.additionalProperties = newAP;
+    }
   }
 
   // Recursively process oneOf/anyOf/allOf
