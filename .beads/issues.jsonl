@@ -1,0 +1,1 @@
+{"id":"mongoforge-74m","title":"Implement CDC and Mutation Modes","status":"closed","priority":1,"issue_type":"task","created_at":"2025-12-27T08:13:16.534644-07:00","updated_at":"2025-12-27T08:13:23.79269-07:00","closed_at":"2025-12-27T08:13:23.79269-07:00","close_reason":"Completed all phases of implementation and verified with integration tests."}

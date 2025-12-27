@@ -174,44 +174,48 @@ Generated documents will have:
 - Synthetic key names matching detected patterns (UUID, ObjectId, etc.)
 - Values matching the inferred value schema
 
-### Configuration
+## CDC and Mutation Mode
 
-**Adjust Detection Threshold**:
+MongoForge supports simulated Change Data Capture (CDC) workloads and mutation-only workloads against existing data.
+
+### 1. Mutation Mode (Modify Existing Data)
+
+Run update and delete workloads against a collection that already contains data:
+
 ```bash
-# Detect dynamic keys with only 20+ unique keys
-mongoforge infer ... --dynamic-key-threshold 20
-
-# Disable dynamic key detection entirely
-mongoforge infer ... --no-dynamic-keys
+mongoforge mutate \
+  --uri mongodb://localhost:27017 \
+  --database test \
+  --collection users \
+  --schema ./schemas/user.json \
+  --ratio "update:70,delete:30" \
+  --rate-limit 100 \
+  --count 5000
 ```
 
-**Supported Key Patterns**:
-- UUID (v4): `550e8400-e29b-41d4-a716-446655440000`
-- MongoDB ObjectId: `507f1f77bcf86cd799439011`
-- ULID: `01ARZ3NDEKTSV4RRFFQ69G5FAV`
-- Numeric IDs: `123456789`
-- Prefixed IDs: `user_abc123`, `order_xyz456`
-- Custom patterns: Detected via regex matching
+### 2. CDC Simulation Mode (Mixed Traffic)
 
-**Schema Annotation Example**:
-```json
-{
-  "type": "object",
-  "x-dynamic-keys": {
-    "enabled": true,
-    "metadata": {
-      "pattern": "UUID",
-      "confidence": 0.95,
-      "countDistribution": { "10": 45, "15": 35, "20": 20 },
-      "exampleKeys": ["550e8400-...", "a1b2c3d4-..."]
-    },
-    "valueSchema": {
-      "types": ["object"],
-      "schemas": [{ "type": "object", "properties": {...} }]
-    }
-  }
-}
+Simulate a live application by generating a mix of inserts, updates, and deletes simultaneously:
+
+```bash
+mongoforge generate \
+  --output-format mongo-cdc \
+  --target-uri mongodb://localhost:27017 \
+  --target-db test \
+  --target-collection users_live \
+  --operation-ratios "insert:50,update:40,delete:10" \
+  --warmup-inserts 1000 \
+  --id-cache-size 50000 \
+  --doc-count 100000 \
+  --rate-limit 500
 ```
+
+### Configuration Options
+
+- `--operation-ratios`: Set the mix of operations (e.g., `insert:60,update:30,delete:10`).
+- `--rate-limit`: Throttle execution to a specific number of operations per second.
+- `--id-cache-size`: Control how many document IDs are tracked in memory for targeting updates/deletes.
+- `--update-strategy`: Choose between `partial` (update few fields) or `regenerate` (replace whole doc).
 
 ## MongoDB Type Mappings
 
