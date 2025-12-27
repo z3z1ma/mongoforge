@@ -517,6 +517,12 @@ export function validateGeneratedKeys(
     return { valid: true, invalidKeys: [], matchRate: 1.0 };
   }
 
+  // CUSTOM patterns cannot be validated since we don't know the pattern
+  // HIGH_CARDINALITY and similar sentinel values are not actual regex patterns
+  if (pattern === 'CUSTOM') {
+    return { valid: true, invalidKeys: [], matchRate: 1.0 };
+  }
+
   const regex = getPatternRegex(pattern, customPattern);
   if (!regex) {
     // No validation possible for unknown patterns

@@ -14,6 +14,12 @@ import {
   countDynamicKeySchemas,
 } from './schema-preprocessor.js';
 
+// Polyfill for json-schema-faker's browser-specific code in Node.js
+// jsf tries to access location.href which doesn't exist in Node.js
+if (typeof (globalThis as any).location === 'undefined') {
+  (globalThis as any).location = { href: '' };
+}
+
 /**
  * Initialize json-schema-faker with faker.js provider
  */
