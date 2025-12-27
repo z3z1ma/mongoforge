@@ -121,6 +121,29 @@ export class Inferencer {
         fieldsAnalyzed: dynamicKeyAnalyses.size,
         dynamicKeysDetected,
       });
+
+      // Strip nested fields from dynamic key fields to prevent bloat in inferred.schema.json
+      // For fields with dynamic keys, storing individual keys is wasteful - we only need the metadata
+      // Keep fields as empty object {} so synthesizer condition passes, but remove individual keys
+      if (dynamicKeysDetected > 0) {
+        for (const [fieldPath, analysis] of dynamicKeyAnalyses) {
+          if (analysis.isDynamic) {
+            const field = fieldPaths.get(fieldPath);
+            if (field && field.fields) {
+              const removedCount = Object.keys(field.fields).length;
+              field.fields = {}; // Empty object instead of delete - synthesizer needs this to exist
+              logger.debug('Stripped nested fields from dynamic key field', {
+                fieldPath,
+                removedFieldsCount: removedCount,
+                pattern: analysis.detection?.pattern,
+              });
+            }
+          }
+        }
+        logger.info('Stripped nested fields from dynamic key fields', {
+          dynamicFieldsProcessed: dynamicKeysDetected,
+        });
+      }
     }
 
     return {
