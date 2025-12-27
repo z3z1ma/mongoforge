@@ -101,7 +101,10 @@ export function calculateDistributionStats(
   const sortedEntries: { value: number; count: number }[] = [];
 
   for (const key in distribution) {
-    sortedEntries.push({ value: Number(key), count: distribution[key] });
+    const count = distribution[key];
+    if (count !== undefined) {
+      sortedEntries.push({ value: Number(key), count });
+    }
   }
 
   if (sortedEntries.length === 0) {
@@ -112,11 +115,21 @@ export function calculateDistributionStats(
 
   let total = 0;
   for (let i = 0; i < sortedEntries.length; i++) {
-    total += sortedEntries[i].count;
+    const entry = sortedEntries[i];
+    if (entry) {
+      total += entry.count;
+    }
   }
 
-  const min = sortedEntries[0].value;
-  const max = sortedEntries[sortedEntries.length - 1].value;
+  const first = sortedEntries[0];
+  const last = sortedEntries[sortedEntries.length - 1];
+
+  if (!first || !last) {
+    throw new Error("Distribution has no entries");
+  }
+
+  const min = first.value;
+  const max = last.value;
   const unique = sortedEntries.length;
 
   // Calculate percentiles in a single pass to be efficient
@@ -130,13 +143,16 @@ export function calculateDistributionStats(
   let p95Found = false;
 
   for (let i = 0; i < sortedEntries.length; i++) {
-    cumulative += sortedEntries[i].count;
+    const entry = sortedEntries[i];
+    if (!entry) continue;
+
+    cumulative += entry.count;
     if (!medianFound && cumulative >= medianTarget) {
-      median = sortedEntries[i].value;
+      median = entry.value;
       medianFound = true;
     }
     if (!p95Found && cumulative >= p95Target) {
-      p95 = sortedEntries[i].value;
+      p95 = entry.value;
       p95Found = true;
       break; // Found everything we need
     }
@@ -166,7 +182,10 @@ export function getPercentile(
 
   const sortedEntries: { value: number; count: number }[] = [];
   for (const key in distribution) {
-    sortedEntries.push({ value: Number(key), count: distribution[key] });
+    const count = distribution[key];
+    if (count !== undefined) {
+      sortedEntries.push({ value: Number(key), count });
+    }
   }
 
   if (sortedEntries.length === 0) {
@@ -177,17 +196,24 @@ export function getPercentile(
 
   let total = 0;
   for (let i = 0; i < sortedEntries.length; i++) {
-    total += sortedEntries[i].count;
+    const entry = sortedEntries[i];
+    if (entry) {
+      total += entry.count;
+    }
   }
 
   const targetCount = total * percentile;
   let cumulative = 0;
   for (let i = 0; i < sortedEntries.length; i++) {
-    cumulative += sortedEntries[i].count;
+    const entry = sortedEntries[i];
+    if (!entry) continue;
+
+    cumulative += entry.count;
     if (cumulative >= targetCount) {
-      return sortedEntries[i].value;
+      return entry.value;
     }
   }
 
-  return sortedEntries[sortedEntries.length - 1].value;
+  const last = sortedEntries[sortedEntries.length - 1];
+  return last ? last.value : 0;
 }

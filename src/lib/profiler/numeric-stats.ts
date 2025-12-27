@@ -25,6 +25,7 @@ function calculateMean(distribution: Record<string, number>): number {
 
   for (const valueStr in distribution) {
     const freq = distribution[valueStr];
+    if (freq === undefined) continue;
     const value = Number(valueStr);
     sum += value * freq;
     count += freq;
@@ -45,6 +46,7 @@ function calculateStdDev(
 
   for (const valueStr in distribution) {
     const freq = distribution[valueStr];
+    if (freq === undefined) continue;
     const value = Number(valueStr);
     sumSquaredDiff += Math.pow(value - mean, 2) * freq;
     count += freq;
