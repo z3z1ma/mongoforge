@@ -94,7 +94,12 @@ export async function inferSchema(
         count: field.count,
         type: field.type,
         probability: field.probability,
-        types: field.types.map((t: any) => ({ name: t.name, probability: t.probability })),
+        types: field.types.map((t: any) => ({
+          name: t.name,
+          probability: t.probability,
+          unique: t.unique,
+          values: t.values?.values ? Array.from(t.values.values()) : undefined, // Extract from reservoir
+        })),
         lengthDistribution,
         fields: nestedFields,
       };
@@ -149,7 +154,12 @@ function transformNestedFields(fields: any[]): Record<string, InferredSchemaFiel
       count: field.count,
       type: field.type,
       probability: field.probability,
-      types: field.types.map((t: any) => ({ name: t.name, probability: t.probability })),
+      types: field.types.map((t: any) => ({
+        name: t.name,
+        probability: t.probability,
+        unique: t.unique,
+        values: t.values?.values ? Array.from(t.values.values()) : undefined, // Extract from reservoir
+      })),
       lengthDistribution,
       fields: nestedFields,
     };
