@@ -12,7 +12,72 @@ import { DocumentIDCache } from "../../lib/utils/id-cache.js";
 import { logger } from "../../utils/logger.js";
 import { MutationConfig } from "../../types/cdc.js";
 
+import { parseConfigFile } from "../config/parser.js";
+import { GenerateCommandOptions, GenerateConfig } from "../config/types.js";
+
 const pipelineAsync = promisify(pipeline);
+
+/**
+ * Merge CLI options with config file
+ */
+function mergeGenerateConfig(
+  options: GenerateCommandOptions,
+  configFile?: GenerateConfig,
+): GenerateConfig {
+  // Build config from CLI options
+  const cliConfig: Partial<GenerateConfig> = {
+    generationSchema: options.generationSchema,
+    constraints: options.constraints,
+    docCount: options.docCount,
+    seed: options.seed,
+    output:
+      options.outputFormat || options.outputPath
+        ? {
+            format: (options.outputFormat as any) || "ndjson",
+            path: options.outputPath || "stdout",
+            splitFilesBy: options.splitFilesBy,
+            splitSize: options.splitSize,
+          }
+        : undefined,
+    target: options.targetUri
+      ? {
+          uri: options.targetUri,
+          database: options.targetDb!,
+          collection: options.targetCollection!,
+          collectionSuffix: options.collectionSuffix,
+          batchSize: options.batchSize || 1000,
+          writeConcern: options.writeConcern || "majority",
+          orderedInserts: options.orderedInserts ?? false,
+        }
+      : undefined,
+    customGenerators: options.customGenerators,
+  };
+
+  // Merge with config file (CLI options take precedence)
+  const merged: GenerateConfig = {
+    ...configFile,
+    ...Object.fromEntries(
+      Object.entries(cliConfig).filter(([_, v]) => v !== undefined && _ !== 'output' && _ !== 'target'),
+    ),
+    output: { 
+      format: "ndjson",
+      path: "stdout",
+      ...configFile?.output, 
+      ...cliConfig.output 
+    } as any,
+    target: (cliConfig.target || configFile?.target
+      ? { ...configFile?.target, ...cliConfig.target }
+      : undefined) as any,
+  } as GenerateConfig;
+
+  // Set defaults for required fields if missing after merge
+  merged.generationSchema =
+    merged.generationSchema || "./schemas/generation.schema.json";
+  merged.constraints = merged.constraints || "./schemas/constraints.json";
+  merged.docCount = merged.docCount || 10000;
+
+  return merged;
+}
 
 /**
  * Create generate command with MongoDB insertion mode
@@ -26,20 +91,17 @@ export function createGenerateCommand(): Command {
     .option(
       "--generation-schema <path>",
       "Path to generation schema file",
-      "./schemas/generation.schema.json",
     )
     .option(
       "--constraints <path>",
       "Path to constraints file",
-      "./schemas/constraints.json",
     )
-    .option("--doc-count <number>", "Number of documents to generate", "10000")
+    .option("--doc-count <number>", "Number of documents to generate", (val) => parseInt(val, 10))
     .option("--seed <seed>", "Seed for deterministic generation")
-    .option("--output-path <path>", 'Output path (or "stdout")', "stdout")
+    .option("--output-path <path>", 'Output path (or "stdout")')
     .option(
       "--output-format <format>",
       "Output format: ndjson, json, mongo-cdc",
-      "ndjson",
     )
     .option("--target-uri <uri>", "MongoDB URI for direct insertion")
     .option("--target-db <database>", "Target database name")
@@ -48,12 +110,11 @@ export function createGenerateCommand(): Command {
     .option(
       "--batch-size <number>",
       "Batch size for MongoDB bulk inserts",
-      "1000",
+      (val) => parseInt(val, 10)
     )
     .option(
       "--write-concern <concern>",
       "Write concern for MongoDB inserts",
-      "majority",
     )
     .option("--ordered-inserts", "Use ordered bulk inserts", false)
     .option(
@@ -81,22 +142,34 @@ export function createGenerateCommand(): Command {
       "--no-dynamic-keys",
       "Disable dynamic key generation for objects with variable key patterns",
     )
+    .option("--config <path>", "Path to configuration file (JSON/YAML)")
     .action(async (opts) => {
       try {
-        const docCount = parseInt(opts.docCount, 10);
-        const batchSize = parseInt(opts.batchSize, 10);
+        // Parse config file if provided
+        let configFile: GenerateConfig | undefined;
+        if (opts.config) {
+          const fullConfig = parseConfigFile(opts.config);
+          configFile = fullConfig.generate as GenerateConfig;
+        }
+
+        // Merge and validate configurations
+        const config = mergeGenerateConfig(opts, configFile);
+
+        const docCount = config.docCount;
+        const batchSize = config.target?.batchSize || 1000;
 
         // Load generation schema
         const schema = await loadGenerationSchema(
-          opts.generationSchema,
-          opts.constraints,
+          config.generationSchema,
+          config.constraints,
         );
 
         let insertionMetrics = null;
 
         // CDC Simulation Mode
-        if (opts.outputFormat === "mongo-cdc") {
-          if (!opts.targetUri || !opts.targetDb || !opts.targetCollection) {
+        if (config.output.format === ("mongo-cdc" as any) || opts.outputFormat === "mongo-cdc") {
+          const target = config.target;
+          if (!target?.uri || !target?.database || !target?.collection) {
             throw new Error(
               "--target-uri, --target-db, and --target-collection are required for mongo-cdc mode",
             );
@@ -105,10 +178,10 @@ export function createGenerateCommand(): Command {
           const cacheSize = parseInt(opts.idCacheSize);
           const cache = new DocumentIDCache(cacheSize);
           const ratios = parseRatios(opts.operationRatios);
-          const config: MutationConfig = {
-            targetUri: opts.targetUri,
-            database: opts.targetDb,
-            collection: opts.targetCollection,
+          const mutationConfig: MutationConfig = {
+            targetUri: target.uri,
+            database: target.database,
+            collection: target.collection,
             ratios,
             rateLimit: parseInt(opts.rateLimit),
             batchSize: batchSize,
@@ -118,13 +191,13 @@ export function createGenerateCommand(): Command {
           };
 
           const inserter = await createMongoInserter({
-            uri: opts.targetUri,
-            database: opts.targetDb,
-            collection: opts.targetCollection,
-            collectionSuffix: opts.collectionSuffix,
+            uri: target.uri,
+            database: target.database,
+            collection: target.collection,
+            collectionSuffix: target.collectionSuffix,
             batchSize: batchSize,
-            writeConcern: opts.writeConcern,
-            orderedInserts: opts.orderedInserts,
+            writeConcern: target.writeConcern,
+            orderedInserts: target.orderedInserts,
           });
 
           // Warmup phase
@@ -134,7 +207,7 @@ export function createGenerateCommand(): Command {
 
             // We need to capture IDs from warmup stream.
             const warmupConfig: MutationConfig = {
-              ...config,
+              ...mutationConfig,
               ratios: { insert: 100, update: 0, delete: 0 },
             };
             const warmupCDCStream = createCDCStream(
@@ -147,35 +220,35 @@ export function createGenerateCommand(): Command {
             logger.info(`Warmup complete. Cache size: ${cache.size()}`);
           }
 
-          const cdcStream = createCDCStream(schema, config, cache, docCount);
+          const cdcStream = createCDCStream(schema, mutationConfig, cache, docCount);
           const cdcInserter = await createMongoInserter({
-            uri: opts.targetUri,
-            database: opts.targetDb,
-            collection: opts.targetCollection,
-            collectionSuffix: opts.collectionSuffix,
+            uri: target.uri,
+            database: target.database,
+            collection: target.collection,
+            collectionSuffix: target.collectionSuffix,
             batchSize: batchSize,
-            writeConcern: opts.writeConcern,
-            orderedInserts: opts.orderedInserts,
+            writeConcern: target.writeConcern,
+            orderedInserts: target.orderedInserts,
           });
 
           insertionMetrics = await cdcInserter.bulkWrite(cdcStream);
         }
         // MongoDB Direct Insertion Mode
-        else if (opts.targetUri && opts.targetDb && opts.targetCollection) {
+        else if (config.target?.uri && config.target?.database && config.target?.collection) {
           const documentStream = createGeneratorStream(
             schema,
             docCount,
             batchSize,
-            opts.seed,
+            config.seed,
           );
           const inserter = await createMongoInserter({
-            uri: opts.targetUri,
-            database: opts.targetDb,
-            collection: opts.targetCollection,
-            collectionSuffix: opts.collectionSuffix,
+            uri: config.target.uri,
+            database: config.target.database,
+            collection: config.target.collection,
+            collectionSuffix: config.target.collectionSuffix,
             batchSize: batchSize,
-            writeConcern: opts.writeConcern,
-            orderedInserts: opts.orderedInserts,
+            writeConcern: config.target.writeConcern,
+            orderedInserts: config.target.orderedInserts,
           });
 
           insertionMetrics = await inserter.bulkInsert(documentStream);
@@ -186,16 +259,16 @@ export function createGenerateCommand(): Command {
             schema,
             docCount,
             batchSize,
-            opts.seed,
+            config.seed,
           );
           const outputStream =
-            opts.outputPath === "stdout"
+            config.output.path === "stdout"
               ? process.stdout
-              : createWriteStream(opts.outputPath);
+              : createWriteStream(config.output.path);
 
           // Create format writer based on output format option
           const formatWriter =
-            opts.outputFormat === "json"
+            config.output.format === "json"
               ? createJSONWriter()
               : createNDJSONWriter();
 
@@ -211,20 +284,20 @@ export function createGenerateCommand(): Command {
             ...(insertionMetrics
               ? {
                   destination:
-                    opts.targetUri +
+                    config.target!.uri +
                     "/" +
-                    opts.targetDb +
+                    config.target!.database +
                     "/" +
-                    opts.targetCollection +
-                    (opts.collectionSuffix || ""),
+                    config.target!.collection +
+                    (config.target!.collectionSuffix || ""),
                   insertedDocuments: insertionMetrics.insertedDocuments,
                   updatedDocuments: insertionMetrics.updatedDocuments,
                   deletedDocuments: insertionMetrics.deletedDocuments,
                   failedInserts: insertionMetrics.failedInserts,
                 }
               : {
-                  format: opts.outputFormat,
-                  path: opts.outputPath,
+                  format: config.output.format,
+                  path: config.output.path,
                 }),
           },
           metrics: insertionMetrics
