@@ -55,6 +55,14 @@ export interface OutputConfig {
 }
 
 /**
+ * Synthesis configuration
+ */
+export interface SynthesisConfig {
+  enforceRequired: boolean;
+  requiredThreshold: number;
+}
+
+/**
  * Infer command configuration
  */
 export interface InferConfig {
@@ -62,6 +70,7 @@ export interface InferConfig {
   sampling: SamplingConfig;
   constraints: ConstraintsConfig;
   keys: KeysConfig;
+  synthesis: SynthesisConfig;
   output: OutputConfig;
 }
 
@@ -148,6 +157,8 @@ export interface InferCommandOptions {
   keyFields?: string; // Comma-separated
   enforceUniqueKeys?: boolean;
   uniquenessScope?: UniquenessScope;
+  enforceRequired?: boolean;
+  requiredThreshold?: number;
   dynamicKeyThreshold?: number;
   noDynamicKeys?: boolean;
   config?: string;

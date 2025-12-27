@@ -12,6 +12,7 @@ import type { ObjectKeysAnalysis } from "../inferencer/dynamic-key-detector.js";
 export interface SynthesizerOptions {
   enforceRequired?: boolean;
   includeMetadata?: boolean;
+  requiredThreshold?: number;
 }
 
 export interface SynthesizerResult {

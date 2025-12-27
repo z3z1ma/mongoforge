@@ -80,6 +80,14 @@ function mergeInferConfig(
           uniquenessScope: options.uniquenessScope || "run",
         }
       : undefined,
+    synthesis:
+      options.enforceRequired !== undefined ||
+      options.requiredThreshold !== undefined
+        ? {
+            enforceRequired: options.enforceRequired ?? true,
+            requiredThreshold: options.requiredThreshold ?? 0.95,
+          }
+        : undefined,
     output: options.outputDir
       ? {
           dir: options.outputDir,
@@ -96,6 +104,10 @@ function mergeInferConfig(
       ...cliConfig.constraints,
     } as any,
     keys: { ...configFile?.keys, ...cliConfig.keys } as any,
+    synthesis: {
+      ...configFile?.synthesis,
+      ...cliConfig.synthesis,
+    } as any,
     output: { ...configFile?.output, ...cliConfig.output } as any,
   };
 
@@ -144,6 +156,10 @@ function validateInferConfig(config: InferConfig): void {
     keyFields: [],
     enforceUniqueKeys: false,
     uniquenessScope: "run",
+  };
+  config.synthesis = config.synthesis || {
+    enforceRequired: true,
+    requiredThreshold: 0.95,
   };
 }
 
@@ -292,11 +308,13 @@ function synthesizeGenerationSchema(
   inferredSchema: any,
   constraints: any,
   typeHints: Map<string, TypeHint>,
+  config: InferConfig,
   dynamicKeyAnalyses?: Map<string, any>,
 ): any {
   logger.info("Synthesizing generation schema");
   const synthesizer = new Synthesizer({
-    enforceRequired: true,
+    enforceRequired: config.synthesis.enforceRequired,
+    requiredThreshold: config.synthesis.requiredThreshold,
     includeMetadata: true,
   });
 
@@ -406,6 +424,7 @@ async function executeInfer(options: InferCommandOptions): Promise<void> {
         inferredSchema,
         constraints,
         typeHints,
+        config,
         dynamicKeyAnalyses,
       );
 
@@ -513,6 +532,15 @@ export function createInferCommand(): Command {
     )
     .option("--enforce-unique-keys", "Enforce uniqueness for key fields", false)
     .option("--uniqueness-scope <scope>", "Uniqueness scope: batch, run", "run")
+    .option(
+      "--required-threshold <number>",
+      "Probability threshold for required fields (default: 0.95)",
+      (val) => parseFloat(val),
+    )
+    .option(
+      "--no-enforce-required",
+      "Disable enforcing required fields based on probability",
+    )
     .option(
       "--dynamic-key-threshold <number>",
       "Minimum unique keys to trigger dynamic key detection (default: 50)",

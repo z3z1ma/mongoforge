@@ -37,6 +37,7 @@ export * from "./vendor-keywords.js";
 const DEFAULT_OPTIONS: SynthesizerOptions = {
   enforceRequired: true,
   includeMetadata: true,
+  requiredThreshold: 0.95,
 };
 
 /**
@@ -167,6 +168,7 @@ function transformField(
   typeHints: Map<string, TypeHint>,
   keyFields: Set<string>,
   dynamicKeyAnalyses?: Map<string, ObjectKeysAnalysis>,
+  requiredThreshold: number = 0.95,
 ): GenerationSchemaProperty {
   const isKey = keyFields.has(fieldPath);
   const typeHint = typeHints.get(fieldPath);
@@ -236,6 +238,8 @@ function transformField(
           constraints,
           typeHints,
           keyFields,
+          dynamicKeyAnalyses,
+          requiredThreshold,
         );
       }
     }
@@ -312,10 +316,11 @@ function transformField(
           typeHints,
           keyFields,
           dynamicKeyAnalyses,
+          requiredThreshold,
         );
 
         // Add to required if field probability is high
-        if (nestedField.probability >= 0.95) {
+        if (nestedField.probability >= requiredThreshold) {
           property.required.push(nestedFieldName);
         }
       }
@@ -377,6 +382,7 @@ export function synthesize(
       typeHints,
       keyFields,
       dynamicKeyAnalyses,
+      opts.requiredThreshold,
     );
     properties[fieldName] = property;
 
@@ -398,8 +404,9 @@ export function synthesize(
 
   // Add fields with high probability to required
   if (opts.enforceRequired) {
+    const threshold = opts.requiredThreshold ?? 0.95;
     for (const [fieldName, field] of Object.entries(inferredSchema.fields)) {
-      if (field.probability >= 0.95 && !required.includes(fieldName)) {
+      if (field.probability >= threshold && !required.includes(fieldName)) {
         required.push(fieldName);
       }
     }
