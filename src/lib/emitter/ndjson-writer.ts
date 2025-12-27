@@ -2,7 +2,7 @@
  * NDJSON Writer - Transform stream that converts objects to NDJSON
  */
 
-import { Transform, TransformCallback } from 'stream';
+import { Transform, TransformCallback } from "stream";
 
 /**
  * Transform stream that converts object-mode chunks to NDJSON strings
@@ -16,9 +16,13 @@ export class NDJSONWriter extends Transform {
     });
   }
 
-  _transform(chunk: any, encoding: BufferEncoding, callback: TransformCallback): void {
+  _transform(
+    chunk: any,
+    encoding: BufferEncoding,
+    callback: TransformCallback,
+  ): void {
     try {
-      const ndjsonLine = JSON.stringify(chunk) + '\n';
+      const ndjsonLine = JSON.stringify(chunk) + "\n";
       this.push(ndjsonLine);
       callback();
     } catch (error) {

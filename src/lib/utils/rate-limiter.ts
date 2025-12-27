@@ -21,7 +21,7 @@ export class RateLimiter {
 
     if (elapsed < minInterval) {
       const delay = minInterval - elapsed;
-      await new Promise(resolve => setTimeout(resolve, delay));
+      await new Promise((resolve) => setTimeout(resolve, delay));
       this.lastOpTime = Date.now();
     } else {
       this.lastOpTime = now;

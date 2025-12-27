@@ -2,19 +2,22 @@
  * BSON type to JSON Schema type mappers
  */
 
-import { ObjectId, Decimal128, Binary } from 'mongodb';
-import { TypeHint } from '../../types/data-model.js';
+import { ObjectId, Decimal128, Binary } from "mongodb";
+import { TypeHint } from "../../types/data-model.js";
 
 /**
  * ObjectId → string mapper
  */
-export function mapObjectId(value: ObjectId): { value: string; hint: TypeHint } {
+export function mapObjectId(value: ObjectId): {
+  value: string;
+  hint: TypeHint;
+} {
   return {
     value: value.toString(),
     hint: {
-      originalType: 'ObjectId',
-      jsonSchemaType: 'string',
-      jsonSchemaFormat: 'objectid',
+      originalType: "ObjectId",
+      jsonSchemaType: "string",
+      jsonSchemaFormat: "objectid",
     },
   };
 }
@@ -26,9 +29,9 @@ export function mapDate(value: Date): { value: string; hint: TypeHint } {
   return {
     value: value.toISOString(),
     hint: {
-      originalType: 'Date',
-      jsonSchemaType: 'string',
-      jsonSchemaFormat: 'date-time',
+      originalType: "Date",
+      jsonSchemaType: "string",
+      jsonSchemaFormat: "date-time",
     },
   };
 }
@@ -36,13 +39,16 @@ export function mapDate(value: Date): { value: string; hint: TypeHint } {
 /**
  * Decimal128 → string mapper
  */
-export function mapDecimal128(value: Decimal128): { value: string; hint: TypeHint } {
+export function mapDecimal128(value: Decimal128): {
+  value: string;
+  hint: TypeHint;
+} {
   return {
     value: value.toString(),
     hint: {
-      originalType: 'Decimal128',
-      jsonSchemaType: 'string',
-      jsonSchemaFormat: 'decimal',
+      originalType: "Decimal128",
+      jsonSchemaType: "string",
+      jsonSchemaFormat: "decimal",
     },
   };
 }
@@ -52,11 +58,11 @@ export function mapDecimal128(value: Decimal128): { value: string; hint: TypeHin
  */
 export function mapBinData(value: Binary): { value: string; hint: TypeHint } {
   return {
-    value: value.toString('base64'),
+    value: value.toString("base64"),
     hint: {
-      originalType: 'BinData',
-      jsonSchemaType: 'string',
-      jsonSchemaFormat: 'base64',
+      originalType: "BinData",
+      jsonSchemaType: "string",
+      jsonSchemaFormat: "base64",
     },
   };
 }
@@ -64,7 +70,10 @@ export function mapBinData(value: Binary): { value: string; hint: TypeHint } {
 /**
  * Type detection and mapping dispatcher
  */
-export function mapValue(value: any, fieldPath: string): { value: any; hint: TypeHint | null } {
+export function mapValue(
+  value: any,
+  fieldPath: string,
+): { value: any; hint: TypeHint | null } {
   // ObjectId
   if (value instanceof ObjectId) {
     return mapObjectId(value);
@@ -76,12 +85,12 @@ export function mapValue(value: any, fieldPath: string): { value: any; hint: Typ
   }
 
   // Decimal128
-  if (value && value._bsontype === 'Decimal128') {
+  if (value && value._bsontype === "Decimal128") {
     return mapDecimal128(value as Decimal128);
   }
 
   // Binary
-  if (value instanceof Binary || (value && value._bsontype === 'Binary')) {
+  if (value instanceof Binary || (value && value._bsontype === "Binary")) {
     return mapBinData(value as Binary);
   }
 
@@ -94,7 +103,7 @@ export function mapValue(value: any, fieldPath: string): { value: any; hint: Typ
  */
 export function mapDocument(
   doc: any,
-  pathPrefix = ''
+  pathPrefix = "",
 ): { doc: any; hints: Record<string, TypeHint> } {
   const result: any = {};
   const hints: Record<string, TypeHint> = {};
@@ -111,7 +120,7 @@ export function mapDocument(
     if (Array.isArray(value)) {
       result[key] = value.map((item, index) => {
         const itemPath = `${fieldPath}[${index}]`;
-        if (typeof item === 'object' && item !== null && !Array.isArray(item)) {
+        if (typeof item === "object" && item !== null && !Array.isArray(item)) {
           const mapped = mapDocument(item, itemPath);
           Object.assign(hints, mapped.hints);
           return mapped.doc;
@@ -127,7 +136,7 @@ export function mapDocument(
     }
 
     // Handle nested objects - but check for BSON types first
-    if (typeof value === 'object' && !Array.isArray(value)) {
+    if (typeof value === "object" && !Array.isArray(value)) {
       // Check if this is a BSON type that needs mapping
       const mappedValue = mapValue(value, fieldPath);
       if (mappedValue.hint) {

@@ -3,8 +3,13 @@
  * These structures flow through the pipeline: sampling → normalization → inference → synthesis → generation → validation
  */
 
-import { ObjectId } from 'mongodb';
-import type { ArrayLengthStats, DynamicKeyMetadata, DynamicKeyValueSchema, FrequencyDistribution } from './dynamic-keys.js';
+import { ObjectId } from "mongodb";
+import type {
+  ArrayLengthStats,
+  DynamicKeyMetadata,
+  DynamicKeyValueSchema,
+  FrequencyDistribution,
+} from "./dynamic-keys.js";
 
 // Re-export types from dynamic-keys to maintain compatibility
 export type { ArrayLengthStats, FrequencyDistribution };
@@ -69,7 +74,7 @@ export interface InferredSchema {
 /**
  * DocumentSizeBucket - Document size classification for distribution matching
  */
-export type SizeProxyType = 'leafFieldCount' | 'arrayLengthSum' | 'byteSize';
+export type SizeProxyType = "leafFieldCount" | "arrayLengthSum" | "byteSize";
 
 export interface DocumentSizeBucket {
   bucketId: string; // e.g., "small", "medium", "large"
@@ -85,10 +90,10 @@ export interface DocumentSizeBucket {
 /**
  * ConstraintsProfile - Statistical constraints for generation
  */
-export type KeyFieldType = 'ObjectId' | 'string' | 'number' | 'UUID';
-export type IdPolicy = 'objectid' | 'uuid' | 'string' | 'number' | 'inferred';
-export type UniquenessScope = 'batch' | 'run';
-export type ArrayLenPolicy = 'minmax' | 'percentileClamp';
+export type KeyFieldType = "ObjectId" | "string" | "number" | "UUID";
+export type IdPolicy = "objectid" | "uuid" | "string" | "number" | "inferred";
+export type UniquenessScope = "batch" | "run";
+export type ArrayLenPolicy = "minmax" | "percentileClamp";
 
 export interface KeyFieldConfig {
   type: KeyFieldType;
@@ -128,7 +133,7 @@ export interface NumericRangeStats {
   valuesAnalyzed: number;
 
   /** Value type: 'integer' or 'float' */
-  valueType: 'integer' | 'float';
+  valueType: "integer" | "float";
 
   /** Whether all observed values are positive (>= 0) */
   allPositive: boolean;
@@ -164,14 +169,14 @@ export interface XGenArrayLen {
   p50: number;
   p90: number;
   p99: number;
-  strategy: 'minmax' | 'percentile';
+  strategy: "minmax" | "percentile";
 }
 
 export interface XGenNumericRange {
   mean: number;
   median: number;
   p95: number;
-  type: 'integer' | 'float';
+  type: "integer" | "float";
   allPositive: boolean;
 }
 
@@ -194,8 +199,8 @@ export interface GenerationSchemaProperty {
   additionalProperties?: boolean;
   minItems?: number;
   maxItems?: number;
-  'x-gen'?: XGenExtensions;
-  'x-dynamic-keys'?: {
+  "x-gen"?: XGenExtensions;
+  "x-dynamic-keys"?: {
     enabled: boolean;
     metadata: DynamicKeyMetadata;
     valueSchema: DynamicKeyValueSchema;
@@ -204,7 +209,7 @@ export interface GenerationSchemaProperty {
 
 export interface GenerationSchema {
   $schema: string;
-  type: 'object';
+  type: "object";
   title: string;
   properties: Record<string, GenerationSchemaProperty>;
   required: string[];
@@ -237,7 +242,7 @@ export interface RunManifest {
   run: {
     id: string;
     timestamp: string;
-    phase: 'discovery' | 'generation' | 'validation';
+    phase: "discovery" | "generation" | "validation";
   };
   config: {
     source?: {
@@ -254,7 +259,7 @@ export interface RunManifest {
       constraintsHash: string;
     };
     output?: {
-      format: 'ndjson' | 'json';
+      format: "ndjson" | "json";
       destination: string;
     };
   };

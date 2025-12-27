@@ -13,17 +13,17 @@ import type {
   DynamicKeyMetadata,
   DynamicKeyValueSchema,
   FrequencyDistribution,
-} from '../../types/dynamic-keys.js';
-import type { InferredSchema } from '../../types/data-model.js';
+} from "../../types/dynamic-keys.js";
+import type { InferredSchema } from "../../types/data-model.js";
 import {
   detectDynamicKeys,
   type DetectionResult,
-} from '../../utils/key-patterns.js';
+} from "../../utils/key-patterns.js";
 import {
   calculateFrequencies,
   calculateDistributionStats,
-} from '../../utils/frequency-map.js';
-import { logger } from '../../utils/logger.js';
+} from "../../utils/frequency-map.js";
+import { logger } from "../../utils/logger.js";
 
 /**
  * Result of analyzing object keys for dynamic key patterns
@@ -82,13 +82,13 @@ interface ValueTypeObservation {
  */
 export function countUniqueKeys(
   documents: any[],
-  fieldPath: string
+  fieldPath: string,
 ): Set<string> {
   const uniqueKeys = new Set<string>();
 
   for (const doc of documents) {
     const value = getValueAtPath(doc, fieldPath);
-    if (value && typeof value === 'object' && !Array.isArray(value)) {
+    if (value && typeof value === "object" && !Array.isArray(value)) {
       for (const key of Object.keys(value)) {
         uniqueKeys.add(key);
       }
@@ -97,7 +97,7 @@ export function countUniqueKeys(
 
   // Debug logging for fields with many keys
   if (uniqueKeys.size > 50) {
-    logger.debug('Found field with high key count', {
+    logger.debug("Found field with high key count", {
       fieldPath,
       uniqueKeyCount: uniqueKeys.size,
       exampleKeys: Array.from(uniqueKeys).slice(0, 5),
@@ -111,11 +111,11 @@ export function countUniqueKeys(
  * Get value at a dot-notation path in an object
  */
 function getValueAtPath(obj: any, path: string): any {
-  const parts = path.split('.');
+  const parts = path.split(".");
   let current = obj;
 
   for (const part of parts) {
-    if (current == null || typeof current !== 'object') {
+    if (current == null || typeof current !== "object") {
       return undefined;
     }
     current = current[part];
@@ -133,13 +133,13 @@ function getValueAtPath(obj: any, path: string): any {
  */
 function collectKeyCountsPerDocument(
   documents: any[],
-  fieldPath: string
+  fieldPath: string,
 ): number[] {
   const counts: number[] = [];
 
   for (const doc of documents) {
     const value = getValueAtPath(doc, fieldPath);
-    if (value && typeof value === 'object' && !Array.isArray(value)) {
+    if (value && typeof value === "object" && !Array.isArray(value)) {
       counts.push(Object.keys(value).length);
     }
   }
@@ -173,14 +173,14 @@ function collectKeyCountsPerDocument(
 export function analyzeValueTypes(
   documents: any[],
   fieldPath: string,
-  keys: Set<string>
+  keys: Set<string>,
 ): DynamicKeyValueSchema {
   const typeObservations = new Map<string, ValueTypeObservation>();
 
   // Collect all value types across all keys and documents
   for (const doc of documents) {
     const obj = getValueAtPath(doc, fieldPath);
-    if (!obj || typeof obj !== 'object' || Array.isArray(obj)) {
+    if (!obj || typeof obj !== "object" || Array.isArray(obj)) {
       continue;
     }
 
@@ -214,12 +214,12 @@ export function analyzeValueTypes(
 
   const totalObservations = Array.from(typeObservations.values()).reduce(
     (sum, obs) => sum + obs.count,
-    0
+    0,
   );
 
   // Sort by count (descending) for consistent ordering
   const sortedObservations = Array.from(typeObservations.values()).sort(
-    (a, b) => b.count - a.count
+    (a, b) => b.count - a.count,
   );
 
   for (const obs of sortedObservations) {
@@ -231,7 +231,7 @@ export function analyzeValueTypes(
   }
 
   const isUniformType = types.length === 1;
-  const dominantType = types[0] || 'unknown';
+  const dominantType = types[0] || "unknown";
 
   return {
     types,
@@ -246,16 +246,16 @@ export function analyzeValueTypes(
  * Get the JSON Schema type of a value
  */
 function getValueType(value: any): string {
-  if (value === null) return 'null';
-  if (Array.isArray(value)) return 'array';
+  if (value === null) return "null";
+  if (Array.isArray(value)) return "array";
 
   const type = typeof value;
-  if (type === 'object') return 'object';
-  if (type === 'boolean') return 'boolean';
-  if (type === 'number') return Number.isInteger(value) ? 'integer' : 'number';
-  if (type === 'string') return 'string';
+  if (type === "object") return "object";
+  if (type === "boolean") return "boolean";
+  if (type === "number") return Number.isInteger(value) ? "integer" : "number";
+  if (type === "string") return "string";
 
-  return 'unknown';
+  return "unknown";
 }
 
 /**
@@ -264,14 +264,14 @@ function getValueType(value: any): string {
 function inferValueSchema(value: any, type: string): any {
   const schema: any = { type };
 
-  if (type === 'string' && typeof value === 'string') {
+  if (type === "string" && typeof value === "string") {
     // Add basic string constraints
     schema.minLength = value.length;
     schema.maxLength = value.length;
-  } else if (type === 'number' || type === 'integer') {
+  } else if (type === "number" || type === "integer") {
     schema.minimum = value;
     schema.maximum = value;
-  } else if (type === 'array' && Array.isArray(value)) {
+  } else if (type === "array" && Array.isArray(value)) {
     schema.minItems = value.length;
     schema.maxItems = value.length;
 
@@ -280,7 +280,7 @@ function inferValueSchema(value: any, type: string): any {
       const itemType = getValueType(value[0]);
       schema.items = { type: itemType };
     }
-  } else if (type === 'object' && value && typeof value === 'object') {
+  } else if (type === "object" && value && typeof value === "object") {
     // Simple object schema
     const properties: any = {};
     for (const key of Object.keys(value)) {
@@ -321,7 +321,7 @@ export function buildDynamicKeyMetadata(
   detection: DetectionResult,
   keyCounts: number[],
   documentsAnalyzed: number,
-  valueSchema: DynamicKeyValueSchema
+  valueSchema: DynamicKeyValueSchema,
 ): DynamicKeyMetadata {
   // Calculate frequency distribution of key counts
   const countDistribution = calculateFrequencies(keyCounts);
@@ -329,7 +329,7 @@ export function buildDynamicKeyMetadata(
 
   return {
     enabled: detection.detected,
-    pattern: detection.pattern || 'CUSTOM',
+    pattern: detection.pattern || "CUSTOM",
     customPattern: detection.customPattern,
     confidence: detection.confidence,
     confidenceLevel: detection.confidenceLevel,
@@ -350,19 +350,19 @@ export function buildDynamicKeyMetadata(
  */
 function checkPathOverride(
   fieldPath: string,
-  config: DynamicKeyDetectionConfig
-): 'static' | 'dynamic' | null {
+  config: DynamicKeyDetectionConfig,
+): "static" | "dynamic" | null {
   // Check force static paths
   for (const pattern of config.forceStaticPaths) {
     if (matchesPathPattern(fieldPath, pattern)) {
-      return 'static';
+      return "static";
     }
   }
 
   // Check force dynamic paths
   for (const pattern of config.forceDynamicPaths) {
     if (matchesPathPattern(fieldPath, pattern)) {
-      return 'dynamic';
+      return "dynamic";
     }
   }
 
@@ -375,9 +375,9 @@ function checkPathOverride(
 function matchesPathPattern(fieldPath: string, pattern: string): boolean {
   // Convert glob-style pattern to regex
   const regexPattern = pattern
-    .replace(/\./g, '\\.')
-    .replace(/\*/g, '.*')
-    .replace(/\?/g, '.');
+    .replace(/\./g, "\\.")
+    .replace(/\*/g, ".*")
+    .replace(/\?/g, ".");
 
   const regex = new RegExp(`^${regexPattern}$`);
   return regex.test(fieldPath);
@@ -423,15 +423,15 @@ function matchesPathPattern(fieldPath: string, pattern: string): boolean {
 export function analyzeObjectKeys(
   documents: any[],
   fieldPath: string,
-  config: DynamicKeyDetectionConfig
+  config: DynamicKeyDetectionConfig,
 ): ObjectKeysAnalysis {
-  logger.debug('Analyzing object keys for dynamic patterns', { fieldPath });
+  logger.debug("Analyzing object keys for dynamic patterns", { fieldPath });
 
   // Check for path overrides
   const override = checkPathOverride(fieldPath, config);
 
-  if (override === 'static') {
-    logger.debug('Field path forced as static keys', { fieldPath });
+  if (override === "static") {
+    logger.debug("Field path forced as static keys", { fieldPath });
     return {
       fieldPath,
       uniqueKeys: new Set(),
@@ -444,20 +444,23 @@ export function analyzeObjectKeys(
   const uniqueKeys = countUniqueKeys(documents, fieldPath);
 
   // Collect key counts per document for frequency distribution
-  const keyCountsPerDocument = collectKeyCountsPerDocument(documents, fieldPath);
+  const keyCountsPerDocument = collectKeyCountsPerDocument(
+    documents,
+    fieldPath,
+  );
 
   // If forced dynamic, skip pattern detection
-  if (override === 'dynamic') {
-    logger.debug('Field path forced as dynamic keys', { fieldPath });
+  if (override === "dynamic") {
+    logger.debug("Field path forced as dynamic keys", { fieldPath });
 
     const valueSchema = analyzeValueTypes(documents, fieldPath, uniqueKeys);
 
     // Create a synthetic detection result
     const detection: DetectionResult = {
       detected: true,
-      pattern: 'CUSTOM',
+      pattern: "CUSTOM",
       confidence: 1.0,
-      confidenceLevel: 'high',
+      confidenceLevel: "high",
       totalKeys: uniqueKeys.size,
       matchCount: uniqueKeys.size,
       matchRatio: 1.0,
@@ -468,7 +471,7 @@ export function analyzeObjectKeys(
       detection,
       keyCountsPerDocument,
       documents.length,
-      valueSchema
+      valueSchema,
     );
 
     return {
@@ -486,7 +489,7 @@ export function analyzeObjectKeys(
   const keys = Array.from(uniqueKeys);
   const detection = detectDynamicKeys(keys, config);
 
-  logger.debug('Dynamic key detection result', {
+  logger.debug("Dynamic key detection result", {
     fieldPath,
     detected: detection.detected,
     pattern: detection.pattern,
@@ -512,10 +515,10 @@ export function analyzeObjectKeys(
     detection,
     keyCountsPerDocument,
     documents.length,
-    valueSchema
+    valueSchema,
   );
 
-  logger.info('Dynamic keys detected', {
+  logger.info("Dynamic keys detected", {
     fieldPath,
     pattern: metadata.pattern,
     confidence: metadata.confidence,

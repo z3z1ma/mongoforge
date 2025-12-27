@@ -7,13 +7,13 @@ import {
   ConstraintsProfile,
   DocumentSizeBucket,
   NormalizedDocument,
-} from '../../types/data-model';
+} from "../../types/data-model";
 
 export interface ProfilerOptions {
-  arrayLenPolicy: 'minmax' | 'percentileClamp';
+  arrayLenPolicy: "minmax" | "percentileClamp";
   percentiles: number[];
   clampRange: [number, number];
-  sizeProxy: 'leafFieldCount' | 'arrayLengthSum' | 'byteSize';
+  sizeProxy: "leafFieldCount" | "arrayLengthSum" | "byteSize";
 }
 
 export interface ProfilerResult {

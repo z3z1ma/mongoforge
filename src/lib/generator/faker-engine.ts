@@ -3,21 +3,21 @@
  * Updated to support frequency distribution-based array length sampling (Feature: 002-dynamic-key-inference)
  */
 
-import jsf from 'json-schema-faker';
-import { faker } from '@faker-js/faker';
-import { logger } from '../../utils/logger.js';
-import { hashStringToSeed } from '../../utils/seed-manager.js';
-import { sampleFromDistribution } from '../../utils/frequency-map.js';
-import type { FrequencyDistribution } from '../../types/dynamic-keys.js';
+import jsf from "json-schema-faker";
+import { faker } from "@faker-js/faker";
+import { logger } from "../../utils/logger.js";
+import { hashStringToSeed } from "../../utils/seed-manager.js";
+import { sampleFromDistribution } from "../../utils/frequency-map.js";
+import type { FrequencyDistribution } from "../../types/dynamic-keys.js";
 import {
   preprocessSchema as preprocessDynamicKeys,
   countDynamicKeySchemas,
-} from './schema-preprocessor.js';
+} from "./schema-preprocessor.js";
 
 // Polyfill for json-schema-faker's browser-specific code in Node.js
 // jsf tries to access location.href which doesn't exist in Node.js
-if (typeof (globalThis as any).location === 'undefined') {
-  (globalThis as any).location = { href: '' };
+if (typeof (globalThis as any).location === "undefined") {
+  (globalThis as any).location = { href: "" };
 }
 
 /**
@@ -25,13 +25,14 @@ if (typeof (globalThis as any).location === 'undefined') {
  */
 export function initializeFaker(seed?: string | number): void {
   // Configure jsf to use faker
-  jsf.extend('faker', () => faker);
+  jsf.extend("faker", () => faker);
 
   // Set seed if provided
   if (seed !== undefined) {
-    const numericSeed = typeof seed === 'string' ? hashStringToSeed(seed) : seed;
+    const numericSeed =
+      typeof seed === "string" ? hashStringToSeed(seed) : seed;
     faker.seed(numericSeed);
-    logger.debug('Faker seed set', { seed, numericSeed });
+    logger.debug("Faker seed set", { seed, numericSeed });
   }
 
   // Configure jsf options
@@ -46,7 +47,7 @@ export function initializeFaker(seed?: string | number): void {
     random: () => faker.number.float({ min: 0, max: 1 }),
   });
 
-  logger.debug('json-schema-faker initialized');
+  logger.debug("json-schema-faker initialized");
 }
 
 /**
@@ -54,7 +55,7 @@ export function initializeFaker(seed?: string | number): void {
  * Walks through schema and replaces minItems/maxItems with sampled values from x-array-length-distribution
  */
 function preprocessSchemaForArrays(schema: any): any {
-  if (!schema || typeof schema !== 'object') {
+  if (!schema || typeof schema !== "object") {
     return schema;
   }
 
@@ -63,10 +64,10 @@ function preprocessSchemaForArrays(schema: any): any {
 
   // Check if this is an array with x-array-length-distribution annotation
   if (
-    processed.type === 'array' &&
-    processed['x-array-length-distribution']?.distribution
+    processed.type === "array" &&
+    processed["x-array-length-distribution"]?.distribution
   ) {
-    const distribution = processed['x-array-length-distribution']
+    const distribution = processed["x-array-length-distribution"]
       .distribution as FrequencyDistribution;
 
     try {
@@ -77,16 +78,16 @@ function preprocessSchemaForArrays(schema: any): any {
       processed.minItems = sampledLength;
       processed.maxItems = sampledLength;
 
-      logger.debug('Applied frequency distribution sampling for array', {
+      logger.debug("Applied frequency distribution sampling for array", {
         sampledLength,
         distributionSize: Object.keys(distribution).length,
       });
     } catch (error) {
       logger.warn(
-        'Failed to sample from array length distribution, using existing constraints',
+        "Failed to sample from array length distribution, using existing constraints",
         {
           error: error instanceof Error ? error.message : String(error),
-        }
+        },
       );
     }
   }
@@ -97,7 +98,7 @@ function preprocessSchemaForArrays(schema: any): any {
       Object.entries(processed.properties).map(([key, value]) => [
         key,
         preprocessSchemaForArrays(value),
-      ])
+      ]),
     );
   }
 
@@ -105,7 +106,7 @@ function preprocessSchemaForArrays(schema: any): any {
   if (processed.items) {
     if (Array.isArray(processed.items)) {
       processed.items = processed.items.map((item: any) =>
-        preprocessSchemaForArrays(item)
+        preprocessSchemaForArrays(item),
       );
     } else {
       processed.items = preprocessSchemaForArrays(processed.items);
@@ -126,7 +127,7 @@ export async function generate(
     useFrequencyDistributions?: boolean;
     useDynamicKeys?: boolean;
     seed?: number;
-  } = {}
+  } = {},
 ): Promise<any> {
   const {
     useFrequencyDistributions = true,
@@ -140,7 +141,7 @@ export async function generate(
   if (useDynamicKeys) {
     const dynamicKeyCount = countDynamicKeySchemas(schema);
     if (dynamicKeyCount > 0) {
-      logger.debug('Preprocessing dynamic keys', { count: dynamicKeyCount });
+      logger.debug("Preprocessing dynamic keys", { count: dynamicKeyCount });
       processedSchema = preprocessDynamicKeys(processedSchema, {
         seed,
         validateKeys: true,
@@ -168,14 +169,13 @@ export async function generateMany(
     useFrequencyDistributions?: boolean;
     useDynamicKeys?: boolean;
     seed?: number;
-  } = {}
+  } = {},
 ): Promise<any[]> {
   const documents: any[] = [];
 
   for (let i = 0; i < count; i++) {
     // Use seed + i for deterministic but varied generation
-    const docSeed =
-      options.seed !== undefined ? options.seed + i : undefined;
+    const docSeed = options.seed !== undefined ? options.seed + i : undefined;
     const doc = await generate(schema, { ...options, seed: docSeed });
     documents.push(doc);
   }
@@ -188,8 +188,9 @@ export async function generateMany(
  */
 export function resetSeed(seed?: string | number): void {
   if (seed !== undefined) {
-    const numericSeed = typeof seed === 'string' ? hashStringToSeed(seed) : seed;
+    const numericSeed =
+      typeof seed === "string" ? hashStringToSeed(seed) : seed;
     faker.seed(numericSeed);
-    logger.debug('Faker seed reset', { seed, numericSeed });
+    logger.debug("Faker seed reset", { seed, numericSeed });
   }
 }

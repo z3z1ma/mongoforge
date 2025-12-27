@@ -6,7 +6,7 @@
 import type {
   FrequencyDistribution,
   DistributionStats,
-} from '../types/dynamic-keys.js';
+} from "../types/dynamic-keys.js";
 
 /**
  * Calculate frequency distribution from an array of values
@@ -41,12 +41,12 @@ export function calculateFrequencies(values: number[]): FrequencyDistribution {
  * // Returns: 1, 2, or 3 (weighted by frequency)
  */
 export function sampleFromDistribution(
-  distribution: FrequencyDistribution
+  distribution: FrequencyDistribution,
 ): number {
   const entries = Object.entries(distribution);
 
   if (entries.length === 0) {
-    throw new Error('Cannot sample from empty distribution');
+    throw new Error("Cannot sample from empty distribution");
   }
 
   // Calculate total frequency
@@ -67,7 +67,7 @@ export function sampleFromDistribution(
   // Fallback to last value (should never reach here due to floating point precision)
   const lastEntry = entries[entries.length - 1];
   if (!lastEntry) {
-    throw new Error('Distribution has no entries');
+    throw new Error("Distribution has no entries");
   }
   return Number(lastEntry[0]);
 }
@@ -85,10 +85,10 @@ export function sampleFromDistribution(
  */
 export function getPercentile(
   distribution: FrequencyDistribution,
-  percentile: number
+  percentile: number,
 ): number {
   if (percentile < 0 || percentile > 1) {
-    throw new Error('Percentile must be between 0.0 and 1.0');
+    throw new Error("Percentile must be between 0.0 and 1.0");
   }
 
   const entries = Object.entries(distribution)
@@ -96,7 +96,7 @@ export function getPercentile(
     .sort((a, b) => a.value - b.value);
 
   if (entries.length === 0) {
-    throw new Error('Cannot calculate percentile of empty distribution');
+    throw new Error("Cannot calculate percentile of empty distribution");
   }
 
   const total = entries.reduce((sum, entry) => sum + entry.count, 0);
@@ -113,7 +113,7 @@ export function getPercentile(
   // Fallback to maximum value
   const lastEntry = entries[entries.length - 1];
   if (!lastEntry) {
-    throw new Error('Distribution has no entries');
+    throw new Error("Distribution has no entries");
   }
   return lastEntry.value;
 }
@@ -129,14 +129,14 @@ export function getPercentile(
  * // Returns: { min: 1, max: 3, median: 2, p95: 3, total: 950, unique: 3 }
  */
 export function calculateDistributionStats(
-  distribution: FrequencyDistribution
+  distribution: FrequencyDistribution,
 ): DistributionStats {
   const entries = Object.entries(distribution)
     .map(([value, count]) => ({ value: Number(value), count }))
     .sort((a, b) => a.value - b.value);
 
   if (entries.length === 0) {
-    throw new Error('Cannot calculate stats for empty distribution');
+    throw new Error("Cannot calculate stats for empty distribution");
   }
 
   const total = entries.reduce((sum, entry) => sum + entry.count, 0);
@@ -144,7 +144,7 @@ export function calculateDistributionStats(
   const lastEntry = entries[entries.length - 1];
 
   if (!firstEntry || !lastEntry) {
-    throw new Error('Distribution has no entries');
+    throw new Error("Distribution has no entries");
   }
 
   const min = firstEntry.value;

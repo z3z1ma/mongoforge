@@ -9,9 +9,9 @@ import {
   TypeHint,
   InferredSchemaField,
   ConstraintsProfile,
-} from '../../types/data-model.js';
-import { ArrayLengthStats } from '../../types/dynamic-keys.js';
-import { logger } from '../../utils/logger.js';
+} from "../../types/data-model.js";
+import { ArrayLengthStats } from "../../types/dynamic-keys.js";
+import { logger } from "../../utils/logger.js";
 
 /**
  * Apply x-gen.key vendor extension
@@ -20,13 +20,13 @@ import { logger } from '../../utils/logger.js';
 export function applyKeyExtension(
   fieldPath: string,
   isKeyField: boolean,
-  existingExtensions: XGenExtensions = {}
+  existingExtensions: XGenExtensions = {},
 ): XGenExtensions {
   if (!isKeyField) {
     return existingExtensions;
   }
 
-  logger.debug('Applying x-gen.key extension', { fieldPath });
+  logger.debug("Applying x-gen.key extension", { fieldPath });
 
   return {
     ...existingExtensions,
@@ -41,13 +41,13 @@ export function applyKeyExtension(
 export function applyMongoTypeExtension(
   fieldPath: string,
   typeHint: TypeHint | undefined,
-  existingExtensions: XGenExtensions = {}
+  existingExtensions: XGenExtensions = {},
 ): XGenExtensions {
   if (!typeHint) {
     return existingExtensions;
   }
 
-  logger.debug('Applying x-gen.mongoType extension', {
+  logger.debug("Applying x-gen.mongoType extension", {
     fieldPath,
     mongoType: typeHint.originalType,
   });
@@ -66,14 +66,14 @@ export function applyMongoTypeExtension(
 export function applyArrayLenExtension(
   fieldPath: string,
   arrayStats: ArrayLengthStats | undefined,
-  strategy: 'minmax' | 'percentile' = 'percentile',
-  existingExtensions: XGenExtensions = {}
+  strategy: "minmax" | "percentile" = "percentile",
+  existingExtensions: XGenExtensions = {},
 ): XGenExtensions {
   if (!arrayStats) {
     return existingExtensions;
   }
 
-  logger.debug('Applying x-gen.arrayLen extension', {
+  logger.debug("Applying x-gen.arrayLen extension", {
     fieldPath,
     strategy,
     p50: arrayStats.stats.median,
@@ -105,7 +105,7 @@ export function buildXGenExtensions(options: {
   isKeyField?: boolean;
   typeHint?: TypeHint;
   arrayStats?: ArrayLengthStats;
-  arrayLenStrategy?: 'minmax' | 'percentile';
+  arrayLenStrategy?: "minmax" | "percentile";
 }): XGenExtensions | undefined {
   let extensions: XGenExtensions = {};
 
@@ -116,7 +116,11 @@ export function buildXGenExtensions(options: {
 
   // Apply mongoType extension
   if (options.typeHint) {
-    extensions = applyMongoTypeExtension(options.fieldPath, options.typeHint, extensions);
+    extensions = applyMongoTypeExtension(
+      options.fieldPath,
+      options.typeHint,
+      extensions,
+    );
   }
 
   // Apply arrayLen extension
@@ -124,8 +128,8 @@ export function buildXGenExtensions(options: {
     extensions = applyArrayLenExtension(
       options.fieldPath,
       options.arrayStats,
-      options.arrayLenStrategy || 'percentile',
-      extensions
+      options.arrayLenStrategy || "percentile",
+      extensions,
     );
   }
 
@@ -138,14 +142,14 @@ export function buildXGenExtensions(options: {
  */
 export function extractArrayConstraints(
   arrayLen: XGenArrayLen | undefined,
-  policy: 'minmax' | 'percentileClamp' = 'percentileClamp',
-  clampRange: [number, number] = [1, 99]
+  policy: "minmax" | "percentileClamp" = "percentileClamp",
+  clampRange: [number, number] = [1, 99],
 ): { minItems?: number; maxItems?: number } {
   if (!arrayLen) {
     return {};
   }
 
-  if (policy === 'minmax') {
+  if (policy === "minmax") {
     return {
       minItems: arrayLen.min,
       maxItems: arrayLen.max,
@@ -170,18 +174,20 @@ export function extractArrayConstraints(
  */
 export function getRecommendedArrayLength(
   arrayLen: XGenArrayLen,
-  randomValue = Math.random()
+  randomValue = Math.random(),
 ): number {
-  if (arrayLen.strategy === 'minmax') {
+  if (arrayLen.strategy === "minmax") {
     // Uniform distribution between min and max
-    return Math.floor(arrayLen.min + randomValue * (arrayLen.max - arrayLen.min + 1));
+    return Math.floor(
+      arrayLen.min + randomValue * (arrayLen.max - arrayLen.min + 1),
+    );
   }
 
   // Percentile-based strategy: weight toward p50-p90 range
   if (randomValue < 0.5) {
     // 50% chance: between min and p50
     const range = arrayLen.p50 - arrayLen.min;
-    return Math.floor(arrayLen.min + (randomValue * 2) * range);
+    return Math.floor(arrayLen.min + randomValue * 2 * range);
   } else if (randomValue < 0.9) {
     // 40% chance: between p50 and p90
     const range = arrayLen.p90 - arrayLen.p50;
@@ -200,19 +206,19 @@ export function getRecommendedArrayLength(
  */
 export function addArrayLengthDistribution(
   property: any,
-  arrayStats: ArrayLengthStats | undefined
+  arrayStats: ArrayLengthStats | undefined,
 ): void {
-  if (!arrayStats || property.type !== 'array') {
+  if (!arrayStats || property.type !== "array") {
     return;
   }
 
-  logger.debug('Adding x-array-length-distribution annotation', {
+  logger.debug("Adding x-array-length-distribution annotation", {
     fieldPath: arrayStats.fieldPath,
     unique: arrayStats.stats.unique,
     total: arrayStats.stats.total,
   });
 
-  property['x-array-length-distribution'] = {
+  property["x-array-length-distribution"] = {
     distribution: arrayStats.distribution,
     stats: arrayStats.stats,
   };

@@ -2,19 +2,19 @@
  * Sampler module - orchestrates MongoDB document sampling
  */
 
-import { MongoConnector, createConnector } from './connector.js';
+import { MongoConnector, createConnector } from "./connector.js";
 import {
   createStrategy,
   TimeWindowOptions,
   SamplingStrategy,
-} from './strategies.js';
-import { SamplerOptions, SamplerResult } from './types.js';
-import { SampleDocument } from '../../types/data-model.js';
-import { logger } from '../../utils/logger.js';
+} from "./strategies.js";
+import { SamplerOptions, SamplerResult } from "./types.js";
+import { SampleDocument } from "../../types/data-model.js";
+import { logger } from "../../utils/logger.js";
 
-export * from './types.js';
-export * from './connector.js';
-export * from './strategies.js';
+export * from "./types.js";
+export * from "./connector.js";
+export * from "./strategies.js";
 
 /**
  * Main sampler class
@@ -48,7 +48,7 @@ export class Sampler {
         collection: options.collection,
       });
 
-      logger.info('Starting document sampling', {
+      logger.info("Starting document sampling", {
         collection: options.collection,
         strategy: options.strategy,
         sampleSize: options.sampleSize,
@@ -61,12 +61,12 @@ export class Sampler {
       const documents = await this.strategy.sample(
         collection,
         options.sampleSize,
-        options.timeWindow
+        options.timeWindow,
       );
 
       const duration = Date.now() - startTime;
 
-      logger.info('Sampling completed', {
+      logger.info("Sampling completed", {
         documentsRetrieved: documents.length,
         durationMs: duration,
       });
@@ -80,7 +80,7 @@ export class Sampler {
         },
       };
     } catch (error) {
-      logger.error('Sampling failed', error);
+      logger.error("Sampling failed", error);
       throw error;
     } finally {
       // Always close connection
@@ -94,7 +94,9 @@ export class Sampler {
 /**
  * Convenience function for one-off sampling
  */
-export async function sampleCollection(options: SamplerOptions): Promise<SamplerResult> {
+export async function sampleCollection(
+  options: SamplerOptions,
+): Promise<SamplerResult> {
   const sampler = new Sampler(options);
   return sampler.sample(options);
 }

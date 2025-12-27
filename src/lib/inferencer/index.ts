@@ -2,18 +2,28 @@
  * Inferencer module - schema inference from normalized documents
  */
 
-import { NormalizedDocument, InferredSchema } from '../../types/data-model.js';
-import { InferencerOptions, InferencerResult } from './types.js';
-import { inferSchema, extractFieldPaths, getArrayFieldPaths } from './mongodb-schema-wrapper.js';
-import { logger } from '../../utils/logger.js';
-import { analyzeObjectKeys, type ObjectKeysAnalysis } from './dynamic-key-detector.js';
-import { DEFAULT_DYNAMIC_KEY_CONFIG, type DynamicKeyDetectionConfig } from '../../types/dynamic-keys.js';
-import { applySemanticTypes, BUILTIN_DETECTORS } from './semantic-detectors.js';
+import { NormalizedDocument, InferredSchema } from "../../types/data-model.js";
+import { InferencerOptions, InferencerResult } from "./types.js";
+import {
+  inferSchema,
+  extractFieldPaths,
+  getArrayFieldPaths,
+} from "./mongodb-schema-wrapper.js";
+import { logger } from "../../utils/logger.js";
+import {
+  analyzeObjectKeys,
+  type ObjectKeysAnalysis,
+} from "./dynamic-key-detector.js";
+import {
+  DEFAULT_DYNAMIC_KEY_CONFIG,
+  type DynamicKeyDetectionConfig,
+} from "../../types/dynamic-keys.js";
+import { applySemanticTypes, BUILTIN_DETECTORS } from "./semantic-detectors.js";
 
-export * from './types.js';
-export * from './mongodb-schema-wrapper.js';
-export * from './dynamic-key-detector.js';
-export * from './semantic-detectors.js';
+export * from "./types.js";
+export * from "./mongodb-schema-wrapper.js";
+export * from "./dynamic-key-detector.js";
+export * from "./semantic-detectors.js";
 
 /**
  * Default inferencer options
@@ -34,7 +44,7 @@ const DEFAULT_OPTIONS: InferencerOptions = {
 function detectDynamicKeyFields(
   documents: NormalizedDocument[],
   schema: InferredSchema,
-  config: DynamicKeyDetectionConfig
+  config: DynamicKeyDetectionConfig,
 ): Map<string, ObjectKeysAnalysis> {
   const analyses = new Map<string, ObjectKeysAnalysis>();
   const fieldPaths = extractFieldPaths(schema);
@@ -43,8 +53,8 @@ function detectDynamicKeyFields(
   for (const [path, field] of fieldPaths) {
     // Check if field is an object type
     const hasObjectType = Array.isArray(field.type)
-      ? field.type.includes('Document')
-      : field.type === 'Document';
+      ? field.type.includes("Document")
+      : field.type === "Document";
 
     if (!hasObjectType) {
       continue;
@@ -66,11 +76,11 @@ function detectDynamicKeyFields(
  */
 export async function infer(
   documents: NormalizedDocument[],
-  options: Partial<InferencerOptions> = {}
+  options: Partial<InferencerOptions> = {},
 ): Promise<InferredSchema> {
   const opts = { ...DEFAULT_OPTIONS, ...options };
 
-  logger.info('Starting schema inference', {
+  logger.info("Starting schema inference", {
     documentCount: documents.length,
     options: opts,
   });
@@ -88,10 +98,10 @@ export async function infer(
 
         // Check if semantic type was detected
         if (field.types) {
-          const stringType = field.types.find((t: any) => t.name === 'String');
+          const stringType = field.types.find((t: any) => t.name === "String");
           if (stringType?.semanticType) {
             semanticTypesDetected++;
-            logger.debug('Semantic type detected', {
+            logger.debug("Semantic type detected", {
               fieldPath: field.path,
               semanticType: stringType.semanticType,
               confidence: stringType.semanticConfidence,
@@ -109,13 +119,13 @@ export async function infer(
     applyToAllFields(schema.fields);
 
     if (semanticTypesDetected > 0) {
-      logger.info('Semantic type detection complete', {
+      logger.info("Semantic type detection complete", {
         typesDetected: semanticTypesDetected,
       });
     }
   }
 
-  logger.info('Schema inference complete', {
+  logger.info("Schema inference complete", {
     fieldsDiscovered: Object.keys(schema.fields).length,
     documentCount: schema.count,
   });
@@ -143,21 +153,21 @@ export class Inferencer {
 
     if (this.options.dynamicKeyDetection) {
       const config =
-        typeof this.options.dynamicKeyDetection === 'boolean'
+        typeof this.options.dynamicKeyDetection === "boolean"
           ? DEFAULT_DYNAMIC_KEY_CONFIG
           : this.options.dynamicKeyDetection;
 
-      logger.info('Running dynamic key detection', {
+      logger.info("Running dynamic key detection", {
         threshold: config.threshold,
         patternsCount: config.patterns.length,
       });
 
       dynamicKeyAnalyses = detectDynamicKeyFields(documents, schema, config);
       dynamicKeysDetected = Array.from(dynamicKeyAnalyses.values()).filter(
-        (a) => a.isDynamic
+        (a) => a.isDynamic,
       ).length;
 
-      logger.info('Dynamic key detection complete', {
+      logger.info("Dynamic key detection complete", {
         fieldsAnalyzed: dynamicKeyAnalyses.size,
         dynamicKeysDetected,
       });
@@ -172,7 +182,7 @@ export class Inferencer {
             if (field && field.fields) {
               const removedCount = Object.keys(field.fields).length;
               field.fields = {}; // Empty object instead of delete - synthesizer needs this to exist
-              logger.debug('Stripped nested fields from dynamic key field', {
+              logger.debug("Stripped nested fields from dynamic key field", {
                 fieldPath,
                 removedFieldsCount: removedCount,
                 pattern: analysis.detection?.pattern,
@@ -180,7 +190,7 @@ export class Inferencer {
             }
           }
         }
-        logger.info('Stripped nested fields from dynamic key fields', {
+        logger.info("Stripped nested fields from dynamic key fields", {
           dynamicFieldsProcessed: dynamicKeysDetected,
         });
       }

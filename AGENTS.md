@@ -11,6 +11,17 @@ Run `bd prime` for workflow context, or install hooks (`bd hooks install`) for a
 
 For full workflow details: `bd prime`
 
+## Testing
+
+Run tests with:
+
+```bash
+npm run format
+npm run lint
+npm test -- --run
+npm test:coverage -- --run
+```
+
 ## MCP Agent Mail: coordination for multi-agent workflows
 
 What it is

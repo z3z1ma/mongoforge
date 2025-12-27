@@ -2,7 +2,7 @@
  * JSON array writer - Transform stream that converts object stream to JSON array format
  */
 
-import { Transform, TransformCallback } from 'stream';
+import { Transform, TransformCallback } from "stream";
 
 /**
  * Transform stream that converts objects to a JSON array
@@ -21,19 +21,23 @@ export class JSONWriter extends Transform {
 
   _construct(callback: (error?: Error | null) => void): void {
     // Write opening bracket
-    this.push('[\n');
+    this.push("[\n");
     callback();
   }
 
-  _transform(chunk: any, encoding: BufferEncoding, callback: TransformCallback): void {
+  _transform(
+    chunk: any,
+    encoding: BufferEncoding,
+    callback: TransformCallback,
+  ): void {
     try {
       let jsonLine: string;
 
       if (this.isFirstItem) {
-        jsonLine = '  ' + JSON.stringify(chunk);
+        jsonLine = "  " + JSON.stringify(chunk);
         this.isFirstItem = false;
       } else {
-        jsonLine = ',\n  ' + JSON.stringify(chunk);
+        jsonLine = ",\n  " + JSON.stringify(chunk);
       }
 
       this.push(jsonLine);
@@ -45,7 +49,7 @@ export class JSONWriter extends Transform {
 
   _flush(callback: TransformCallback): void {
     // Write closing bracket
-    this.push('\n]\n');
+    this.push("\n]\n");
     callback();
   }
 }

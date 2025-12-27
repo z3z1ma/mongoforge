@@ -9,21 +9,27 @@ import {
   ConstraintsProfile,
   TypeHint,
   InferredSchemaField,
-} from '../../types/data-model.js';
-import { SynthesizerOptions, SynthesizerResult } from './types.js';
+} from "../../types/data-model.js";
+import { SynthesizerOptions, SynthesizerResult } from "./types.js";
 import {
   buildXGenExtensions,
   extractArrayConstraints,
   applyArrayLenExtension,
   addArrayLengthDistribution,
-} from './vendor-keywords.js';
-import { extractFieldPaths, isFieldRequired } from '../inferencer/mongodb-schema-wrapper.js';
-import { logger } from '../../utils/logger.js';
-import type { ObjectKeysAnalysis } from '../inferencer/dynamic-key-detector.js';
-import type { DynamicKeyMetadata, DynamicKeyValueSchema } from '../../types/dynamic-keys.js';
+} from "./vendor-keywords.js";
+import {
+  extractFieldPaths,
+  isFieldRequired,
+} from "../inferencer/mongodb-schema-wrapper.js";
+import { logger } from "../../utils/logger.js";
+import type { ObjectKeysAnalysis } from "../inferencer/dynamic-key-detector.js";
+import type {
+  DynamicKeyMetadata,
+  DynamicKeyValueSchema,
+} from "../../types/dynamic-keys.js";
 
-export * from './types.js';
-export * from './vendor-keywords.js';
+export * from "./types.js";
+export * from "./vendor-keywords.js";
 
 /**
  * Default synthesizer options
@@ -36,7 +42,9 @@ const DEFAULT_OPTIONS: SynthesizerOptions = {
 /**
  * Build DynamicKeyValueSchema from analysis metadata
  */
-function buildValueSchemaFromAnalysis(analysis: ObjectKeysAnalysis): DynamicKeyValueSchema {
+function buildValueSchemaFromAnalysis(
+  analysis: ObjectKeysAnalysis,
+): DynamicKeyValueSchema {
   // Use the valueSchema from the analysis if available
   if (analysis.valueSchema) {
     return analysis.valueSchema;
@@ -44,59 +52,64 @@ function buildValueSchemaFromAnalysis(analysis: ObjectKeysAnalysis): DynamicKeyV
 
   // Fallback to simple string schema
   return {
-    types: ['string'],
+    types: ["string"],
     typeProbabilities: [1.0],
-    schemas: [{ type: 'string' }],
+    schemas: [{ type: "string" }],
     isUniformType: true,
-    dominantType: 'string',
+    dominantType: "string",
   };
 }
 
 /**
  * Map mongodb-schema type to JSON Schema type
  */
-function mapTypeToJsonSchema(mongoSchemaType: string | string[]): string | string[] {
+function mapTypeToJsonSchema(
+  mongoSchemaType: string | string[],
+): string | string[] {
   const typeMap: Record<string, string> = {
-    String: 'string',
-    Number: 'number',
-    Boolean: 'boolean',
-    Array: 'array',
-    Document: 'object',
-    ObjectID: 'string',
-    Date: 'string',
-    Decimal128: 'string',
-    Binary: 'string',
-    Null: 'null',
+    String: "string",
+    Number: "number",
+    Boolean: "boolean",
+    Array: "array",
+    Document: "object",
+    ObjectID: "string",
+    Date: "string",
+    Decimal128: "string",
+    Binary: "string",
+    Null: "null",
     // mongodb-schema semantic types (all map to string with format)
-    Email: 'string',
-    URL: 'string',
-    UUID: 'string',
-    Phone: 'string',
-    IPAddress: 'string',
+    Email: "string",
+    URL: "string",
+    UUID: "string",
+    Phone: "string",
+    IPAddress: "string",
   };
 
   if (Array.isArray(mongoSchemaType)) {
-    const mapped = mongoSchemaType.map((t) => typeMap[t] || (t ? t.toLowerCase() : '') || 'string');
-    if (mapped.length === 0) return 'string';
+    const mapped = mongoSchemaType.map(
+      (t) => typeMap[t] || (t ? t.toLowerCase() : "") || "string",
+    );
+    if (mapped.length === 0) return "string";
     const first = mapped[0];
-    return mapped.length === 1 ? (first || 'string') : mapped;
+    return mapped.length === 1 ? first || "string" : mapped;
   }
 
-  const lowerType = typeof mongoSchemaType === 'string' ? mongoSchemaType.toLowerCase() : '';
+  const lowerType =
+    typeof mongoSchemaType === "string" ? mongoSchemaType.toLowerCase() : "";
   const result = typeMap[mongoSchemaType] || lowerType;
-  return result || 'string'; // Always return a string, never undefined
+  return result || "string"; // Always return a string, never undefined
 }
 
 /**
  * Map semantic types to JSON Schema format
  */
 const SEMANTIC_TYPE_TO_FORMAT: Record<string, string> = {
-  Email: 'email',
-  URL: 'url',
-  UUID: 'uuid',
-  Phone: 'phone',
-  PersonName: 'person-name',
-  IPAddress: 'ipv4',
+  Email: "email",
+  URL: "url",
+  UUID: "uuid",
+  Phone: "phone",
+  PersonName: "person-name",
+  IPAddress: "ipv4",
 };
 
 /**
@@ -106,7 +119,7 @@ const SEMANTIC_TYPE_TO_FORMAT: Record<string, string> = {
 function getJsonSchemaFormat(
   mongoSchemaType: string,
   field: InferredSchemaField,
-  typeHint?: TypeHint
+  typeHint?: TypeHint,
 ): string | undefined {
   // Priority 1: MongoDB type hints (ObjectId, Date, etc.)
   if (typeHint?.jsonSchemaFormat) {
@@ -121,7 +134,7 @@ function getJsonSchemaFormat(
 
   // Priority 2b: Check for our custom semantic types on String types
   if (field.types) {
-    const stringType = field.types.find((t) => t.name === 'String');
+    const stringType = field.types.find((t) => t.name === "String");
     if (stringType?.semanticType) {
       const format = SEMANTIC_TYPE_TO_FORMAT[stringType.semanticType];
       if (format) {
@@ -132,9 +145,9 @@ function getJsonSchemaFormat(
 
   // Priority 3: MongoDB types
   const formatMap: Record<string, string> = {
-    ObjectID: 'objectid',
-    Date: 'date-time',
-    Decimal128: 'decimal',
+    ObjectID: "objectid",
+    Date: "date-time",
+    Decimal128: "decimal",
   };
 
   return formatMap[mongoSchemaType];
@@ -149,7 +162,7 @@ function transformField(
   constraints: ConstraintsProfile,
   typeHints: Map<string, TypeHint>,
   keyFields: Set<string>,
-  dynamicKeyAnalyses?: Map<string, ObjectKeysAnalysis>
+  dynamicKeyAnalyses?: Map<string, ObjectKeysAnalysis>,
 ): GenerationSchemaProperty {
   const isKey = keyFields.has(fieldPath);
   const typeHint = typeHints.get(fieldPath);
@@ -159,7 +172,7 @@ function transformField(
   let primaryType = field.type;
   if (Array.isArray(field.type)) {
     const mostProbableType = field.types.reduce((a, b) =>
-      a.probability > b.probability ? a : b
+      a.probability > b.probability ? a : b,
     );
     primaryType = mostProbableType.name;
   }
@@ -168,7 +181,7 @@ function transformField(
   const format = getJsonSchemaFormat(primaryType as string, field, typeHint);
 
   // Ensure we always have a valid type
-  const validType = jsonSchemaType || 'string';
+  const validType = jsonSchemaType || "string";
 
   const property: GenerationSchemaProperty = {
     type: validType,
@@ -179,17 +192,17 @@ function transformField(
   }
 
   // Apply numeric constraints (minimum/maximum) from profiler
-  if (primaryType === 'Number') {
+  if (primaryType === "Number") {
     const numericStats = constraints.numericRanges.get(fieldPath);
     if (numericStats) {
       property.minimum = numericStats.stats.min;
       property.maximum = numericStats.stats.max;
 
       // Add x-gen.numericRange extension for additional metadata
-      if (!property['x-gen']) {
-        property['x-gen'] = {};
+      if (!property["x-gen"]) {
+        property["x-gen"] = {};
       }
-      property['x-gen'].numericRange = {
+      property["x-gen"].numericRange = {
         mean: numericStats.mean,
         median: numericStats.stats.median,
         p95: numericStats.stats.p95,
@@ -197,7 +210,7 @@ function transformField(
         allPositive: numericStats.allPositive,
       };
 
-      logger.debug('Applied numeric constraints', {
+      logger.debug("Applied numeric constraints", {
         fieldPath,
         min: property.minimum,
         max: property.maximum,
@@ -207,8 +220,8 @@ function transformField(
   }
 
   // Handle array types
-  if (primaryType === 'Array' && field.types) {
-    const arrayItemTypes = field.types.find((t) => t.name === 'Array');
+  if (primaryType === "Array" && field.types) {
+    const arrayItemTypes = field.types.find((t) => t.name === "Array");
     if (arrayItemTypes && field.fields) {
       // Get the item type from nested fields (mongodb-schema stores array items in fields)
       const itemField = Object.values(field.fields)[0];
@@ -218,7 +231,7 @@ function transformField(
           `${fieldPath}[]`,
           constraints,
           typeHints,
-          keyFields
+          keyFields,
         );
       }
     }
@@ -226,7 +239,7 @@ function transformField(
     // Fallback: create basic items schema if not set
     if (!property.items) {
       // Default to string type for array items
-      property.items = { type: 'string' };
+      property.items = { type: "string" };
     }
 
     // Set minItems/maxItems from profiler stats (T053)
@@ -238,10 +251,13 @@ function transformField(
           p50: arrayStats.stats.median,
           p90: Math.round(arrayStats.stats.p95 * 0.95),
           p99: arrayStats.stats.p95,
-          strategy: constraints.config.arrayLenPolicy === 'minmax' ? 'minmax' : 'percentile',
+          strategy:
+            constraints.config.arrayLenPolicy === "minmax"
+              ? "minmax"
+              : "percentile",
         },
         constraints.config.arrayLenPolicy,
-        constraints.config.clampRange
+        constraints.config.clampRange,
       );
 
       if (arrayConstraints.minItems !== undefined) {
@@ -257,20 +273,20 @@ function transformField(
   }
 
   // Handle nested document types
-  if (primaryType === 'Document' && field.fields) {
+  if (primaryType === "Document" && field.fields) {
     // Check if this object has dynamic keys detected
     const dynamicKeyAnalysis = dynamicKeyAnalyses?.get(fieldPath);
 
     if (dynamicKeyAnalysis?.isDynamic && dynamicKeyAnalysis.metadata) {
       // Add x-dynamic-keys annotation instead of exhaustive properties
-      property['x-dynamic-keys'] = {
+      property["x-dynamic-keys"] = {
         enabled: true,
         metadata: dynamicKeyAnalysis.metadata,
         valueSchema: buildValueSchemaFromAnalysis(dynamicKeyAnalysis),
       };
 
       // Don't add individual properties for dynamic key objects
-      logger.debug('Adding x-dynamic-keys annotation', {
+      logger.debug("Adding x-dynamic-keys annotation", {
         fieldPath,
         pattern: dynamicKeyAnalysis.metadata.pattern,
         uniqueKeys: dynamicKeyAnalysis.metadata.uniqueKeysObserved,
@@ -281,7 +297,9 @@ function transformField(
       property.required = [];
       property.additionalProperties = false; // Prevent json-schema-faker from adding random properties
 
-      for (const [nestedFieldName, nestedField] of Object.entries(field.fields)) {
+      for (const [nestedFieldName, nestedField] of Object.entries(
+        field.fields,
+      )) {
         const nestedPath = `${fieldPath}.${nestedFieldName}`;
         property.properties[nestedFieldName] = transformField(
           nestedField,
@@ -289,7 +307,7 @@ function transformField(
           constraints,
           typeHints,
           keyFields,
-          dynamicKeyAnalyses
+          dynamicKeyAnalyses,
         );
 
         // Add to required if field probability is high
@@ -306,11 +324,12 @@ function transformField(
     isKeyField: isKey,
     typeHint,
     arrayStats,
-    arrayLenStrategy: constraints.config.arrayLenPolicy === 'minmax' ? 'minmax' : 'percentile',
+    arrayLenStrategy:
+      constraints.config.arrayLenPolicy === "minmax" ? "minmax" : "percentile",
   });
 
   if (xGen) {
-    property['x-gen'] = xGen;
+    property["x-gen"] = xGen;
   }
 
   return property;
@@ -324,11 +343,11 @@ export function synthesize(
   constraints: ConstraintsProfile,
   typeHints: Map<string, TypeHint>,
   options: Partial<SynthesizerOptions> = {},
-  dynamicKeyAnalyses?: Map<string, ObjectKeysAnalysis>
+  dynamicKeyAnalyses?: Map<string, ObjectKeysAnalysis>,
 ): GenerationSchema {
   const opts = { ...DEFAULT_OPTIONS, ...options };
 
-  logger.info('Synthesizing generation schema', {
+  logger.info("Synthesizing generation schema", {
     fieldsInferred: Object.keys(inferredSchema.fields).length,
     arrayStatsCount: constraints.arrayStats.size,
     enforceRequired: opts.enforceRequired,
@@ -336,7 +355,7 @@ export function synthesize(
   });
 
   // Build set of key fields (T054)
-  const keyFields = new Set<string>(['_id']);
+  const keyFields = new Set<string>(["_id"]);
   for (const additionalKey of constraints.keyFields.additionalKeys) {
     keyFields.add(additionalKey.fieldPath);
   }
@@ -353,20 +372,20 @@ export function synthesize(
       constraints,
       typeHints,
       keyFields,
-      dynamicKeyAnalyses
+      dynamicKeyAnalyses,
     );
     properties[fieldName] = property;
 
-    if (property['x-gen']) {
+    if (property["x-gen"]) {
       vendorExtensionsApplied++;
     }
-    if (property['x-dynamic-keys']) {
+    if (property["x-dynamic-keys"]) {
       dynamicKeysAnnotated++;
     }
   }
 
   // Generate required array with _id + configured keys (T054)
-  const required: string[] = ['_id'];
+  const required: string[] = ["_id"];
   for (const additionalKey of constraints.keyFields.additionalKeys) {
     if (!required.includes(additionalKey.fieldPath)) {
       required.push(additionalKey.fieldPath);
@@ -383,15 +402,15 @@ export function synthesize(
   }
 
   const generationSchema: GenerationSchema = {
-    $schema: 'http://json-schema.org/draft-07/schema#',
-    type: 'object',
-    title: 'SyntheticDocument',
+    $schema: "http://json-schema.org/draft-07/schema#",
+    type: "object",
+    title: "SyntheticDocument",
     properties,
     required,
     additionalProperties: false,
   };
 
-  logger.info('Generation schema synthesized', {
+  logger.info("Generation schema synthesized", {
     propertiesCount: Object.keys(properties).length,
     requiredFields: required.length,
     vendorExtensionsApplied,
@@ -415,26 +434,27 @@ export class Synthesizer {
     inferredSchema: InferredSchema,
     constraints: ConstraintsProfile,
     typeHints: Map<string, TypeHint>,
-    dynamicKeyAnalyses?: Map<string, ObjectKeysAnalysis>
+    dynamicKeyAnalyses?: Map<string, ObjectKeysAnalysis>,
   ): SynthesizerResult {
     const schema = synthesize(
       inferredSchema,
       constraints,
       typeHints,
       this.options,
-      dynamicKeyAnalyses
+      dynamicKeyAnalyses,
     );
 
     const dynamicKeysAnnotated = Object.values(schema.properties).filter(
-      (p) => p['x-dynamic-keys']
+      (p) => p["x-dynamic-keys"],
     ).length;
 
     return {
       schema,
       metadata: {
         fieldsProcessed: Object.keys(schema.properties).length,
-        vendorExtensionsApplied: Object.values(schema.properties).filter((p) => p['x-gen'])
-          .length,
+        vendorExtensionsApplied: Object.values(schema.properties).filter(
+          (p) => p["x-gen"],
+        ).length,
         dynamicKeysAnnotated,
       },
     };

@@ -2,11 +2,11 @@
  * Streaming document generation
  */
 
-import { Readable } from 'stream';
-import { GenerationSchema, SyntheticDocument } from '../../types/data-model.js';
-import { generate, initializeFaker } from './faker-engine.js';
-import { registerCustomFormats } from './custom-formats.js';
-import { logger } from '../../utils/logger.js';
+import { Readable } from "stream";
+import { GenerationSchema, SyntheticDocument } from "../../types/data-model.js";
+import { generate, initializeFaker } from "./faker-engine.js";
+import { registerCustomFormats } from "./custom-formats.js";
+import { logger } from "../../utils/logger.js";
 
 /**
  * Create a readable stream that yields synthetic documents
@@ -19,7 +19,12 @@ export class DocumentGeneratorStream extends Readable {
   private initialized = false;
   private seed?: string | number;
 
-  constructor(schema: GenerationSchema, count: number, batchSize = 100, seed?: string | number) {
+  constructor(
+    schema: GenerationSchema,
+    count: number,
+    batchSize = 100,
+    seed?: string | number,
+  ) {
     super({ objectMode: true });
     this.schema = schema;
     this.totalCount = count;
@@ -41,7 +46,7 @@ export class DocumentGeneratorStream extends Readable {
     registerCustomFormats();
 
     this.initialized = true;
-    logger.debug('DocumentGeneratorStream initialized', { seed: this.seed });
+    logger.debug("DocumentGeneratorStream initialized", { seed: this.seed });
   }
 
   async _read(): Promise<void> {
@@ -65,7 +70,7 @@ export class DocumentGeneratorStream extends Readable {
       }
 
       if (this.generatedCount % 1000 === 0) {
-        logger.debug('Generated documents', { count: this.generatedCount });
+        logger.debug("Generated documents", { count: this.generatedCount });
       }
     } catch (error) {
       this.destroy(error as Error);
@@ -80,7 +85,7 @@ export function createGeneratorStream(
   schema: GenerationSchema,
   count: number,
   batchSize?: number,
-  seed?: string | number
+  seed?: string | number,
 ): Readable {
   return new DocumentGeneratorStream(schema, count, batchSize, seed);
 }
@@ -90,14 +95,14 @@ export function createGeneratorStream(
  */
 export async function* generateDocuments(
   schema: GenerationSchema,
-  count: number
+  count: number,
 ): AsyncGenerator<SyntheticDocument> {
   for (let i = 0; i < count; i++) {
     const doc = (await generate(schema)) as SyntheticDocument;
     yield doc;
 
     if ((i + 1) % 1000 === 0) {
-      logger.debug('Generated documents', { count: i + 1 });
+      logger.debug("Generated documents", { count: i + 1 });
     }
   }
 }

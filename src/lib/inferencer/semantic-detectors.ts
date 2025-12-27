@@ -14,12 +14,13 @@ export interface SemanticDetector {
 /**
  * Email detector (uses regex from mongodb-schema's email.ts)
  */
-const emailRegex = /[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?/i;
+const emailRegex =
+  /[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?/i;
 
 const EMAIL_DETECTOR: SemanticDetector = {
-  name: 'Email',
+  name: "Email",
   fieldPatterns: [/email/i, /e_?mail/i],
-  valueValidator: (v) => typeof v === 'string' && emailRegex.test(v),
+  valueValidator: (v) => typeof v === "string" && emailRegex.test(v),
   minConfidence: 0.8,
   priority: 1,
 };
@@ -28,9 +29,9 @@ const EMAIL_DETECTOR: SemanticDetector = {
  * URL detector
  */
 const URL_DETECTOR: SemanticDetector = {
-  name: 'URL',
+  name: "URL",
   fieldPatterns: [/url/i, /link/i, /href/i, /website/i, /endpoint/i],
-  valueValidator: (v) => typeof v === 'string' && /^https?:\/\/.+/.test(v),
+  valueValidator: (v) => typeof v === "string" && /^https?:\/\/.+/.test(v),
   minConfidence: 0.8,
   priority: 2,
 };
@@ -39,9 +40,11 @@ const URL_DETECTOR: SemanticDetector = {
  * UUID detector (UUID v4 format)
  */
 const UUID_DETECTOR: SemanticDetector = {
-  name: 'UUID',
+  name: "UUID",
   fieldPatterns: [/uuid/i, /guid/i],
-  valueValidator: (v) => typeof v === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v),
+  valueValidator: (v) =>
+    typeof v === "string" &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v),
   minConfidence: 0.9,
   priority: 3,
 };
@@ -50,12 +53,12 @@ const UUID_DETECTOR: SemanticDetector = {
  * Phone number detector
  */
 const PHONE_DETECTOR: SemanticDetector = {
-  name: 'Phone',
+  name: "Phone",
   fieldPatterns: [/phone/i, /mobile/i, /tel/i, /fax/i],
   valueValidator: (v) => {
-    if (typeof v !== 'string') return false;
+    if (typeof v !== "string") return false;
     // Match common formats: +1-555-123-4567, (555) 123-4567, 555.123.4567
-    const cleaned = v.replace(/[\s.\-()]/g, '');
+    const cleaned = v.replace(/[\s.\-()]/g, "");
     return /^(\+?\d{1,3})?[\d]{7,15}$/.test(cleaned);
   },
   minConfidence: 0.7,
@@ -66,7 +69,7 @@ const PHONE_DETECTOR: SemanticDetector = {
  * Person name detector
  */
 const PERSON_NAME_DETECTOR: SemanticDetector = {
-  name: 'PersonName',
+  name: "PersonName",
   fieldPatterns: [
     /^(first|last|full)_?name$/i,
     /^name$/i,
@@ -74,7 +77,7 @@ const PERSON_NAME_DETECTOR: SemanticDetector = {
     /^(created|updated)_?by$/i,
   ],
   valueValidator: (v) => {
-    if (typeof v !== 'string') return false;
+    if (typeof v !== "string") return false;
     // Basic heuristic: 2-50 chars, mostly letters/spaces/hyphens/apostrophes
     return v.length >= 2 && v.length <= 50 && /^[A-Za-z\s\-'.]+$/.test(v);
   },
@@ -86,10 +89,10 @@ const PERSON_NAME_DETECTOR: SemanticDetector = {
  * IP Address detector
  */
 const IP_ADDRESS_DETECTOR: SemanticDetector = {
-  name: 'IPAddress',
+  name: "IPAddress",
   fieldPatterns: [/ip_?addr/i, /ip_?address/i, /client_ip/i],
   valueValidator: (v) => {
-    if (typeof v !== 'string') return false;
+    if (typeof v !== "string") return false;
     // IPv4: 192.168.1.1
     const ipv4 = /^(\d{1,3}\.){3}\d{1,3}$/;
     // IPv6: 2001:db8::1
@@ -127,19 +130,23 @@ export function analyzeFieldForSemanticType(
   fieldName: string,
   fieldPath: string,
   values: any[],
-  detectors: SemanticDetector[] = BUILTIN_DETECTORS
+  detectors: SemanticDetector[] = BUILTIN_DETECTORS,
 ): SemanticAnalysisResult | null {
   if (!values || values.length === 0) {
     return null;
   }
 
   // Sort detectors by priority (lower number = higher priority)
-  const sortedDetectors = [...detectors].sort((a, b) => a.priority - b.priority);
+  const sortedDetectors = [...detectors].sort(
+    (a, b) => a.priority - b.priority,
+  );
 
   // Check each detector
   for (const detector of sortedDetectors) {
     // Check if field name matches pattern
-    const nameMatches = detector.fieldPatterns.some((pattern) => pattern.test(fieldName) || pattern.test(fieldPath));
+    const nameMatches = detector.fieldPatterns.some(
+      (pattern) => pattern.test(fieldName) || pattern.test(fieldPath),
+    );
 
     if (!nameMatches) {
       continue;
@@ -175,20 +182,25 @@ export function analyzeFieldForSemanticType(
  */
 export function applySemanticTypes(
   field: any,
-  detectors: SemanticDetector[] = BUILTIN_DETECTORS
+  detectors: SemanticDetector[] = BUILTIN_DETECTORS,
 ): void {
   if (!field.types || !Array.isArray(field.types)) {
     return;
   }
 
   // Find String type entry
-  const stringType = field.types.find((t: any) => t.name === 'String');
+  const stringType = field.types.find((t: any) => t.name === "String");
   if (!stringType || !stringType.values || stringType.values.length === 0) {
     return;
   }
 
   // Analyze values for semantic type
-  const analysis = analyzeFieldForSemanticType(field.name, field.path, stringType.values, detectors);
+  const analysis = analyzeFieldForSemanticType(
+    field.name,
+    field.path,
+    stringType.values,
+    detectors,
+  );
 
   if (analysis) {
     stringType.semanticType = analysis.semanticType;

@@ -2,36 +2,41 @@
  * Infer command - discover schema from MongoDB collection
  */
 
-import { Command } from 'commander';
-import { writeFileSync, mkdirSync } from 'fs';
-import { resolve } from 'path';
-import { InferCommandOptions, InferConfig } from '../config/types.js';
-import { parseConfigFile, validateConfigSection } from '../config/parser.js';
-import { Sampler } from '../../lib/sampler/index.js';
-import { Normalizer } from '../../lib/normalizer/index.js';
-import { Inferencer } from '../../lib/inferencer/index.js';
-import { Profiler } from '../../lib/profiler/index.js';
-import { Synthesizer } from '../../lib/synthesizer/index.js';
-import { logger } from '../../utils/logger.js';
-import { loadDynamicKeyConfig } from '../../utils/config-loader.js';
+import { Command } from "commander";
+import { writeFileSync, mkdirSync } from "fs";
+import { resolve } from "path";
+import { InferCommandOptions, InferConfig } from "../config/types.js";
+import { parseConfigFile, validateConfigSection } from "../config/parser.js";
+import { Sampler } from "../../lib/sampler/index.js";
+import { Normalizer } from "../../lib/normalizer/index.js";
+import { Inferencer } from "../../lib/inferencer/index.js";
+import { Profiler } from "../../lib/profiler/index.js";
+import { Synthesizer } from "../../lib/synthesizer/index.js";
+import { logger } from "../../utils/logger.js";
+import { loadDynamicKeyConfig } from "../../utils/config-loader.js";
 
 /**
  * Merge CLI options with config file
  */
 function mergeInferConfig(
   options: InferCommandOptions,
-  configFile?: InferConfig
+  configFile?: InferConfig,
 ): InferConfig {
   // Parse comma-separated values
   const percentiles = options.percentiles
-    ? options.percentiles.split(',').map((p) => parseInt(p.trim(), 10))
+    ? options.percentiles.split(",").map((p) => parseInt(p.trim(), 10))
     : undefined;
 
   const clampRange = options.clampRange
-    ? (options.clampRange.split(',').map((p) => parseInt(p.trim(), 10)) as [number, number])
+    ? (options.clampRange.split(",").map((p) => parseInt(p.trim(), 10)) as [
+        number,
+        number,
+      ])
     : undefined;
 
-  const keyFields = options.keyFields ? options.keyFields.split(',').map((k) => k.trim()) : undefined;
+  const keyFields = options.keyFields
+    ? options.keyFields.split(",").map((k) => k.trim())
+    : undefined;
 
   // Build config from CLI options
   const cliConfig: Partial<InferConfig> = {
@@ -45,7 +50,7 @@ function mergeInferConfig(
     sampling: options.sampleSize
       ? {
           sampleSize: options.sampleSize,
-          strategy: options.samplingStrategy || 'random',
+          strategy: options.samplingStrategy || "random",
           timeField: options.timeField,
         }
       : undefined,
@@ -54,7 +59,7 @@ function mergeInferConfig(
           arrayLenPolicy: options.arrayLenPolicy,
           percentiles: percentiles || [50, 90, 99],
           clampRange: clampRange || [1, 99],
-          sizeProxy: 'leafFieldCount',
+          sizeProxy: "leafFieldCount",
         }
       : undefined,
     keys: options.idPolicy
@@ -62,7 +67,7 @@ function mergeInferConfig(
           idPolicy: options.idPolicy,
           keyFields: keyFields || [],
           enforceUniqueKeys: options.enforceUniqueKeys ?? false,
-          uniquenessScope: options.uniquenessScope || 'run',
+          uniquenessScope: options.uniquenessScope || "run",
         }
       : undefined,
     output: options.outputDir
@@ -76,7 +81,10 @@ function mergeInferConfig(
   const merged: InferConfig = {
     source: { ...configFile?.source, ...cliConfig.source } as any,
     sampling: { ...configFile?.sampling, ...cliConfig.sampling } as any,
-    constraints: { ...configFile?.constraints, ...cliConfig.constraints } as any,
+    constraints: {
+      ...configFile?.constraints,
+      ...cliConfig.constraints,
+    } as any,
     keys: { ...configFile?.keys, ...cliConfig.keys } as any,
     output: { ...configFile?.output, ...cliConfig.output } as any,
   };
@@ -89,34 +97,43 @@ function mergeInferConfig(
  */
 function validateInferConfig(config: InferConfig): void {
   // Validate source
-  if (!config.source?.uri || !config.source?.database || !config.source?.collection) {
+  if (
+    !config.source?.uri ||
+    !config.source?.database ||
+    !config.source?.collection
+  ) {
     throw new Error(
-      'Missing required source configuration: --source-uri, --source-db, --source-collection'
+      "Missing required source configuration: --source-uri, --source-db, --source-collection",
     );
   }
 
   // Validate sampling
   if (!config.sampling?.sampleSize) {
-    throw new Error('Missing required sampling configuration: --sample-size');
+    throw new Error("Missing required sampling configuration: --sample-size");
   }
 
-  if (config.sampling.strategy === 'time-windowed' && !config.sampling.timeField) {
-    throw new Error('--time-field is required when using time-windowed sampling strategy');
+  if (
+    config.sampling.strategy === "time-windowed" &&
+    !config.sampling.timeField
+  ) {
+    throw new Error(
+      "--time-field is required when using time-windowed sampling strategy",
+    );
   }
 
   // Set defaults if missing
-  config.output = config.output || { dir: './output' };
+  config.output = config.output || { dir: "./output" };
   config.constraints = config.constraints || {
-    arrayLenPolicy: 'percentileClamp',
+    arrayLenPolicy: "percentileClamp",
     percentiles: [50, 90, 99],
     clampRange: [1, 99],
-    sizeProxy: 'leafFieldCount',
+    sizeProxy: "leafFieldCount",
   };
   config.keys = config.keys || {
-    idPolicy: 'inferred',
+    idPolicy: "inferred",
     keyFields: [],
     enforceUniqueKeys: false,
-    uniquenessScope: 'run',
+    uniquenessScope: "run",
   };
 }
 
@@ -143,19 +160,21 @@ async function executeInfer(options: InferCommandOptions): Promise<void> {
     const config = mergeInferConfig(options, configFile);
     validateInferConfig(config);
 
-    logger.info('Starting discovery phase', { config });
+    logger.info("Starting discovery phase", { config });
 
     // Create output directory
     mkdirSync(config.output.dir, { recursive: true });
 
     // Step 1: Sample documents from MongoDB
-    logger.info('Sampling documents from MongoDB');
+    logger.info("Sampling documents from MongoDB");
 
     // Map CLI strategy to sampler strategy
     const samplingStrategy =
-      config.sampling.strategy === 'first-n' ? 'firstN' as const :
-      config.sampling.strategy === 'time-windowed' ? 'timeWindowed' as const :
-      'random' as const;
+      config.sampling.strategy === "first-n"
+        ? ("firstN" as const)
+        : config.sampling.strategy === "time-windowed"
+          ? ("timeWindowed" as const)
+          : ("random" as const);
 
     const samplerOptions = {
       uri: config.source.uri,
@@ -163,25 +182,27 @@ async function executeInfer(options: InferCommandOptions): Promise<void> {
       collection: config.source.collection,
       sampleSize: config.sampling.sampleSize,
       strategy: samplingStrategy,
-      timeWindow: config.sampling.timeField ? {
-        field: config.sampling.timeField,
-        start: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // Default: last 30 days
-        end: new Date(),
-      } : undefined,
+      timeWindow: config.sampling.timeField
+        ? {
+            field: config.sampling.timeField,
+            start: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // Default: last 30 days
+            end: new Date(),
+          }
+        : undefined,
     };
 
     const sampler = new Sampler(samplerOptions);
     const samplerResult = await sampler.sample(samplerOptions);
 
     const samples = samplerResult.documents;
-    logger.info('Sampling complete', { count: samples.length });
+    logger.info("Sampling complete", { count: samples.length });
 
     // Step 2: Normalize documents
-    logger.info('Normalizing documents');
+    logger.info("Normalizing documents");
     const normalizer = new Normalizer();
     const { documents: normalized, typeHints } = normalizer.normalize(samples);
 
-    logger.info('Normalization complete', {
+    logger.info("Normalization complete", {
       count: normalized.length,
       uniqueTypeHints: typeHints.size,
     });
@@ -191,38 +212,55 @@ async function executeInfer(options: InferCommandOptions): Promise<void> {
       dynamicKeyThreshold: options.dynamicKeyThreshold,
       noDynamicKeys: options.noDynamicKeys,
     };
-    const dynamicKeyConfigSection = configFile ? (configFile as any).dynamicKeys : undefined;
-    const dynamicKeyConfig = loadDynamicKeyConfig(dynamicKeyCliOptions, dynamicKeyConfigSection);
+    const dynamicKeyConfigSection = configFile
+      ? (configFile as any).dynamicKeys
+      : undefined;
+    const dynamicKeyConfig = loadDynamicKeyConfig(
+      dynamicKeyCliOptions,
+      dynamicKeyConfigSection,
+    );
 
     // Step 4: Infer schema with dynamic key detection
-    logger.info('Inferring schema');
+    logger.info("Inferring schema");
     const inferencer = new Inferencer({
       semanticTypes: true,
       storeValues: true,
       dynamicKeyDetection: dynamicKeyConfig,
     });
-    const { schema: inferredSchema, metadata: inferMeta, dynamicKeyAnalyses } = await inferencer.infer(normalized);
+    const {
+      schema: inferredSchema,
+      metadata: inferMeta,
+      dynamicKeyAnalyses,
+    } = await inferencer.infer(normalized);
 
-    logger.info('Schema inference complete', {
+    logger.info("Schema inference complete", {
       ...inferMeta,
       dynamicKeysDetected: inferMeta.dynamicKeysDetected || 0,
     });
 
     // Write inferred schema
-    const inferredSchemaPath = resolve(config.output.dir, 'inferred.schema.json');
-    writeFileSync(inferredSchemaPath, JSON.stringify(inferredSchema, null, 2), 'utf-8');
+    const inferredSchemaPath = resolve(
+      config.output.dir,
+      "inferred.schema.json",
+    );
+    writeFileSync(
+      inferredSchemaPath,
+      JSON.stringify(inferredSchema, null, 2),
+      "utf-8",
+    );
 
     // Step 5: Profile constraints
-    logger.info('Profiling constraints');
+    logger.info("Profiling constraints");
     const profiler = new Profiler({
       arrayLenPolicy: config.constraints.arrayLenPolicy,
       percentiles: config.constraints.percentiles,
       clampRange: config.constraints.clampRange,
       sizeProxy: config.constraints.sizeProxy,
     });
-    const { profile: constraints, metadata: profileMeta } = profiler.profile(normalized);
+    const { profile: constraints, metadata: profileMeta } =
+      profiler.profile(normalized);
 
-    logger.info('Profiling complete', profileMeta);
+    logger.info("Profiling complete", profileMeta);
 
     // Strip array stats for paths nested under dynamic key fields to prevent bloat
     // For fields with dynamic keys, storing stats for individual nested keys is wasteful
@@ -230,13 +268,13 @@ async function executeInfer(options: InferCommandOptions): Promise<void> {
       const dynamicKeyPaths = new Set(
         Array.from(dynamicKeyAnalyses.entries())
           .filter(([_, analysis]) => analysis.isDynamic)
-          .map(([path, _]) => path)
+          .map(([path, _]) => path),
       );
 
       let removedCount = 0;
       for (const [arrayPath, _] of constraints.arrayStats) {
         for (const dynamicPath of dynamicKeyPaths) {
-          if (arrayPath.startsWith(dynamicPath + '.')) {
+          if (arrayPath.startsWith(dynamicPath + ".")) {
             constraints.arrayStats.delete(arrayPath);
             removedCount++;
             break;
@@ -245,7 +283,7 @@ async function executeInfer(options: InferCommandOptions): Promise<void> {
       }
 
       if (removedCount > 0) {
-        logger.info('Stripped array stats nested under dynamic key fields', {
+        logger.info("Stripped array stats nested under dynamic key fields", {
           removedEntries: removedCount,
           remainingEntries: constraints.arrayStats.size,
         });
@@ -256,47 +294,59 @@ async function executeInfer(options: InferCommandOptions): Promise<void> {
     for (const keyField of config.keys.keyFields) {
       constraints.keyFields.additionalKeys.push({
         fieldPath: keyField,
-        type: 'string', // Infer from schema if needed
+        type: "string", // Infer from schema if needed
         enforceUniqueness: config.keys.enforceUniqueKeys,
         uniquenessScope: config.keys.uniquenessScope,
       });
     }
 
     // Write constraints
-    const constraintsPath = resolve(config.output.dir, 'constraints.json');
+    const constraintsPath = resolve(config.output.dir, "constraints.json");
     // Convert Map to plain object for JSON serialization
     const constraintsJson = {
       ...constraints,
       arrayStats: Object.fromEntries(constraints.arrayStats),
       numericRanges: Object.fromEntries(constraints.numericRanges),
     };
-    writeFileSync(constraintsPath, JSON.stringify(constraintsJson, null, 2), 'utf-8');
+    writeFileSync(
+      constraintsPath,
+      JSON.stringify(constraintsJson, null, 2),
+      "utf-8",
+    );
 
     // Step 6: Synthesize generation schema
-    logger.info('Synthesizing generation schema');
+    logger.info("Synthesizing generation schema");
     const synthesizer = new Synthesizer({
       enforceRequired: true,
       includeMetadata: true,
     });
-    const { schema: generationSchema, metadata: synthMeta } = synthesizer.synthesize(
-      inferredSchema,
-      constraints,
-      typeHints,
-      dynamicKeyAnalyses
-    );
+    const { schema: generationSchema, metadata: synthMeta } =
+      synthesizer.synthesize(
+        inferredSchema,
+        constraints,
+        typeHints,
+        dynamicKeyAnalyses,
+      );
 
-    logger.info('Generation schema synthesized', synthMeta);
+    logger.info("Generation schema synthesized", synthMeta);
 
     // Write generation schema
-    const generationSchemaPath = resolve(config.output.dir, 'generation.schema.json');
-    writeFileSync(generationSchemaPath, JSON.stringify(generationSchema, null, 2), 'utf-8');
+    const generationSchemaPath = resolve(
+      config.output.dir,
+      "generation.schema.json",
+    );
+    writeFileSync(
+      generationSchemaPath,
+      JSON.stringify(generationSchema, null, 2),
+      "utf-8",
+    );
 
     const duration = Date.now() - startTime;
 
     // Output success result
     const result = {
-      status: 'success',
-      phase: 'discovery',
+      status: "success",
+      phase: "discovery",
       artifacts: {
         inferredSchema: inferredSchemaPath,
         generationSchema: generationSchemaPath,
@@ -315,17 +365,25 @@ async function executeInfer(options: InferCommandOptions): Promise<void> {
     process.exit(0);
   } catch (error) {
     const errorResult = {
-      status: 'error',
-      phase: 'discovery',
+      status: "error",
+      phase: "discovery",
       error: {
-        code: error instanceof Error && error.message.includes('MongoDB') ? 'MONGO_CONNECTION_ERROR' : 'GENERAL_ERROR',
+        code:
+          error instanceof Error && error.message.includes("MongoDB")
+            ? "MONGO_CONNECTION_ERROR"
+            : "GENERAL_ERROR",
         message: error instanceof Error ? error.message : String(error),
-        details: error instanceof Error && error.cause ? String(error.cause) : undefined,
+        details:
+          error instanceof Error && error.cause
+            ? String(error.cause)
+            : undefined,
       },
     };
 
     console.error(JSON.stringify(errorResult, null, 2));
-    process.exit(error instanceof Error && error.message.includes('config') ? 2 : 1);
+    process.exit(
+      error instanceof Error && error.message.includes("config") ? 2 : 1,
+    );
   }
 }
 
@@ -333,37 +391,67 @@ async function executeInfer(options: InferCommandOptions): Promise<void> {
  * Create infer command
  */
 export function createInferCommand(): Command {
-  const command = new Command('infer');
+  const command = new Command("infer");
 
   command
     .description(
-      'Sample MongoDB collection, infer schema with dynamic key detection, and produce discovery artifacts'
+      "Sample MongoDB collection, infer schema with dynamic key detection, and produce discovery artifacts",
     )
-    .option('--source-uri <uri>', 'MongoDB connection URI')
-    .option('--source-db <database>', 'Source database name')
-    .option('--source-collection <collection>', 'Source collection name')
-    .option('--sample-size <count>', 'Number of documents to sample', (val) => parseInt(val, 10))
-    .option('--sampling-strategy <strategy>', 'Sampling strategy: random, first-n, time-windowed', 'random')
-    .option('--time-field <field>', 'Field for time-windowed sampling')
-    .option('--output-dir <path>', 'Directory for output artifacts', './output')
-    .option('--array-len-policy <policy>', 'Array length policy: minmax, percentileClamp', 'percentileClamp')
-    .option('--percentiles <values>', 'Percentiles to track (comma-separated)', '50,90,99')
-    .option('--clamp-range <range>', 'Percentile clamping range [low,high]', '1,99')
-    .option('--id-policy <policy>', 'ID policy: objectid, uuid, string, number, inferred', 'inferred')
-    .option('--key-fields <fields>', 'Additional key fields (comma-separated)', '')
-    .option('--enforce-unique-keys', 'Enforce uniqueness for key fields', false)
-    .option('--uniqueness-scope <scope>', 'Uniqueness scope: batch, run', 'run')
-    .option(
-      '--dynamic-key-threshold <number>',
-      'Minimum unique keys to trigger dynamic key detection (default: 50)',
-      (val) => parseInt(val, 10)
+    .option("--source-uri <uri>", "MongoDB connection URI")
+    .option("--source-db <database>", "Source database name")
+    .option("--source-collection <collection>", "Source collection name")
+    .option("--sample-size <count>", "Number of documents to sample", (val) =>
+      parseInt(val, 10),
     )
     .option(
-      '--no-dynamic-keys',
-      'Disable dynamic key detection and inference for objects with highly variable keys'
+      "--sampling-strategy <strategy>",
+      "Sampling strategy: random, first-n, time-windowed",
+      "random",
     )
-    .option('--config <path>', 'Path to configuration file (JSON/YAML)')
-    .option('--log-level <level>', 'Logging verbosity: error, warn, info, debug', 'info')
+    .option("--time-field <field>", "Field for time-windowed sampling")
+    .option("--output-dir <path>", "Directory for output artifacts", "./output")
+    .option(
+      "--array-len-policy <policy>",
+      "Array length policy: minmax, percentileClamp",
+      "percentileClamp",
+    )
+    .option(
+      "--percentiles <values>",
+      "Percentiles to track (comma-separated)",
+      "50,90,99",
+    )
+    .option(
+      "--clamp-range <range>",
+      "Percentile clamping range [low,high]",
+      "1,99",
+    )
+    .option(
+      "--id-policy <policy>",
+      "ID policy: objectid, uuid, string, number, inferred",
+      "inferred",
+    )
+    .option(
+      "--key-fields <fields>",
+      "Additional key fields (comma-separated)",
+      "",
+    )
+    .option("--enforce-unique-keys", "Enforce uniqueness for key fields", false)
+    .option("--uniqueness-scope <scope>", "Uniqueness scope: batch, run", "run")
+    .option(
+      "--dynamic-key-threshold <number>",
+      "Minimum unique keys to trigger dynamic key detection (default: 50)",
+      (val) => parseInt(val, 10),
+    )
+    .option(
+      "--no-dynamic-keys",
+      "Disable dynamic key detection and inference for objects with highly variable keys",
+    )
+    .option("--config <path>", "Path to configuration file (JSON/YAML)")
+    .option(
+      "--log-level <level>",
+      "Logging verbosity: error, warn, info, debug",
+      "info",
+    )
     .action(executeInfer);
 
   return command;

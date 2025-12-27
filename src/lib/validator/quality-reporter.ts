@@ -3,9 +3,14 @@
  * Implements T080-T082: Array/size comparison and deviation calculation
  */
 
-import { ArrayLengthStats, DocumentSizeBucket, ArrayLengthComparison, SizeBucketComparison } from '../../types/data-model.js';
-import { calculateAllArrayStats } from '../profiler/array-stats.js';
-import { createSizeBuckets } from '../profiler/size-buckets.js';
+import {
+  ArrayLengthStats,
+  DocumentSizeBucket,
+  ArrayLengthComparison,
+  SizeBucketComparison,
+} from "../../types/data-model.js";
+import { calculateAllArrayStats } from "../profiler/array-stats.js";
+import { createSizeBuckets } from "../profiler/size-buckets.js";
 
 /**
  * Compare array length distributions between sample and generated documents
@@ -14,7 +19,7 @@ import { createSizeBuckets } from '../profiler/size-buckets.js';
 export function compareArrayLengths(
   sampleStats: Map<string, ArrayLengthStats>,
   generatedDocuments: any[],
-  tolerance: number = 0.1 // 10% tolerance
+  tolerance: number = 0.1, // 10% tolerance
 ): Record<string, ArrayLengthComparison> {
   const generatedStats = calculateAllArrayStats(generatedDocuments);
   const comparison: Record<string, ArrayLengthComparison> = {};
@@ -53,15 +58,24 @@ export function compareArrayLengths(
     // Calculate percentage deviations for each percentile
     // T082: Implement deviation calculation with tolerances (10% array)
     // Updated to use new frequency distribution format (Feature: 002-dynamic-key-inference)
-    const deviationP50 = calculatePercentageDeviation(sampleStat.stats.median, generatedStat.stats.median);
+    const deviationP50 = calculatePercentageDeviation(
+      sampleStat.stats.median,
+      generatedStat.stats.median,
+    );
     const deviationP90 = calculatePercentageDeviation(
       Math.round(sampleStat.stats.p95 * 0.95),
-      Math.round(generatedStat.stats.p95 * 0.95)
+      Math.round(generatedStat.stats.p95 * 0.95),
     );
-    const deviationP99 = calculatePercentageDeviation(sampleStat.stats.p95, generatedStat.stats.p95);
+    const deviationP99 = calculatePercentageDeviation(
+      sampleStat.stats.p95,
+      generatedStat.stats.p95,
+    );
 
     // Check if deviations are within tolerance
-    const passed = deviationP50 <= tolerance && deviationP90 <= tolerance && deviationP99 <= tolerance;
+    const passed =
+      deviationP50 <= tolerance &&
+      deviationP90 <= tolerance &&
+      deviationP99 <= tolerance;
 
     comparison[fieldPath] = {
       sample: {
@@ -97,24 +111,30 @@ export function compareArrayLengths(
 export function compareDocumentSizes(
   sampleBuckets: DocumentSizeBucket[],
   generatedDocuments: any[],
-  tolerance: number = 0.2 // 20% tolerance
+  tolerance: number = 0.2, // 20% tolerance
 ): {
   buckets: SizeBucketComparison[];
 } {
   // Extract size buckets from generated documents using same proxy type and bucket configuration
-  const sizeProxy = sampleBuckets[0]?.sizeProxy ?? 'leafFieldCount';
+  const sizeProxy = sampleBuckets[0]?.sizeProxy ?? "leafFieldCount";
   const bucketConfig = sampleBuckets.map((b) => ({
     id: b.bucketId,
     min: b.sizeRange.min,
     max: b.sizeRange.max,
   }));
-  const generatedBuckets = createSizeBuckets(generatedDocuments, sizeProxy, bucketConfig);
+  const generatedBuckets = createSizeBuckets(
+    generatedDocuments,
+    sizeProxy,
+    bucketConfig,
+  );
 
   const comparisons: SizeBucketComparison[] = [];
 
   // Match buckets by ID and compare
   for (const sampleBucket of sampleBuckets) {
-    const generatedBucket = generatedBuckets.find((b) => b.bucketId === sampleBucket.bucketId);
+    const generatedBucket = generatedBuckets.find(
+      (b) => b.bucketId === sampleBucket.bucketId,
+    );
 
     if (!generatedBucket) {
       // Bucket not found in generated data
@@ -136,7 +156,10 @@ export function compareDocumentSizes(
 
     // Calculate probability deviation
     // T082: Implement deviation calculation with tolerances (20% size)
-    const deviation = calculatePercentageDeviation(sampleBucket.probability, generatedBucket.probability);
+    const deviation = calculatePercentageDeviation(
+      sampleBucket.probability,
+      generatedBucket.probability,
+    );
     const passed = deviation <= tolerance;
 
     comparisons.push({
@@ -161,7 +184,10 @@ export function compareDocumentSizes(
  * Calculate fractional deviation between two values
  * Returns absolute fractional deviation (0-1+, where 0.1 = 10%)
  */
-function calculatePercentageDeviation(expected: number, actual: number): number {
+function calculatePercentageDeviation(
+  expected: number,
+  actual: number,
+): number {
   if (expected === 0 && actual === 0) {
     return 0;
   }

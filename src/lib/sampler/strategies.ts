@@ -2,16 +2,16 @@
  * Sampling strategies for MongoDB collections
  */
 
-import { Collection } from 'mongodb';
-import { SampleDocument } from '../../types/data-model.js';
-import { logger } from '../../utils/logger.js';
+import { Collection } from "mongodb";
+import { SampleDocument } from "../../types/data-model.js";
+import { logger } from "../../utils/logger.js";
 
 export interface SamplingStrategy {
   name: string;
   sample(
     collection: Collection,
     size: number,
-    options?: any
+    options?: any,
   ): Promise<SampleDocument[]>;
 }
 
@@ -19,13 +19,13 @@ export interface SamplingStrategy {
  * Random sampling using MongoDB $sample aggregation
  */
 export class RandomSamplingStrategy implements SamplingStrategy {
-  name = 'random';
+  name = "random";
 
   async sample(
     collection: Collection,
-    size: number
+    size: number,
   ): Promise<SampleDocument[]> {
-    logger.debug('Executing random sampling strategy', { size });
+    logger.debug("Executing random sampling strategy", { size });
 
     const pipeline = [{ $sample: { size } }];
     const documents = await collection.aggregate(pipeline).toArray();
@@ -45,13 +45,13 @@ export class RandomSamplingStrategy implements SamplingStrategy {
  * First-N sampling (reads first N documents in natural order)
  */
 export class FirstNSamplingStrategy implements SamplingStrategy {
-  name = 'firstN';
+  name = "firstN";
 
   async sample(
     collection: Collection,
-    size: number
+    size: number,
   ): Promise<SampleDocument[]> {
-    logger.debug('Executing first-N sampling strategy', { size });
+    logger.debug("Executing first-N sampling strategy", { size });
 
     const documents = await collection.find({}).limit(size).toArray();
 
@@ -76,18 +76,20 @@ export interface TimeWindowOptions {
 }
 
 export class TimeWindowedSamplingStrategy implements SamplingStrategy {
-  name = 'timeWindowed';
+  name = "timeWindowed";
 
   async sample(
     collection: Collection,
     size: number,
-    options?: TimeWindowOptions
+    options?: TimeWindowOptions,
   ): Promise<SampleDocument[]> {
     if (!options) {
-      throw new Error('TimeWindowedSamplingStrategy requires options with field, start, and end');
+      throw new Error(
+        "TimeWindowedSamplingStrategy requires options with field, start, and end",
+      );
     }
 
-    logger.debug('Executing time-windowed sampling strategy', {
+    logger.debug("Executing time-windowed sampling strategy", {
       size,
       field: options.field,
       start: options.start,
@@ -103,10 +105,10 @@ export class TimeWindowedSamplingStrategy implements SamplingStrategy {
 
     // First, count documents in window
     const totalInWindow = await collection.countDocuments(filter);
-    logger.debug('Documents in time window: ' + totalInWindow);
+    logger.debug("Documents in time window: " + totalInWindow);
 
     if (totalInWindow === 0) {
-      logger.warn('No documents found in time window');
+      logger.warn("No documents found in time window");
       return [];
     }
 
@@ -132,13 +134,13 @@ export class TimeWindowedSamplingStrategy implements SamplingStrategy {
  */
 export function createStrategy(strategyName: string): SamplingStrategy {
   switch (strategyName) {
-    case 'random':
+    case "random":
       return new RandomSamplingStrategy();
-    case 'firstN':
+    case "firstN":
       return new FirstNSamplingStrategy();
-    case 'timeWindowed':
+    case "timeWindowed":
       return new TimeWindowedSamplingStrategy();
     default:
-      throw new Error('Unknown sampling strategy: ' + strategyName);
+      throw new Error("Unknown sampling strategy: " + strategyName);
   }
 }

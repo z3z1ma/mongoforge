@@ -2,7 +2,12 @@
  * CLI configuration types
  */
 
-import { ArrayLenPolicy, IdPolicy, UniquenessScope, SizeProxyType } from '../../types/data-model.js';
+import {
+  ArrayLenPolicy,
+  IdPolicy,
+  UniquenessScope,
+  SizeProxyType,
+} from "../../types/data-model.js";
 
 /**
  * Source MongoDB connection configuration
@@ -18,7 +23,7 @@ export interface SourceConfig {
  */
 export interface SamplingConfig {
   sampleSize: number;
-  strategy: 'random' | 'first-n' | 'time-windowed';
+  strategy: "random" | "first-n" | "time-windowed";
   timeField?: string; // Required if strategy is 'time-windowed'
 }
 
@@ -77,9 +82,9 @@ export interface TargetConfig {
  * Generation output configuration
  */
 export interface GenerationOutputConfig {
-  format: 'ndjson' | 'json';
+  format: "ndjson" | "json";
   path: string; // File path or 'stdout'
-  splitFilesBy?: 'size' | 'count';
+  splitFilesBy?: "size" | "count";
   splitSize?: number;
 }
 
@@ -133,7 +138,7 @@ export interface InferCommandOptions {
   sourceDb?: string;
   sourceCollection?: string;
   sampleSize?: number;
-  samplingStrategy?: 'random' | 'first-n' | 'time-windowed';
+  samplingStrategy?: "random" | "first-n" | "time-windowed";
   timeField?: string;
   outputDir?: string;
   arrayLenPolicy?: ArrayLenPolicy;
@@ -154,9 +159,9 @@ export interface GenerateCommandOptions {
   constraints?: string;
   docCount?: number;
   seed?: string;
-  outputFormat?: 'ndjson' | 'json';
+  outputFormat?: "ndjson" | "json";
   outputPath?: string;
-  splitFilesBy?: 'size' | 'count';
+  splitFilesBy?: "size" | "count";
   splitSize?: number;
   targetUri?: string;
   targetDb?: string;

@@ -2,10 +2,10 @@
  * Reporter module types
  */
 
-import { RunManifest } from '../../types/data-model';
+import { RunManifest } from "../../types/data-model";
 
 export interface ReporterOptions {
-  phase: 'discovery' | 'generation' | 'validation';
+  phase: "discovery" | "generation" | "validation";
   includeMetrics?: boolean;
 }
 

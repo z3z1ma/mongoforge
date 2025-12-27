@@ -11,15 +11,15 @@
  * @module lib/generator/dynamic-key-generator
  */
 
-import { faker } from '@faker-js/faker';
-import { sampleFromDistribution } from '../../utils/frequency-map.js';
-import { generateTimestampPrefixedObjectId } from './custom-formats.js';
+import { faker } from "@faker-js/faker";
+import { sampleFromDistribution } from "../../utils/frequency-map.js";
+import { generateTimestampPrefixedObjectId } from "./custom-formats.js";
 import type {
   DynamicKeyPattern,
   DynamicKeyValueSchema,
   FrequencyDistribution,
-} from '../../types/dynamic-keys.js';
-import { logger } from '../../utils/logger.js';
+} from "../../types/dynamic-keys.js";
+import { logger } from "../../utils/logger.js";
 
 /**
  * Dynamic key generator with uniqueness guarantee
@@ -78,7 +78,7 @@ export class DynamicKeyGenerator {
   generateKey(
     pattern: DynamicKeyPattern,
     customPattern?: string,
-    seed?: number
+    seed?: number,
   ): string {
     // Increment counter for uniqueness
     this.counter++;
@@ -121,7 +121,7 @@ export class DynamicKeyGenerator {
     count: number,
     pattern: DynamicKeyPattern,
     customPattern?: string,
-    seed?: number
+    seed?: number,
   ): string[] {
     const keys: string[] = [];
     const generatedSet = new Set<string>();
@@ -145,30 +145,30 @@ export class DynamicKeyGenerator {
    */
   private generateKeyByPattern(
     pattern: DynamicKeyPattern,
-    customPattern?: string
+    customPattern?: string,
   ): string {
     switch (pattern) {
-      case 'UUID':
+      case "UUID":
         return faker.string.uuid();
 
-      case 'MONGODB_OBJECTID':
+      case "MONGODB_OBJECTID":
         return generateTimestampPrefixedObjectId();
 
-      case 'ULID':
+      case "ULID":
         return this.generateULID();
 
-      case 'NUMERIC_ID':
+      case "NUMERIC_ID":
         return faker.number.int({ min: 100000, max: 999999999 }).toString();
 
-      case 'PREFIXED_ID':
+      case "PREFIXED_ID":
         return this.generatePrefixedID();
 
-      case 'CUSTOM':
+      case "CUSTOM":
         // Use custom pattern or fallback to alphanumeric
         return this.generateCustomKey(customPattern);
 
       default:
-        logger.warn('Unknown pattern type, using alphanumeric', { pattern });
+        logger.warn("Unknown pattern type, using alphanumeric", { pattern });
         return faker.string.alphanumeric(16);
     }
   }
@@ -192,7 +192,7 @@ export class DynamicKeyGenerator {
    * Generate prefixed ID (e.g., user_abc123, order_xyz789)
    */
   private generatePrefixedID(): string {
-    const prefixes = ['user', 'doc', 'item', 'order'];
+    const prefixes = ["user", "doc", "item", "order"];
     const prefix = faker.helpers.arrayElement(prefixes);
     const suffix = faker.string.alphanumeric(16).toLowerCase();
 
@@ -214,8 +214,8 @@ export class DynamicKeyGenerator {
    * Base32 encoding helper for ULID
    */
   private base32Encode(value: number, length: number): string {
-    const alphabet = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
-    let result = '';
+    const alphabet = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+    let result = "";
     let num = value;
 
     for (let i = 0; i < length; i++) {
@@ -224,7 +224,7 @@ export class DynamicKeyGenerator {
       num = Math.floor(num / 32);
     }
 
-    return result.padStart(length, '0');
+    return result.padStart(length, "0");
   }
 }
 
@@ -264,7 +264,7 @@ export class DynamicKeyGenerator {
  */
 export function generateDynamicKeyValue(
   valueSchema: DynamicKeyValueSchema,
-  keyName?: string
+  keyName?: string,
 ): any {
   // Handle edge case: empty or invalid schema
   if (
@@ -272,7 +272,9 @@ export function generateDynamicKeyValue(
     valueSchema.types.length === 0 ||
     !valueSchema.schemas
   ) {
-    logger.warn('Invalid value schema for dynamic key, using null', { keyName });
+    logger.warn("Invalid value schema for dynamic key, using null", {
+      keyName,
+    });
     return null;
   }
 
@@ -285,13 +287,13 @@ export function generateDynamicKeyValue(
   // Sample type based on probability distribution
   const typeIndex = sampleTypeFromProbabilities(
     valueSchema.types,
-    valueSchema.typeProbabilities
+    valueSchema.typeProbabilities,
   );
 
   const selectedType = valueSchema.types[typeIndex];
   const selectedSchema = valueSchema.schemas[typeIndex];
 
-  logger.debug('Sampled value type for dynamic key', {
+  logger.debug("Sampled value type for dynamic key", {
     keyName,
     selectedType,
     typeIndex,
@@ -305,11 +307,11 @@ export function generateDynamicKeyValue(
  */
 function sampleTypeFromProbabilities(
   types: string[],
-  probabilities: number[]
+  probabilities: number[],
 ): number {
   // Validate inputs
   if (types.length !== probabilities.length) {
-    logger.warn('Mismatched types and probabilities length, using first type');
+    logger.warn("Mismatched types and probabilities length, using first type");
     return 0;
   }
 
@@ -326,7 +328,7 @@ function sampleTypeFromProbabilities(
   try {
     return sampleFromDistribution(distribution);
   } catch (error) {
-    logger.warn('Failed to sample type from probabilities, using first type', {
+    logger.warn("Failed to sample type from probabilities, using first type", {
       error: error instanceof Error ? error.message : String(error),
     });
     return 0;
@@ -343,27 +345,27 @@ function generateValueFromSchema(schema: any): any {
   }
 
   switch (schema.type) {
-    case 'string':
+    case "string":
       return generateStringValue(schema);
 
-    case 'number':
-    case 'integer':
+    case "number":
+    case "integer":
       return generateNumberValue(schema);
 
-    case 'boolean':
+    case "boolean":
       return faker.datatype.boolean();
 
-    case 'object':
+    case "object":
       return generateObjectValue(schema);
 
-    case 'array':
+    case "array":
       return generateArrayValue(schema);
 
-    case 'null':
+    case "null":
       return null;
 
     default:
-      logger.warn('Unknown schema type, returning null', { type: schema.type });
+      logger.warn("Unknown schema type, returning null", { type: schema.type });
       return null;
   }
 }
@@ -375,13 +377,13 @@ function generateStringValue(schema: any): string {
   // Handle format hints
   if (schema.format) {
     switch (schema.format) {
-      case 'email':
+      case "email":
         return faker.internet.email();
-      case 'uuid':
+      case "uuid":
         return faker.string.uuid();
-      case 'date-time':
+      case "date-time":
         return faker.date.recent().toISOString();
-      case 'uri':
+      case "uri":
         return faker.internet.url();
       default:
         // Fall through to default string
@@ -409,7 +411,7 @@ function generateNumberValue(schema: any): number {
   const minimum = schema.minimum ?? 0;
   const maximum = schema.maximum ?? 1000;
 
-  if (schema.type === 'integer') {
+  if (schema.type === "integer") {
     return faker.number.int({ min: minimum, max: maximum });
   }
 
@@ -475,13 +477,18 @@ function generateArrayValue(schema: any): any[] {
  * // Returns: 5 (25%), 10 (50%), or 15 (25%)
  * ```
  */
-export function selectKeyCount(countDistribution: FrequencyDistribution): number {
+export function selectKeyCount(
+  countDistribution: FrequencyDistribution,
+): number {
   try {
     return sampleFromDistribution(countDistribution);
   } catch (error) {
-    logger.warn('Failed to sample key count from distribution, using default 10', {
-      error: error instanceof Error ? error.message : String(error),
-    });
+    logger.warn(
+      "Failed to sample key count from distribution, using default 10",
+      {
+        error: error instanceof Error ? error.message : String(error),
+      },
+    );
     return 10;
   }
 }
@@ -511,7 +518,7 @@ export function selectKeyCount(countDistribution: FrequencyDistribution): number
 export function validateGeneratedKeys(
   keys: string[],
   pattern: DynamicKeyPattern,
-  customPattern?: string
+  customPattern?: string,
 ): { valid: boolean; invalidKeys: string[]; matchRate: number } {
   if (keys.length === 0) {
     return { valid: true, invalidKeys: [], matchRate: 1.0 };
@@ -519,7 +526,7 @@ export function validateGeneratedKeys(
 
   // CUSTOM patterns cannot be validated since we don't know the pattern
   // HIGH_CARDINALITY and similar sentinel values are not actual regex patterns
-  if (pattern === 'CUSTOM') {
+  if (pattern === "CUSTOM") {
     return { valid: true, invalidKeys: [], matchRate: 1.0 };
   }
 
@@ -544,30 +551,30 @@ export function validateGeneratedKeys(
  */
 function getPatternRegex(
   pattern: DynamicKeyPattern,
-  customPattern?: string
+  customPattern?: string,
 ): RegExp | null {
   switch (pattern) {
-    case 'UUID':
+    case "UUID":
       return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-    case 'MONGODB_OBJECTID':
+    case "MONGODB_OBJECTID":
       return /^[0-9a-f]{24}$/i;
 
-    case 'ULID':
+    case "ULID":
       return /^[0-9A-Z]{26}$/;
 
-    case 'NUMERIC_ID':
+    case "NUMERIC_ID":
       return /^\d{6,20}$/;
 
-    case 'PREFIXED_ID':
+    case "PREFIXED_ID":
       return /^(user|doc|item|order)_[a-z0-9]{8,32}$/i;
 
-    case 'CUSTOM':
+    case "CUSTOM":
       if (customPattern) {
         try {
           return new RegExp(customPattern);
         } catch (error) {
-          logger.warn('Invalid custom pattern regex', {
+          logger.warn("Invalid custom pattern regex", {
             customPattern,
             error: error instanceof Error ? error.message : String(error),
           });

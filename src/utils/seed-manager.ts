@@ -1,8 +1,8 @@
-import crypto from 'crypto';
+import crypto from "crypto";
 
 export function hashStringToSeed(seed: string): number {
   // Convert seed string to SHA-256 hash
-  const hash = crypto.createHash('sha256').update(seed).digest('hex');
+  const hash = crypto.createHash("sha256").update(seed).digest("hex");
 
   // Convert first 8 characters of hash to numeric seed
   const numericSeed = parseInt(hash.slice(0, 8), 16);
@@ -12,7 +12,7 @@ export function hashStringToSeed(seed: string): number {
 
 export function generateRandomSeed(): string {
   // Generate a cryptographically secure random seed
-  return crypto.randomBytes(32).toString('hex');
+  return crypto.randomBytes(32).toString("hex");
 }
 
 export function validateSeed(seed: string): boolean {

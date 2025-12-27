@@ -7,7 +7,7 @@ import {
   IdPolicy,
   UniquenessScope,
   SizeProxyType,
-} from './data-model';
+} from "./data-model";
 
 /**
  * SourceConfig - MongoDB source configuration
@@ -17,7 +17,7 @@ export interface SourceConfig {
   database: string;
   collection: string;
   sampleSize: number;
-  samplingStrategy: 'random' | 'firstN' | 'timeWindowed';
+  samplingStrategy: "random" | "firstN" | "timeWindowed";
   timeWindow?: {
     field: string; // Field name for time-based sampling
     start: Date;
@@ -29,7 +29,7 @@ export interface SourceConfig {
  * SamplingConfig - Sampling behavior configuration
  */
 export interface SamplingConfig {
-  strategy: 'random' | 'firstN' | 'timeWindowed';
+  strategy: "random" | "firstN" | "timeWindowed";
   size: number;
   timeWindow?: {
     field: string;
@@ -80,7 +80,7 @@ export interface GenerationConfig {
  * OutputConfig - Output destination configuration
  */
 export interface OutputConfig {
-  format: 'ndjson' | 'json';
+  format: "ndjson" | "json";
   destination: string; // File path, "stdout", or MongoDB URI
   prettyPrint?: boolean; // For JSON format
 }
@@ -94,5 +94,5 @@ export interface MongoForgeConfig {
   constraints?: ConstraintsConfig;
   generation?: GenerationConfig;
   output?: OutputConfig;
-  logLevel?: 'error' | 'warn' | 'info' | 'debug';
+  logLevel?: "error" | "warn" | "info" | "debug";
 }

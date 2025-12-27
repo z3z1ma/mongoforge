@@ -2,7 +2,11 @@
  * Normalizer module types
  */
 
-import { NormalizedDocument, SampleDocument, TypeHint } from '../../types/data-model';
+import {
+  NormalizedDocument,
+  SampleDocument,
+  TypeHint,
+} from "../../types/data-model";
 
 export interface NormalizerOptions {
   preserveMetadata?: boolean;

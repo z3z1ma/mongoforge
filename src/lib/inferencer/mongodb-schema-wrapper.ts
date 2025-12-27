@@ -2,10 +2,14 @@
  * MongoDB Schema wrapper - integrates mongodb-schema library for schema inference
  */
 
-import parseSchema from 'mongodb-schema';
-import { NormalizedDocument, InferredSchema, InferredSchemaField } from '../../types/data-model.js';
-import { logger } from '../../utils/logger.js';
-import { calculateFrequencies } from '../../utils/frequency-map.js';
+import parseSchema from "mongodb-schema";
+import {
+  NormalizedDocument,
+  InferredSchema,
+  InferredSchemaField,
+} from "../../types/data-model.js";
+import { logger } from "../../utils/logger.js";
+import { calculateFrequencies } from "../../utils/frequency-map.js";
 
 /**
  * Options for schema inference
@@ -19,10 +23,15 @@ export interface InferOptions {
  * Extract all field paths from inferred schema (JSONPath-style)
  * Example: { "user.addresses.city": field, "tags": field }
  */
-export function extractFieldPaths(schema: InferredSchema): Map<string, InferredSchemaField> {
+export function extractFieldPaths(
+  schema: InferredSchema,
+): Map<string, InferredSchemaField> {
   const paths = new Map<string, InferredSchemaField>();
 
-  function traverse(fields: Record<string, InferredSchemaField>, parentPath = ''): void {
+  function traverse(
+    fields: Record<string, InferredSchemaField>,
+    parentPath = "",
+  ): void {
     for (const [fieldName, field] of Object.entries(fields)) {
       const currentPath = parentPath ? `${parentPath}.${fieldName}` : fieldName;
       paths.set(currentPath, field);
@@ -43,16 +52,16 @@ export function extractFieldPaths(schema: InferredSchema): Map<string, InferredS
  */
 export async function inferSchema(
   documents: NormalizedDocument[],
-  options: InferOptions = {}
+  options: InferOptions = {},
 ): Promise<InferredSchema> {
-  logger.info('Inferring schema from normalized documents', {
+  logger.info("Inferring schema from normalized documents", {
     count: documents.length,
     semanticTypes: options.semanticTypes ?? false,
     storeValues: options.storeValues ?? false,
   });
 
   if (documents.length === 0) {
-    throw new Error('Cannot infer schema from empty document array');
+    throw new Error("Cannot infer schema from empty document array");
   }
 
   // Remove __typeHints metadata before passing to mongodb-schema
@@ -76,21 +85,21 @@ export async function inferSchema(
       let nestedFields: Record<string, InferredSchemaField> | undefined;
 
       for (const schemaType of field.types) {
-        if (schemaType.name === 'Array' && 'lengths' in schemaType) {
+        if (schemaType.name === "Array" && "lengths" in schemaType) {
           // Convert array of lengths to frequency distribution
           const lengths = schemaType.lengths as number[];
           if (lengths && lengths.length > 0) {
             lengthDistribution = calculateFrequencies(lengths);
           }
         }
-        if (schemaType.name === 'Document' && 'fields' in schemaType) {
+        if (schemaType.name === "Document" && "fields" in schemaType) {
           nestedFields = transformNestedFields(schemaType.fields);
         }
       }
 
       fieldsRecord[fieldName] = {
         name: field.name,
-        path: field.path.join('.'),
+        path: field.path.join("."),
         count: field.count,
         type: field.type,
         probability: field.probability,
@@ -105,7 +114,7 @@ export async function inferSchema(
       };
     }
 
-    logger.info('Schema inference complete', {
+    logger.info("Schema inference complete", {
       fieldsInferred: Object.keys(fieldsRecord).length,
       documentCount: schema.count,
     });
@@ -118,7 +127,9 @@ export async function inferSchema(
 
     return inferredSchema;
   } catch (error) {
-    logger.error('Schema inference failed', { error: error instanceof Error ? error.message : String(error) });
+    logger.error("Schema inference failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
     throw error;
   }
 }
@@ -126,7 +137,9 @@ export async function inferSchema(
 /**
  * Helper to transform nested fields array to Record
  */
-function transformNestedFields(fields: any[]): Record<string, InferredSchemaField> {
+function transformNestedFields(
+  fields: any[],
+): Record<string, InferredSchemaField> {
   const record: Record<string, InferredSchemaField> = {};
   for (const field of fields) {
     const fieldName = field.path[field.path.length - 1] || field.name;
@@ -136,21 +149,21 @@ function transformNestedFields(fields: any[]): Record<string, InferredSchemaFiel
     let nestedFields: Record<string, InferredSchemaField> | undefined;
 
     for (const schemaType of field.types) {
-      if (schemaType.name === 'Array' && 'lengths' in schemaType) {
+      if (schemaType.name === "Array" && "lengths" in schemaType) {
         // Convert array of lengths to frequency distribution
         const lengths = schemaType.lengths as number[];
         if (lengths && lengths.length > 0) {
           lengthDistribution = calculateFrequencies(lengths);
         }
       }
-      if (schemaType.name === 'Document' && 'fields' in schemaType) {
+      if (schemaType.name === "Document" && "fields" in schemaType) {
         nestedFields = transformNestedFields(schemaType.fields);
       }
     }
 
     record[fieldName] = {
       name: field.name,
-      path: field.path.join('.'),
+      path: field.path.join("."),
       count: field.count,
       type: field.type,
       probability: field.probability,
@@ -171,22 +184,28 @@ function transformNestedFields(fields: any[]): Record<string, InferredSchemaFiel
  * Get array field paths from inferred schema
  * Returns map of field paths to their length frequency distributions
  */
-export function getArrayFieldPaths(schema: InferredSchema): Map<string, Record<string, number>> {
+export function getArrayFieldPaths(
+  schema: InferredSchema,
+): Map<string, Record<string, number>> {
   const arrayPaths = new Map<string, Record<string, number>>();
   const allPaths = extractFieldPaths(schema);
 
   for (const [path, field] of allPaths) {
     // Check if this field is an array type
     const hasArrayType = Array.isArray(field.type)
-      ? field.type.includes('Array')
-      : field.type === 'Array';
+      ? field.type.includes("Array")
+      : field.type === "Array";
 
-    if (hasArrayType && field.lengthDistribution && Object.keys(field.lengthDistribution).length > 0) {
+    if (
+      hasArrayType &&
+      field.lengthDistribution &&
+      Object.keys(field.lengthDistribution).length > 0
+    ) {
       arrayPaths.set(path, field.lengthDistribution);
     }
   }
 
-  logger.debug('Array fields extracted', {
+  logger.debug("Array fields extracted", {
     count: arrayPaths.size,
     paths: Array.from(arrayPaths.keys()),
   });
@@ -197,7 +216,10 @@ export function getArrayFieldPaths(schema: InferredSchema): Map<string, Record<s
 /**
  * Get field probability (presence rate) from inferred schema
  */
-export function getFieldProbability(schema: InferredSchema, fieldPath: string): number {
+export function getFieldProbability(
+  schema: InferredSchema,
+  fieldPath: string,
+): number {
   const allPaths = extractFieldPaths(schema);
   const field = allPaths.get(fieldPath);
 
@@ -214,7 +236,7 @@ export function getFieldProbability(schema: InferredSchema, fieldPath: string): 
 export function isFieldRequired(
   schema: InferredSchema,
   fieldPath: string,
-  threshold = 0.95
+  threshold = 0.95,
 ): boolean {
   const probability = getFieldProbability(schema, fieldPath);
   return probability >= threshold;

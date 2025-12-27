@@ -3,13 +3,31 @@
  * T083: Create validator module index
  */
 
-export * from './types.js';
-export { SchemaValidator, checkIdUniqueness, checkKeyFieldUniqueness } from './schema-validator.js';
-export { compareArrayLengths, compareDocumentSizes } from './quality-reporter.js';
+export * from "./types.js";
+export {
+  SchemaValidator,
+  checkIdUniqueness,
+  checkKeyFieldUniqueness,
+} from "./schema-validator.js";
+export {
+  compareArrayLengths,
+  compareDocumentSizes,
+} from "./quality-reporter.js";
 
-import { SchemaValidator, checkIdUniqueness, checkKeyFieldUniqueness } from './schema-validator.js';
-import { compareArrayLengths, compareDocumentSizes } from './quality-reporter.js';
-import { ValidationReport, GenerationSchema, ConstraintsProfile } from '../../types/data-model.js';
+import {
+  SchemaValidator,
+  checkIdUniqueness,
+  checkKeyFieldUniqueness,
+} from "./schema-validator.js";
+import {
+  compareArrayLengths,
+  compareDocumentSizes,
+} from "./quality-reporter.js";
+import {
+  ValidationReport,
+  GenerationSchema,
+  ConstraintsProfile,
+} from "../../types/data-model.js";
 
 /**
  * Main validation function - validates documents against schema and constraints
@@ -22,7 +40,7 @@ export function validateDocuments(
   options: {
     arrayLengthTolerance?: number;
     sizeBucketTolerance?: number;
-  } = {}
+  } = {},
 ): ValidationReport {
   const { arrayLengthTolerance = 0.1, sizeBucketTolerance = 0.2 } = options;
 
@@ -32,10 +50,18 @@ export function validateDocuments(
   const schemaConformance = validator.validateAll(documents);
 
   // 2. Array length comparison
-  const arrayLengthComparison = compareArrayLengths(constraints.arrayStats, documents, arrayLengthTolerance);
+  const arrayLengthComparison = compareArrayLengths(
+    constraints.arrayStats,
+    documents,
+    arrayLengthTolerance,
+  );
 
   // 3. Document size comparison
-  const documentSizeComparison = compareDocumentSizes(constraints.sizeBuckets, documents, sizeBucketTolerance);
+  const documentSizeComparison = compareDocumentSizes(
+    constraints.sizeBuckets,
+    documents,
+    sizeBucketTolerance,
+  );
 
   // 4. Key uniqueness checks
   const idUniqueness = checkIdUniqueness(documents);
@@ -44,7 +70,10 @@ export function validateDocuments(
     .filter((key) => key.enforceUniqueness)
     .map((key) => key.fieldPath);
 
-  const additionalKeysUniqueness = checkKeyFieldUniqueness(documents, additionalKeyPaths);
+  const additionalKeysUniqueness = checkKeyFieldUniqueness(
+    documents,
+    additionalKeyPaths,
+  );
 
   return {
     schemaConformance,

@@ -1,7 +1,13 @@
-import { MongoClient, Collection, BulkWriteOptions, Document, AnyBulkWriteOperation } from 'mongodb';
-import { Readable } from 'stream';
-import { logger } from '../../utils/logger.js';
-import { CDCOperation } from '../../types/cdc.js';
+import {
+  MongoClient,
+  Collection,
+  BulkWriteOptions,
+  Document,
+  AnyBulkWriteOperation,
+} from "mongodb";
+import { Readable } from "stream";
+import { logger } from "../../utils/logger.js";
+import { CDCOperation } from "../../types/cdc.js";
 
 /**
  * Configuration options for MongoDB insertion
@@ -40,17 +46,19 @@ export class MongoInserter {
   constructor(config: MongoInserterConfig) {
     this.config = {
       batchSize: 1000,
-      writeConcern: 'majority',
+      writeConcern: "majority",
       orderedInserts: false,
-      ...config
+      ...config,
     };
 
     this.client = new MongoClient(this.config.uri, {
-      writeConcern: { w: (this.config.writeConcern || 'majority') as number | 'majority' },
+      writeConcern: {
+        w: (this.config.writeConcern || "majority") as number | "majority",
+      },
       maxPoolSize: 20,
       minPoolSize: 5,
       serverSelectionTimeoutMS: 10000,
-      socketTimeoutMS: 60000
+      socketTimeoutMS: 60000,
     });
   }
 
@@ -70,8 +78,10 @@ export class MongoInserter {
       this.collection = db.collection(targetCollection);
       logger.info(`Connected to MongoDB collection: ${targetCollection}`);
     } catch (error) {
-      logger.error('MongoDB connection failed', error);
-      throw new Error(`Failed to connect to MongoDB: ${(error as Error).message}`);
+      logger.error("MongoDB connection failed", error);
+      throw new Error(
+        `Failed to connect to MongoDB: ${(error as Error).message}`,
+      );
     }
   }
 
@@ -88,7 +98,7 @@ export class MongoInserter {
 
     const bulkOptions: BulkWriteOptions = {
       ordered: this.config.orderedInserts ?? false,
-      bypassDocumentValidation: false
+      bypassDocumentValidation: false,
     };
 
     const batch: Document[] = [];
@@ -98,13 +108,16 @@ export class MongoInserter {
       if (batch.length === 0) return;
       const batchToInsert = batch.splice(0, batch.length);
       try {
-        const result = await this.collection.insertMany(batchToInsert, bulkOptions);
+        const result = await this.collection.insertMany(
+          batchToInsert,
+          bulkOptions,
+        );
         insertedDocuments += result.insertedCount;
       } catch (error: any) {
-        logger.debug('Bulk insert partially failed or interrupted', { 
+        logger.debug("Bulk insert partially failed or interrupted", {
           message: error.message,
           code: error.code,
-          insertedCount: error.result?.insertedCount 
+          insertedCount: error.result?.insertedCount,
         });
         if (error.result?.insertedCount) {
           insertedDocuments += error.result.insertedCount;
@@ -124,7 +137,7 @@ export class MongoInserter {
       }
       await processBatch(); // Final batch
     } catch (error) {
-      logger.error('Document stream error', error);
+      logger.error("Document stream error", error);
       throw error;
     } finally {
       await this.client.close();
@@ -135,7 +148,7 @@ export class MongoInserter {
       totalDocuments,
       insertedDocuments,
       failedInserts,
-      durationMs
+      durationMs,
     };
   }
 
@@ -152,7 +165,7 @@ export class MongoInserter {
     let failedOps = 0;
 
     const bulkOptions: BulkWriteOptions = {
-      ordered: this.config.orderedInserts ?? false
+      ordered: this.config.orderedInserts ?? false,
     };
 
     const batch: AnyBulkWriteOperation[] = [];
@@ -162,28 +175,34 @@ export class MongoInserter {
       if (batch.length === 0) return;
       const batchToWrite = batch.splice(0, batch.length);
       try {
-        const result = await this.collection.bulkWrite(batchToWrite, bulkOptions);
+        const result = await this.collection.bulkWrite(
+          batchToWrite,
+          bulkOptions,
+        );
         insertedDocuments += result.insertedCount;
         updatedDocuments += result.modifiedCount;
         deletedDocuments += result.deletedCount;
       } catch (error: any) {
-        logger.debug('Bulk write partially failed or interrupted', {
+        logger.debug("Bulk write partially failed or interrupted", {
           message: error.message,
           code: error.code,
-          result: error.result ? {
-            insertedCount: error.result.insertedCount,
-            modifiedCount: error.result.modifiedCount,
-            deletedCount: error.result.deletedCount
-          } : undefined
+          result: error.result
+            ? {
+                insertedCount: error.result.insertedCount,
+                modifiedCount: error.result.modifiedCount,
+                deletedCount: error.result.deletedCount,
+              }
+            : undefined,
         });
         if (error.result) {
           insertedDocuments += error.result.insertedCount || 0;
           updatedDocuments += error.result.modifiedCount || 0;
           deletedDocuments += error.result.deletedCount || 0;
         }
-        const successfulInBatch = (error.result?.insertedCount || 0) + 
-                                (error.result?.modifiedCount || 0) + 
-                                (error.result?.deletedCount || 0);
+        const successfulInBatch =
+          (error.result?.insertedCount || 0) +
+          (error.result?.modifiedCount || 0) +
+          (error.result?.deletedCount || 0);
         failedOps += batchToWrite.length - successfulInBatch;
       }
     };
@@ -193,18 +212,18 @@ export class MongoInserter {
         totalOperations++;
         let mongoOp: AnyBulkWriteOperation;
         switch (op.type) {
-          case 'insert':
+          case "insert":
             mongoOp = { insertOne: { document: op.payload } };
             break;
-          case 'update':
-            mongoOp = { 
-              updateOne: { 
-                filter: op.payload.filter, 
-                update: op.payload.update 
-              } 
+          case "update":
+            mongoOp = {
+              updateOne: {
+                filter: op.payload.filter,
+                update: op.payload.update,
+              },
             };
             break;
-          case 'delete':
+          case "delete":
             mongoOp = { deleteOne: { filter: op.payload } };
             break;
           default:
@@ -218,7 +237,7 @@ export class MongoInserter {
       }
       await processBatch(); // Final batch
     } catch (error) {
-      logger.error('Operation stream error', error);
+      logger.error("Operation stream error", error);
       throw error;
     } finally {
       await this.client.close();
@@ -231,7 +250,7 @@ export class MongoInserter {
       updatedDocuments,
       deletedDocuments,
       failedInserts: failedOps,
-      durationMs
+      durationMs,
     };
   }
 
@@ -251,7 +270,7 @@ export class MongoInserter {
  * @returns Configured MongoInserter
  */
 export async function createMongoInserter(
-  config: MongoInserterConfig
+  config: MongoInserterConfig,
 ): Promise<MongoInserter> {
   const inserter = new MongoInserter(config);
   await inserter.connect();

@@ -3,14 +3,17 @@
  * Analyzes numeric fields and calculates min/max/mean/median constraints
  */
 
-import { NumericRangeStats } from '../../types/data-model.js';
-import { calculateFrequencies, calculateDistributionStats } from '../../utils/frequency-map.js';
+import { NumericRangeStats } from "../../types/data-model.js";
+import {
+  calculateFrequencies,
+  calculateDistributionStats,
+} from "../../utils/frequency-map.js";
 
 /**
  * Determine if a value is an integer or float
  */
-function detectNumericType(values: number[]): 'integer' | 'float' {
-  return values.every((v) => Number.isInteger(v)) ? 'integer' : 'float';
+function detectNumericType(values: number[]): "integer" | "float" {
+  return values.every((v) => Number.isInteger(v)) ? "integer" : "float";
 }
 
 /**
@@ -32,7 +35,10 @@ function calculateMean(distribution: Record<string, number>): number {
 /**
  * Calculate standard deviation from frequency distribution
  */
-function calculateStdDev(distribution: Record<string, number>, mean: number): number {
+function calculateStdDev(
+  distribution: Record<string, number>,
+  mean: number,
+): number {
   let sumSquaredDiff = 0;
   let count = 0;
 
@@ -48,7 +54,10 @@ function calculateStdDev(distribution: Record<string, number>, mean: number): nu
 /**
  * Extract numeric statistics for a field path
  */
-export function calculateNumericStats(fieldPath: string, values: number[]): NumericRangeStats {
+export function calculateNumericStats(
+  fieldPath: string,
+  values: number[],
+): NumericRangeStats {
   if (values.length === 0) {
     return {
       fieldPath,
@@ -62,7 +71,7 @@ export function calculateNumericStats(fieldPath: string, values: number[]): Nume
         unique: 0,
       },
       valuesAnalyzed: 0,
-      valueType: 'integer',
+      valueType: "integer",
       allPositive: true,
       mean: 0,
       stdDev: 0,
@@ -106,14 +115,14 @@ export function calculateNumericStats(fieldPath: string, values: number[]): Nume
 export function extractNumericValues(documents: any[]): Map<string, number[]> {
   const numericValues = new Map<string, number[]>();
 
-  function traverse(obj: any, pathPrefix = ''): void {
+  function traverse(obj: any, pathPrefix = ""): void {
     for (const [key, value] of Object.entries(obj)) {
       const fieldPath = pathPrefix ? `${pathPrefix}.${key}` : key;
 
       // Skip metadata fields
-      if (key.startsWith('__')) continue;
+      if (key.startsWith("__")) continue;
 
-      if (typeof value === 'number' && !isNaN(value) && isFinite(value)) {
+      if (typeof value === "number" && !isNaN(value) && isFinite(value)) {
         // Record numeric value
         if (!numericValues.has(fieldPath)) {
           numericValues.set(fieldPath, []);
@@ -122,18 +131,18 @@ export function extractNumericValues(documents: any[]): Map<string, number[]> {
       } else if (Array.isArray(value)) {
         // Traverse array elements
         value.forEach((item) => {
-          if (typeof item === 'number' && !isNaN(item) && isFinite(item)) {
+          if (typeof item === "number" && !isNaN(item) && isFinite(item)) {
             // Record array element numeric value
             const arrayFieldPath = `${fieldPath}[]`;
             if (!numericValues.has(arrayFieldPath)) {
               numericValues.set(arrayFieldPath, []);
             }
             numericValues.get(arrayFieldPath)!.push(item);
-          } else if (typeof item === 'object' && item !== null) {
+          } else if (typeof item === "object" && item !== null) {
             traverse(item, `${fieldPath}[]`);
           }
         });
-      } else if (typeof value === 'object' && value !== null) {
+      } else if (typeof value === "object" && value !== null) {
         // Traverse nested objects
         traverse(value, fieldPath);
       }
@@ -147,7 +156,9 @@ export function extractNumericValues(documents: any[]): Map<string, number[]> {
 /**
  * Calculate statistics for all numeric fields
  */
-export function calculateAllNumericStats(documents: any[]): Map<string, NumericRangeStats> {
+export function calculateAllNumericStats(
+  documents: any[],
+): Map<string, NumericRangeStats> {
   const numericValues = extractNumericValues(documents);
   const stats = new Map<string, NumericRangeStats>();
 

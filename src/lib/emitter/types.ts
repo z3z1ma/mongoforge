@@ -2,10 +2,10 @@
  * Emitter module types
  */
 
-import { SyntheticDocument } from '../../types/data-model';
+import { SyntheticDocument } from "../../types/data-model";
 
 export interface EmitterOptions {
-  format: 'ndjson' | 'json';
+  format: "ndjson" | "json";
   destination: string;
   batchSize?: number;
 }

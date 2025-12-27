@@ -2,8 +2,12 @@
  * Synthesizer module types
  */
 
-import { InferredSchema, GenerationSchema, ConstraintsProfile } from '../../types/data-model';
-import type { ObjectKeysAnalysis } from '../inferencer/dynamic-key-detector.js';
+import {
+  InferredSchema,
+  GenerationSchema,
+  ConstraintsProfile,
+} from "../../types/data-model";
+import type { ObjectKeysAnalysis } from "../inferencer/dynamic-key-detector.js";
 
 export interface SynthesizerOptions {
   enforceRequired?: boolean;

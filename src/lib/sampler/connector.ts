@@ -2,9 +2,9 @@
  * MongoDB connection management with pooling
  */
 
-import { MongoClient, Db, Collection } from 'mongodb';
-import { logger } from '../../utils/logger.js';
-import { MongoConnection } from './types.js';
+import { MongoClient, Db, Collection } from "mongodb";
+import { logger } from "../../utils/logger.js";
+import { MongoConnection } from "./types.js";
 
 export class MongoConnector {
   private client: MongoClient | null = null;
@@ -16,7 +16,7 @@ export class MongoConnector {
   async connect(config: MongoConnection): Promise<void> {
     try {
       const sanitized = this.sanitizeUri(config.uri);
-      logger.info('Connecting to MongoDB: ' + sanitized);
+      logger.info("Connecting to MongoDB: " + sanitized);
 
       this.client = new MongoClient(config.uri, {
         maxPoolSize: 10,
@@ -28,10 +28,12 @@ export class MongoConnector {
       await this.client.connect();
       this.db = this.client.db(config.database);
 
-      logger.info('Connected to database: ' + config.database);
+      logger.info("Connected to database: " + config.database);
     } catch (error) {
-      logger.error('MongoDB connection failed', error);
-      throw new Error('Failed to connect to MongoDB: ' + (error as Error).message);
+      logger.error("MongoDB connection failed", error);
+      throw new Error(
+        "Failed to connect to MongoDB: " + (error as Error).message,
+      );
     }
   }
 
@@ -40,7 +42,7 @@ export class MongoConnector {
    */
   getCollection(collectionName: string): Collection {
     if (!this.db) {
-      throw new Error('Not connected to MongoDB. Call connect() first.');
+      throw new Error("Not connected to MongoDB. Call connect() first.");
     }
 
     return this.db.collection(collectionName);
@@ -54,7 +56,7 @@ export class MongoConnector {
       await this.client.close();
       this.client = null;
       this.db = null;
-      logger.info('MongoDB connection closed');
+      logger.info("MongoDB connection closed");
     }
   }
 
@@ -72,11 +74,11 @@ export class MongoConnector {
     try {
       const url = new URL(uri);
       if (url.username || url.password) {
-        return uri.replace(/:\/\/[^@]+@/, '://***:***@');
+        return uri.replace(/:\/\/[^@]+@/, "://***:***@");
       }
       return uri;
     } catch {
-      return 'mongodb://***';
+      return "mongodb://***";
     }
   }
 }
@@ -84,7 +86,9 @@ export class MongoConnector {
 /**
  * Factory function for creating connector instances
  */
-export async function createConnector(config: MongoConnection): Promise<MongoConnector> {
+export async function createConnector(
+  config: MongoConnection,
+): Promise<MongoConnector> {
   const connector = new MongoConnector();
   await connector.connect(config);
   return connector;

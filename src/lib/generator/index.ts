@@ -2,20 +2,24 @@
  * Generator module - synthetic document generation
  */
 
-import { GenerationSchema, ConstraintsProfile, SyntheticDocument } from '../../types/data-model.js';
-import { GeneratorOptions } from './types.js';
-import { initializeFaker, generateMany } from './faker-engine.js';
-import { registerCustomFormats } from './custom-formats.js';
-import { createGeneratorStream } from './stream.js';
-import { logger } from '../../utils/logger.js';
-import { Readable } from 'stream';
+import {
+  GenerationSchema,
+  ConstraintsProfile,
+  SyntheticDocument,
+} from "../../types/data-model.js";
+import { GeneratorOptions } from "./types.js";
+import { initializeFaker, generateMany } from "./faker-engine.js";
+import { registerCustomFormats } from "./custom-formats.js";
+import { createGeneratorStream } from "./stream.js";
+import { logger } from "../../utils/logger.js";
+import { Readable } from "stream";
 
-export * from './types.js';
-export * from './faker-engine.js';
-export * from './custom-formats.js';
-export * from './stream.js';
-export * from './dynamic-key-generator.js';
-export * from './schema-preprocessor.js';
+export * from "./types.js";
+export * from "./faker-engine.js";
+export * from "./custom-formats.js";
+export * from "./stream.js";
+export * from "./dynamic-key-generator.js";
+export * from "./schema-preprocessor.js";
 
 /**
  * Main generator class
@@ -45,7 +49,7 @@ export class Generator {
     registerCustomFormats();
 
     this.initialized = true;
-    logger.info('Generator initialized', { seed: this.seed });
+    logger.info("Generator initialized", { seed: this.seed });
   }
 
   /**
@@ -55,15 +59,15 @@ export class Generator {
     this.initialize();
 
     const docCount = count || 100;
-    logger.info('Generating documents', { count: docCount });
+    logger.info("Generating documents", { count: docCount });
 
     const documents = await generateMany(this.schema, docCount, {
       useFrequencyDistributions: true,
       useDynamicKeys: true,
-      seed: typeof this.seed === 'number' ? this.seed : undefined,
+      seed: typeof this.seed === "number" ? this.seed : undefined,
     });
 
-    logger.info('Generation complete', { generated: documents.length });
+    logger.info("Generation complete", { generated: documents.length });
     return documents as SyntheticDocument[];
   }
 
@@ -74,7 +78,7 @@ export class Generator {
     this.initialize();
 
     const docCount = count || 100;
-    logger.info('Creating generator stream', { count: docCount, batchSize });
+    logger.info("Creating generator stream", { count: docCount, batchSize });
 
     return createGeneratorStream(this.schema, docCount, batchSize);
   }
@@ -86,7 +90,7 @@ export class Generator {
 export async function generateDocuments(
   schema: GenerationSchema,
   count: number,
-  seed?: string | number
+  seed?: string | number,
 ): Promise<SyntheticDocument[]> {
   const generator = new Generator({
     schema,

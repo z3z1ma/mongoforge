@@ -7,7 +7,7 @@ import type {
   DynamicKeyPattern,
   DynamicKeyDetectionConfig,
   ConfidenceLevel,
-} from '../types/dynamic-keys.js';
+} from "../types/dynamic-keys.js";
 
 /**
  * Compiled regex patterns for dynamic key detection
@@ -23,29 +23,29 @@ interface CompiledPattern {
  */
 export const DYNAMIC_KEY_PATTERNS: CompiledPattern[] = [
   {
-    name: 'UUID',
+    name: "UUID",
     regex: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
-    description: 'Standard UUID v4 format',
+    description: "Standard UUID v4 format",
   },
   {
-    name: 'MONGODB_OBJECTID',
+    name: "MONGODB_OBJECTID",
     regex: /^[0-9a-f]{24}$/i,
-    description: 'MongoDB ObjectId (24 hex characters)',
+    description: "MongoDB ObjectId (24 hex characters)",
   },
   {
-    name: 'ULID',
+    name: "ULID",
     regex: /^[0-9A-Z]{26}$/,
-    description: 'Universally Unique Lexicographically Sortable Identifier',
+    description: "Universally Unique Lexicographically Sortable Identifier",
   },
   {
-    name: 'NUMERIC_ID',
+    name: "NUMERIC_ID",
     regex: /^\d{6,20}$/,
-    description: 'Numeric identifier (6-20 digits)',
+    description: "Numeric identifier (6-20 digits)",
   },
   {
-    name: 'PREFIXED_ID',
+    name: "PREFIXED_ID",
     regex: /^(user|doc|item|order)_[a-z0-9]{8,32}$/i,
-    description: 'Prefixed alphanumeric identifier',
+    description: "Prefixed alphanumeric identifier",
   },
 ];
 
@@ -82,7 +82,7 @@ export interface DetectionResult {
  * @returns Array of compiled patterns
  */
 export function compilePatterns(
-  config: DynamicKeyDetectionConfig
+  config: DynamicKeyDetectionConfig,
 ): CompiledPattern[] {
   const compiled: CompiledPattern[] = [];
 
@@ -96,7 +96,7 @@ export function compilePatterns(
       });
     } catch (error) {
       throw new Error(
-        `Invalid regex pattern for ${pattern.name}: ${pattern.regex}`
+        `Invalid regex pattern for ${pattern.name}: ${pattern.regex}`,
       );
     }
   }
@@ -124,7 +124,7 @@ export function testKeyPattern(key: string, pattern: CompiledPattern): boolean {
  */
 export function calculatePatternMatch(
   keys: string[],
-  pattern: CompiledPattern
+  pattern: CompiledPattern,
 ): PatternMatch {
   const matchedKeys: string[] = [];
 
@@ -156,7 +156,7 @@ export function calculatePatternMatch(
  */
 export function findBestPattern(
   keys: string[],
-  patterns: CompiledPattern[]
+  patterns: CompiledPattern[],
 ): PatternMatch | null {
   let bestMatch: PatternMatch | null = null;
   let bestRatio = 0;
@@ -184,7 +184,7 @@ export function findBestPattern(
 export function computeConfidenceScore(
   matchRatio: number,
   keyCount: number,
-  threshold: number
+  threshold: number,
 ): number {
   // Base confidence from match ratio
   let confidence = matchRatio;
@@ -207,9 +207,9 @@ export function computeConfidenceScore(
  * @returns Confidence level category
  */
 export function getConfidenceLevel(confidence: number): ConfidenceLevel {
-  if (confidence >= 0.8) return 'high';
-  if (confidence >= 0.6) return 'medium';
-  return 'low';
+  if (confidence >= 0.8) return "high";
+  if (confidence >= 0.6) return "medium";
+  return "low";
 }
 
 /**
@@ -245,7 +245,7 @@ export function getConfidenceLevel(confidence: number): ConfidenceLevel {
  */
 export function detectDynamicKeys(
   keys: string[],
-  config: DynamicKeyDetectionConfig
+  config: DynamicKeyDetectionConfig,
 ): DetectionResult {
   const totalKeys = keys.length;
 
@@ -283,7 +283,11 @@ export function detectDynamicKeys(
 
   if (meetsPatternThreshold && meetsCountThreshold) {
     // Hybrid: Both conditions met - highest confidence
-    confidence = computeConfidenceScore(matchRatio, totalKeys, config.threshold);
+    confidence = computeConfidenceScore(
+      matchRatio,
+      totalKeys,
+      config.threshold,
+    );
   } else if (meetsPatternThreshold) {
     // Pattern-based only: Use pattern match ratio as base, slight boost for pattern clarity
     confidence = Math.min(1.0, matchRatio + 0.05);
@@ -303,7 +307,7 @@ export function detectDynamicKeys(
   return {
     detected,
     pattern,
-    customPattern: !pattern ? 'HIGH_CARDINALITY' : undefined,
+    customPattern: !pattern ? "HIGH_CARDINALITY" : undefined,
     confidence,
     confidenceLevel: getConfidenceLevel(confidence),
     totalKeys,

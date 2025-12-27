@@ -11,9 +11,9 @@ import {
   selectKeyCount,
   generateDynamicKeyValue,
   validateGeneratedKeys,
-} from './dynamic-key-generator.js';
-import type { DynamicKeyMetadata } from '../../types/dynamic-keys.js';
-import { logger } from '../../utils/logger.js';
+} from "./dynamic-key-generator.js";
+import type { DynamicKeyMetadata } from "../../types/dynamic-keys.js";
+import { logger } from "../../utils/logger.js";
 
 /**
  * Options for schema preprocessing
@@ -36,14 +36,23 @@ export interface PreprocessOptions {
  * @param options - Preprocessing options
  * @returns Preprocessed schema with expanded static properties
  */
-export function preprocessSchema(schema: any, options: PreprocessOptions = {}): any {
+export function preprocessSchema(
+  schema: any,
+  options: PreprocessOptions = {},
+): any {
   const { seed, validateKeys = true, maxDepth = 10 } = options;
 
   // Create generator instance for this preprocessing session
   const generator = new DynamicKeyGenerator();
 
   // Start recursive preprocessing
-  return preprocessSchemaRecursive(schema, generator, { seed, validateKeys }, 0, maxDepth);
+  return preprocessSchemaRecursive(
+    schema,
+    generator,
+    { seed, validateKeys },
+    0,
+    maxDepth,
+  );
 }
 
 /**
@@ -54,11 +63,11 @@ function preprocessSchemaRecursive(
   generator: DynamicKeyGenerator,
   options: { seed?: number; validateKeys: boolean },
   depth: number,
-  maxDepth: number
+  maxDepth: number,
 ): any {
   // Prevent infinite recursion
   if (depth > maxDepth) {
-    logger.warn('Maximum preprocessing depth reached, stopping recursion', {
+    logger.warn("Maximum preprocessing depth reached, stopping recursion", {
       depth,
       maxDepth,
     });
@@ -66,7 +75,7 @@ function preprocessSchemaRecursive(
   }
 
   // Handle non-object schemas
-  if (!schema || typeof schema !== 'object') {
+  if (!schema || typeof schema !== "object") {
     return schema;
   }
 
@@ -74,7 +83,7 @@ function preprocessSchemaRecursive(
   const processed = { ...schema };
 
   // Check for x-dynamic-keys annotation
-  if (processed['x-dynamic-keys']) {
+  if (processed["x-dynamic-keys"]) {
     return expandDynamicKeys(processed, generator, options);
   }
 
@@ -83,8 +92,14 @@ function preprocessSchemaRecursive(
     processed.properties = Object.fromEntries(
       Object.entries(processed.properties).map(([key, value]) => [
         key,
-        preprocessSchemaRecursive(value, generator, options, depth + 1, maxDepth),
-      ])
+        preprocessSchemaRecursive(
+          value,
+          generator,
+          options,
+          depth + 1,
+          maxDepth,
+        ),
+      ]),
     );
   }
 
@@ -93,7 +108,13 @@ function preprocessSchemaRecursive(
     if (Array.isArray(processed.items)) {
       // Tuple validation
       processed.items = processed.items.map((item: any) =>
-        preprocessSchemaRecursive(item, generator, options, depth + 1, maxDepth)
+        preprocessSchemaRecursive(
+          item,
+          generator,
+          options,
+          depth + 1,
+          maxDepth,
+        ),
       );
     } else {
       // Single item schema
@@ -102,7 +123,7 @@ function preprocessSchemaRecursive(
         generator,
         options,
         depth + 1,
-        maxDepth
+        maxDepth,
       );
     }
   }
@@ -110,22 +131,28 @@ function preprocessSchemaRecursive(
   // Recursively process additionalProperties
   if (
     processed.additionalProperties &&
-    typeof processed.additionalProperties === 'object'
+    typeof processed.additionalProperties === "object"
   ) {
     processed.additionalProperties = preprocessSchemaRecursive(
       processed.additionalProperties,
       generator,
       options,
       depth + 1,
-      maxDepth
+      maxDepth,
     );
   }
 
   // Recursively process oneOf/anyOf/allOf
-  for (const combiner of ['oneOf', 'anyOf', 'allOf']) {
+  for (const combiner of ["oneOf", "anyOf", "allOf"]) {
     if (Array.isArray(processed[combiner])) {
       processed[combiner] = processed[combiner].map((subschema: any) =>
-        preprocessSchemaRecursive(subschema, generator, options, depth + 1, maxDepth)
+        preprocessSchemaRecursive(
+          subschema,
+          generator,
+          options,
+          depth + 1,
+          maxDepth,
+        ),
       );
     }
   }
@@ -144,35 +171,38 @@ function preprocessSchemaRecursive(
 function expandDynamicKeys(
   schema: any,
   generator: DynamicKeyGenerator,
-  options: { seed?: number; validateKeys: boolean }
+  options: { seed?: number; validateKeys: boolean },
 ): any {
-  const dynamicKeysAnnotation = schema['x-dynamic-keys'];
+  const dynamicKeysAnnotation = schema["x-dynamic-keys"];
 
   // Handle two possible structures:
   // 1. Synthesizer output: { enabled, metadata, valueSchema }
   // 2. Direct metadata: DynamicKeyMetadata
-  const dynamicKeysConfig = (dynamicKeysAnnotation.metadata || dynamicKeysAnnotation) as DynamicKeyMetadata;
+  const dynamicKeysConfig = (dynamicKeysAnnotation.metadata ||
+    dynamicKeysAnnotation) as DynamicKeyMetadata;
 
   // Value schema can be in three places:
   // 1. dynamicKeysAnnotation.valueSchema (new synthesizer output)
   // 2. schema['x-dynamic-key-value-schema'] (old format, separate property)
   // 3. undefined (fallback to string)
-  const valueSchema = dynamicKeysAnnotation.valueSchema || schema['x-dynamic-key-value-schema'];
+  const valueSchema =
+    dynamicKeysAnnotation.valueSchema || schema["x-dynamic-key-value-schema"];
 
   // Check if dynamic keys are enabled
-  const enabled = dynamicKeysAnnotation.enabled !== undefined
-    ? dynamicKeysAnnotation.enabled
-    : dynamicKeysConfig.enabled;
+  const enabled =
+    dynamicKeysAnnotation.enabled !== undefined
+      ? dynamicKeysAnnotation.enabled
+      : dynamicKeysConfig.enabled;
 
   if (!enabled) {
-    logger.debug('Dynamic keys disabled, skipping expansion');
+    logger.debug("Dynamic keys disabled, skipping expansion");
     // Remove annotation but keep schema as-is
     const result = { ...schema };
-    delete result['x-dynamic-keys'];
+    delete result["x-dynamic-keys"];
     return result;
   }
 
-  logger.debug('Expanding dynamic keys', {
+  logger.debug("Expanding dynamic keys", {
     pattern: dynamicKeysConfig.pattern,
     documentsAnalyzed: dynamicKeysConfig.documentsAnalyzed,
     uniqueKeysObserved: dynamicKeysConfig.uniqueKeysObserved,
@@ -181,14 +211,14 @@ function expandDynamicKeys(
   // Select number of keys from distribution
   const keyCount = selectKeyCount(dynamicKeysConfig.countDistribution);
 
-  logger.debug('Selected key count from distribution', { keyCount });
+  logger.debug("Selected key count from distribution", { keyCount });
 
   // Generate synthetic keys
   const keys = generator.generateKeys(
     keyCount,
     dynamicKeysConfig.pattern,
     dynamicKeysConfig.customPattern,
-    options.seed
+    options.seed,
   );
 
   // Validate generated keys if requested
@@ -196,18 +226,18 @@ function expandDynamicKeys(
     const validation = validateGeneratedKeys(
       keys,
       dynamicKeysConfig.pattern,
-      dynamicKeysConfig.customPattern
+      dynamicKeysConfig.customPattern,
     );
 
     if (!validation.valid) {
-      logger.warn('Generated keys failed validation', {
+      logger.warn("Generated keys failed validation", {
         pattern: dynamicKeysConfig.pattern,
         invalidCount: validation.invalidKeys.length,
         matchRate: validation.matchRate,
         exampleInvalid: validation.invalidKeys.slice(0, 5),
       });
     } else {
-      logger.debug('Generated keys validated successfully', {
+      logger.debug("Generated keys validated successfully", {
         pattern: dynamicKeysConfig.pattern,
         keyCount: keys.length,
       });
@@ -224,20 +254,20 @@ function expandDynamicKeys(
     } else {
       // Fallback: use generic string schema
       properties[key] = {
-        type: 'string',
+        type: "string",
       };
     }
   }
 
   // Create new schema with expanded properties
   const expanded = {
-    type: 'object',
+    type: "object",
     properties,
     required: keys, // All generated keys are required
     additionalProperties: schema.additionalProperties ?? false,
   };
 
-  logger.debug('Dynamic keys expanded to static properties', {
+  logger.debug("Dynamic keys expanded to static properties", {
     keyCount: keys.length,
     exampleKeys: keys.slice(0, 5),
   });
@@ -254,7 +284,7 @@ function expandDynamicKeys(
  */
 function createSchemaFromValueSchema(valueSchema: any, keyName: string): any {
   if (!valueSchema) {
-    return { type: 'string' };
+    return { type: "string" };
   }
 
   // If uniform type, use the single schema
@@ -268,12 +298,12 @@ function createSchemaFromValueSchema(valueSchema: any, keyName: string): any {
   if (valueSchema.types?.length > 1 && valueSchema.schemas) {
     return {
       anyOf: valueSchema.schemas,
-      'x-type-probabilities': valueSchema.typeProbabilities,
+      "x-type-probabilities": valueSchema.typeProbabilities,
     };
   }
 
   // Fallback to first schema or string
-  return valueSchema.schemas?.[0] || { type: 'string' };
+  return valueSchema.schemas?.[0] || { type: "string" };
 }
 
 /**
@@ -283,11 +313,11 @@ function createSchemaFromValueSchema(valueSchema: any, keyName: string): any {
  * @returns True if schema has x-dynamic-keys annotation
  */
 export function hasDynamicKeys(schema: any): boolean {
-  if (!schema || typeof schema !== 'object') {
+  if (!schema || typeof schema !== "object") {
     return false;
   }
 
-  return Boolean(schema['x-dynamic-keys']?.enabled);
+  return Boolean(schema["x-dynamic-keys"]?.enabled);
 }
 
 /**
@@ -297,13 +327,13 @@ export function hasDynamicKeys(schema: any): boolean {
  * @returns Dynamic key metadata if present, undefined otherwise
  */
 export function extractDynamicKeyMetadata(
-  schema: any
+  schema: any,
 ): DynamicKeyMetadata | undefined {
   if (!hasDynamicKeys(schema)) {
     return undefined;
   }
 
-  return schema['x-dynamic-keys'] as DynamicKeyMetadata;
+  return schema["x-dynamic-keys"] as DynamicKeyMetadata;
 }
 
 /**
@@ -313,7 +343,7 @@ export function extractDynamicKeyMetadata(
  * @returns Count of schemas with dynamic keys
  */
 export function countDynamicKeySchemas(schema: any): number {
-  if (!schema || typeof schema !== 'object') {
+  if (!schema || typeof schema !== "object") {
     return 0;
   }
 
@@ -345,13 +375,13 @@ export function countDynamicKeySchemas(schema: any): number {
   // Check additionalProperties
   if (
     schema.additionalProperties &&
-    typeof schema.additionalProperties === 'object'
+    typeof schema.additionalProperties === "object"
   ) {
     count += countDynamicKeySchemas(schema.additionalProperties);
   }
 
   // Check combiners
-  for (const combiner of ['oneOf', 'anyOf', 'allOf']) {
+  for (const combiner of ["oneOf", "anyOf", "allOf"]) {
     if (Array.isArray(schema[combiner])) {
       for (const subschema of schema[combiner]) {
         count += countDynamicKeySchemas(subschema);

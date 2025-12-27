@@ -2,7 +2,7 @@
  * Document size bucket calculation
  */
 
-import { DocumentSizeBucket, SizeProxyType } from '../../types/data-model.js';
+import { DocumentSizeBucket, SizeProxyType } from "../../types/data-model.js";
 
 /**
  * Calculate leaf field count (non-object, non-array values)
@@ -21,7 +21,7 @@ function countLeafFields(obj: any): number {
       return;
     }
 
-    if (typeof value === 'object') {
+    if (typeof value === "object") {
       for (const v of Object.values(value)) {
         traverse(v);
       }
@@ -49,7 +49,7 @@ function sumArrayLengths(obj: any): number {
       return;
     }
 
-    if (typeof value === 'object' && value !== null) {
+    if (typeof value === "object" && value !== null) {
       for (const v of Object.values(value)) {
         traverse(v);
       }
@@ -76,14 +76,14 @@ function calculateByteSize(obj: any): number {
  */
 export function calculateSizeProxy(doc: any, proxyType: SizeProxyType): number {
   switch (proxyType) {
-    case 'leafFieldCount':
+    case "leafFieldCount":
       return countLeafFields(doc);
-    case 'arrayLengthSum':
+    case "arrayLengthSum":
       return sumArrayLengths(doc);
-    case 'byteSize':
+    case "byteSize":
       return calculateByteSize(doc);
     default:
-      throw new Error('Unknown size proxy type: ' + proxyType);
+      throw new Error("Unknown size proxy type: " + proxyType);
   }
 }
 
@@ -93,7 +93,7 @@ export function calculateSizeProxy(doc: any, proxyType: SizeProxyType): number {
 export function createSizeBuckets(
   documents: any[],
   proxyType: SizeProxyType,
-  bucketConfig?: Array<{ id: string; min: number; max: number }>
+  bucketConfig?: Array<{ id: string; min: number; max: number }>,
 ): DocumentSizeBucket[] {
   // Calculate size proxies for all documents
   const sizes = documents.map((doc) => calculateSizeProxy(doc, proxyType));
@@ -105,9 +105,9 @@ export function createSizeBuckets(
     const range = max - min;
 
     bucketConfig = [
-      { id: 'small', min: min, max: min + range * 0.33 },
-      { id: 'medium', min: min + range * 0.33, max: min + range * 0.67 },
-      { id: 'large', min: min + range * 0.67, max: max },
+      { id: "small", min: min, max: min + range * 0.33 },
+      { id: "medium", min: min + range * 0.33, max: min + range * 0.67 },
+      { id: "large", min: min + range * 0.67, max: max },
     ];
   }
 

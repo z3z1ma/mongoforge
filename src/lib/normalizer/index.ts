@@ -2,13 +2,17 @@
  * Normalizer module - converts BSON types to JSON Schema compatible representations
  */
 
-import { SampleDocument, NormalizedDocument, TypeHint } from '../../types/data-model.js';
-import { NormalizerOptions, NormalizerResult } from './types.js';
-import { mapDocument } from './type-mappers.js';
-import { logger } from '../../utils/logger.js';
+import {
+  SampleDocument,
+  NormalizedDocument,
+  TypeHint,
+} from "../../types/data-model.js";
+import { NormalizerOptions, NormalizerResult } from "./types.js";
+import { mapDocument } from "./type-mappers.js";
+import { logger } from "../../utils/logger.js";
 
-export * from './types.js';
-export * from './type-mappers.js';
+export * from "./types.js";
+export * from "./type-mappers.js";
 
 /**
  * Normalize a single sample document
@@ -31,9 +35,9 @@ export function normalizeDocument(doc: SampleDocument): NormalizedDocument {
  */
 export function normalizeDocuments(
   documents: SampleDocument[],
-  options: NormalizerOptions = {}
+  options: NormalizerOptions = {},
 ): NormalizerResult {
-  logger.info('Normalizing documents', { count: documents.length });
+  logger.info("Normalizing documents", { count: documents.length });
 
   const normalized: NormalizedDocument[] = [];
   const allTypeHints = new Map<string, TypeHint>();
@@ -50,7 +54,7 @@ export function normalizeDocuments(
     }
   }
 
-  logger.info('Normalization complete', {
+  logger.info("Normalization complete", {
     documentsNormalized: normalized.length,
     uniqueTypeHints: allTypeHints.size,
   });

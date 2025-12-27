@@ -1,7 +1,7 @@
-import { MutationConfig, CDCOperation } from '../../types/cdc';
-import { generate, initializeFaker } from './faker-engine.js';
-import { registerCustomFormats } from './custom-formats.js';
-import { GenerationSchema } from '../../types/data-model';
+import { MutationConfig, CDCOperation } from "../../types/cdc";
+import { generate, initializeFaker } from "./faker-engine.js";
+import { registerCustomFormats } from "./custom-formats.js";
+import { GenerationSchema } from "../../types/data-model";
 
 /**
  * MutationGenerator handles the generation of update and delete operations
@@ -27,66 +27,75 @@ export class MutationGenerator {
   /**
    * Generates a mutation operation (update or delete) for a given document ID.
    */
-  async generateMutation(id: any, type: 'update' | 'delete'): Promise<CDCOperation> {
+  async generateMutation(
+    id: any,
+    type: "update" | "delete",
+  ): Promise<CDCOperation> {
     this.initialize();
 
-    if (type === 'delete') {
+    if (type === "delete") {
       return {
-        type: 'delete',
+        type: "delete",
         collection: this.config.collection,
-        payload: { _id: id }
+        payload: { _id: id },
       };
     }
 
-    const strategy = this.config.updateStrategy === 'mixed'
-      ? (Math.random() > 0.5 ? 'regenerate' : 'partial')
-      : this.config.updateStrategy;
+    const strategy =
+      this.config.updateStrategy === "mixed"
+        ? Math.random() > 0.5
+          ? "regenerate"
+          : "partial"
+        : this.config.updateStrategy;
 
-    if (strategy === 'regenerate') {
+    if (strategy === "regenerate") {
       const newDoc = await generate(this.schema);
       delete newDoc._id; // Ensure we don't try to change the immutable _id
       return {
-        type: 'update',
+        type: "update",
         collection: this.config.collection,
         payload: {
           filter: { _id: id },
-          update: { $set: newDoc }
-        }
+          update: { $set: newDoc },
+        },
       };
     }
 
-    if (strategy === 'partial') {
+    if (strategy === "partial") {
       const newDoc = await generate(this.schema);
       delete newDoc._id;
-      
+
       const keys = Object.keys(newDoc);
-      const numFields = Math.min(keys.length, Math.floor(Math.random() * 3) + 1);
+      const numFields = Math.min(
+        keys.length,
+        Math.floor(Math.random() * 3) + 1,
+      );
       const shuffled = keys.sort(() => 0.5 - Math.random());
       const selectedKeys = shuffled.slice(0, numFields);
-      
+
       const updateSet: Record<string, any> = {};
       for (const key of selectedKeys) {
         updateSet[key] = newDoc[key];
       }
 
       return {
-        type: 'update',
+        type: "update",
         collection: this.config.collection,
         payload: {
           filter: { _id: id },
-          update: { $set: updateSet }
-        }
+          update: { $set: updateSet },
+        },
       };
     }
 
     // Default fallback
     return {
-      type: 'update',
+      type: "update",
       collection: this.config.collection,
       payload: {
         filter: { _id: id },
-        update: { $set: { updatedAt: new Date() } }
-      }
+        update: { $set: { updatedAt: new Date() } },
+      },
     };
   }
 }

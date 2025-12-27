@@ -6,7 +6,7 @@ import {
   GenerationSchema,
   ConstraintsProfile,
   SyntheticDocument,
-} from '../../types/data-model';
+} from "../../types/data-model";
 
 export interface GeneratorOptions {
   schema: GenerationSchema;

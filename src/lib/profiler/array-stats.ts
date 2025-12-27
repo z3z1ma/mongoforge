@@ -3,18 +3,21 @@
  * Updated to use frequency distributions for compact storage (Feature: 002-dynamic-key-inference)
  */
 
-import { ArrayLengthStats } from '../../types/dynamic-keys.js';
+import { ArrayLengthStats } from "../../types/dynamic-keys.js";
 import {
   calculateFrequencies,
   calculateDistributionStats,
   getPercentile,
-} from '../../utils/frequency-map.js';
+} from "../../utils/frequency-map.js";
 
 /**
  * Extract array length statistics for a field path
  * Uses frequency distribution for compact storage instead of exhaustive length arrays
  */
-export function calculateArrayStats(fieldPath: string, lengths: number[]): ArrayLengthStats {
+export function calculateArrayStats(
+  fieldPath: string,
+  lengths: number[],
+): ArrayLengthStats {
   if (lengths.length === 0) {
     return {
       fieldPath,
@@ -51,12 +54,12 @@ export function calculateArrayStats(fieldPath: string, lengths: number[]): Array
 export function extractArrayLengths(documents: any[]): Map<string, number[]> {
   const arrayLengths = new Map<string, number[]>();
 
-  function traverse(obj: any, pathPrefix = ''): void {
+  function traverse(obj: any, pathPrefix = ""): void {
     for (const [key, value] of Object.entries(obj)) {
       const fieldPath = pathPrefix ? `${pathPrefix}.${key}` : key;
 
       // Skip metadata fields
-      if (key.startsWith('__')) continue;
+      if (key.startsWith("__")) continue;
 
       if (Array.isArray(value)) {
         // Record array length
@@ -67,11 +70,15 @@ export function extractArrayLengths(documents: any[]): Map<string, number[]> {
 
         // Traverse array elements if they are objects
         value.forEach((item) => {
-          if (typeof item === 'object' && item !== null && !Array.isArray(item)) {
+          if (
+            typeof item === "object" &&
+            item !== null &&
+            !Array.isArray(item)
+          ) {
             traverse(item, `${fieldPath}[]`);
           }
         });
-      } else if (typeof value === 'object' && value !== null) {
+      } else if (typeof value === "object" && value !== null) {
         // Traverse nested objects
         traverse(value, fieldPath);
       }
@@ -85,7 +92,9 @@ export function extractArrayLengths(documents: any[]): Map<string, number[]> {
 /**
  * Calculate statistics for all array fields
  */
-export function calculateAllArrayStats(documents: any[]): Map<string, ArrayLengthStats> {
+export function calculateAllArrayStats(
+  documents: any[],
+): Map<string, ArrayLengthStats> {
   const arrayLengths = extractArrayLengths(documents);
   const stats = new Map<string, ArrayLengthStats>();
 
@@ -118,8 +127,8 @@ export interface LegacyArrayLengthStats {
 export function isLegacyFormat(stats: any): stats is LegacyArrayLengthStats {
   return (
     stats &&
-    typeof stats === 'object' &&
-    'observedLengths' in stats &&
+    typeof stats === "object" &&
+    "observedLengths" in stats &&
     Array.isArray(stats.observedLengths)
   );
 }
@@ -129,7 +138,7 @@ export function isLegacyFormat(stats: any): stats is LegacyArrayLengthStats {
  * Provides backward compatibility for old constraints.json files
  */
 export function convertLegacyArrayStats(
-  legacy: LegacyArrayLengthStats
+  legacy: LegacyArrayLengthStats,
 ): ArrayLengthStats {
   const distribution = calculateFrequencies(legacy.observedLengths);
   const stats = calculateDistributionStats(distribution);

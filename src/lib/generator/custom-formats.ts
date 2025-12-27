@@ -2,9 +2,9 @@
  * Custom format generators for MongoDB types
  */
 
-import jsf from 'json-schema-faker';
-import { faker } from '@faker-js/faker';
-import { ObjectId } from 'mongodb';
+import jsf from "json-schema-faker";
+import { faker } from "@faker-js/faker";
+import { ObjectId } from "mongodb";
 
 /**
  * Generate valid ObjectId string (24-char hex) deterministically using faker
@@ -12,9 +12,9 @@ import { ObjectId } from 'mongodb';
 function generateObjectId(): string {
   // Generate 12 random bytes using faker for determinism
   const bytes = Array.from({ length: 12 }, () =>
-    faker.number.int({ min: 0, max: 255 })
+    faker.number.int({ min: 0, max: 255 }),
   );
-  return Buffer.from(bytes).toString('hex');
+  return Buffer.from(bytes).toString("hex");
 }
 
 /**
@@ -44,7 +44,7 @@ function generateDecimal(): string {
  */
 function generateBase64(): string {
   const randomBytes = faker.string.alphanumeric(16);
-  return Buffer.from(randomBytes).toString('base64');
+  return Buffer.from(randomBytes).toString("base64");
 }
 
 /**
@@ -52,18 +52,18 @@ function generateBase64(): string {
  */
 export function registerCustomFormats(): void {
   // MongoDB type formats
-  jsf.format('objectid', generateObjectId);
-  jsf.format('date-time', generateDateTime);
-  jsf.format('uuid', generateUUID);
-  jsf.format('decimal', generateDecimal);
-  jsf.format('base64', generateBase64);
+  jsf.format("objectid", generateObjectId);
+  jsf.format("date-time", generateDateTime);
+  jsf.format("uuid", generateUUID);
+  jsf.format("decimal", generateDecimal);
+  jsf.format("base64", generateBase64);
 
   // Semantic type formats
-  jsf.format('email', () => faker.internet.email());
-  jsf.format('url', () => faker.internet.url());
-  jsf.format('phone', () => faker.phone.number());
-  jsf.format('person-name', () => faker.person.fullName());
-  jsf.format('ipv4', () => faker.internet.ipv4());
+  jsf.format("email", () => faker.internet.email());
+  jsf.format("url", () => faker.internet.url());
+  jsf.format("phone", () => faker.phone.number());
+  jsf.format("person-name", () => faker.person.fullName());
+  jsf.format("ipv4", () => faker.internet.ipv4());
 }
 
 /**
@@ -121,23 +121,38 @@ class CustomGeneratorRegistry {
 
 const customGeneratorRegistry = new CustomGeneratorRegistry();
 
-export function registerPathGenerator(path: string, generator: () => any): void {
+export function registerPathGenerator(
+  path: string,
+  generator: () => any,
+): void {
   customGeneratorRegistry.registerPathGenerator(path, generator);
 }
 
-export function registerTypeGenerator(type: string, generator: () => any): void {
+export function registerTypeGenerator(
+  type: string,
+  generator: () => any,
+): void {
   customGeneratorRegistry.registerTypeGenerator(type, generator);
 }
 
-export function getCustomGenerator(path?: string, type?: string): (() => any) | undefined {
+export function getCustomGenerator(
+  path?: string,
+  type?: string,
+): (() => any) | undefined {
   return customGeneratorRegistry.getGenerator(path, type);
 }
 
 // Custom Email Generator
 export function generateValidEmail(): string {
   // More structured email generation with realistic patterns
-  const domains = ['gmail.com', 'yahoo.com', 'hotmail.com', 'example.com', 'company.org'];
-  const username = faker.internet.userName().toLowerCase().replace(/[._]/g, '');
+  const domains = [
+    "gmail.com",
+    "yahoo.com",
+    "hotmail.com",
+    "example.com",
+    "company.org",
+  ];
+  const username = faker.internet.userName().toLowerCase().replace(/[._]/g, "");
   const domain = faker.helpers.arrayElement(domains);
 
   return `${username}@${domain}`;
@@ -146,32 +161,32 @@ export function generateValidEmail(): string {
 // Custom ObjectId with Timestamp Prefix
 export function generateTimestampPrefixedObjectId(): string {
   const timestamp = Math.floor(Date.now() / 1000); // Unix timestamp
-  const timestampHex = timestamp.toString(16).padStart(8, '0');
+  const timestampHex = timestamp.toString(16).padStart(8, "0");
 
   // Generate the remaining 8 random bytes (ObjectId is 12 bytes total = 24 hex chars)
   // 4 bytes timestamp + 8 bytes random = 12 bytes = 24 hex characters
   const randomBytes = Array.from({ length: 8 }, () =>
-    faker.number.int({ min: 0, max: 255 })
+    faker.number.int({ min: 0, max: 255 }),
   );
 
   const remainingBytes = Buffer.from(randomBytes);
   const fullObjectId = Buffer.concat([
-    Buffer.from(timestampHex, 'hex'),
+    Buffer.from(timestampHex, "hex"),
     remainingBytes,
   ]);
 
-  return fullObjectId.toString('hex');
+  return fullObjectId.toString("hex");
 }
 
 // Register these as default type/path generators during module initialization
 export function registerDefaultCustomGenerators(): void {
   // Email generators
-  registerPathGenerator('*.email', generateValidEmail);
-  registerTypeGenerator('email', generateValidEmail);
+  registerPathGenerator("*.email", generateValidEmail);
+  registerTypeGenerator("email", generateValidEmail);
 
   // ObjectId generators with timestamp prefix
-  registerPathGenerator('*._id', generateTimestampPrefixedObjectId);
-  registerTypeGenerator('objectid', generateTimestampPrefixedObjectId);
+  registerPathGenerator("*._id", generateTimestampPrefixedObjectId);
+  registerTypeGenerator("objectid", generateTimestampPrefixedObjectId);
 }
 
 // Call during module initialization

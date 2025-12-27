@@ -1,4 +1,4 @@
-export type OperationType = 'insert' | 'update' | 'delete';
+export type OperationType = "insert" | "update" | "delete";
 
 export interface OperationRatios {
   insert: number;
@@ -17,8 +17,8 @@ export interface MutationConfig {
   batchSize: number;
 
   // Strategy
-  updateStrategy: 'regenerate' | 'partial' | 'increment' | 'mixed';
-  deleteBehavior: 'remove' | 'keep' | 'tombstone';
+  updateStrategy: "regenerate" | "partial" | "increment" | "mixed";
+  deleteBehavior: "remove" | "keep" | "tombstone";
   idCacheSize: number;
 }
 

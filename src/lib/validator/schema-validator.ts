@@ -3,8 +3,8 @@
  * Implements T076-T079: JSON Schema validation and uniqueness checking
  */
 
-import Ajv, { ValidateFunction } from 'ajv';
-import { GenerationSchema, SchemaViolation } from '../../types/data-model.js';
+import Ajv, { ValidateFunction } from "ajv";
+import { GenerationSchema, SchemaViolation } from "../../types/data-model.js";
 
 /**
  * Schema validator using Ajv for JSON Schema draft-07 validation
@@ -35,7 +35,7 @@ export class SchemaValidator {
    */
   validate(document: any): boolean {
     if (!this.validateFn) {
-      throw new Error('Schema not compiled. Call compile() first.');
+      throw new Error("Schema not compiled. Call compile() first.");
     }
 
     return this.validateFn(document) as boolean;
@@ -44,7 +44,7 @@ export class SchemaValidator {
   /**
    * Get validation errors for the last validation
    */
-  getErrors(): SchemaViolation['errors'] {
+  getErrors(): SchemaViolation["errors"] {
     if (!this.validateFn || !this.validateFn.errors) {
       return [];
     }
@@ -52,7 +52,9 @@ export class SchemaValidator {
     return this.validateFn.errors.map((error) => {
       // For missing required properties, Ajv includes the field name in params
       const path =
-        error.keyword === 'required' && error.params && 'missingProperty' in error.params
+        error.keyword === "required" &&
+        error.params &&
+        "missingProperty" in error.params
           ? `/${error.params.missingProperty}`
           : error.instancePath || error.schemaPath;
 
@@ -75,7 +77,7 @@ export class SchemaValidator {
     violations: SchemaViolation[];
   } {
     if (!this.validateFn) {
-      throw new Error('Schema not compiled. Call compile() first.');
+      throw new Error("Schema not compiled. Call compile() first.");
     }
 
     const violations: SchemaViolation[] = [];
@@ -146,7 +148,7 @@ export function checkIdUniqueness(documents: any[]): {
  */
 export function checkKeyFieldUniqueness(
   documents: any[],
-  fieldPaths: string[]
+  fieldPaths: string[],
 ): Map<
   string,
   {
@@ -189,7 +191,7 @@ export function checkKeyFieldUniqueness(
  * Helper function to get nested value from object using dot notation path
  */
 function getNestedValue(obj: any, path: string): any {
-  const keys = path.split('.');
+  const keys = path.split(".");
   let current = obj;
 
   for (const key of keys) {

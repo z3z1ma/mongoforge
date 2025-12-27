@@ -67,7 +67,7 @@ export class DocumentIDCache {
       this.tombstones.delete(id);
       return;
     }
-    
+
     // Swap last element with the one to be removed
     this.ids[index] = lastId;
     this.indices.set(lastId, index);

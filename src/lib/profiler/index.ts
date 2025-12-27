@@ -2,26 +2,29 @@
  * Profiler module - extracts statistical constraints from normalized documents
  */
 
-import { NormalizedDocument, ConstraintsProfile } from '../../types/data-model.js';
-import { ProfilerOptions, ProfilerResult } from './types.js';
-import { calculateAllArrayStats } from './array-stats.js';
-import { calculateAllNumericStats } from './numeric-stats.js';
-import { createSizeBuckets } from './size-buckets.js';
-import { logger } from '../../utils/logger.js';
+import {
+  NormalizedDocument,
+  ConstraintsProfile,
+} from "../../types/data-model.js";
+import { ProfilerOptions, ProfilerResult } from "./types.js";
+import { calculateAllArrayStats } from "./array-stats.js";
+import { calculateAllNumericStats } from "./numeric-stats.js";
+import { createSizeBuckets } from "./size-buckets.js";
+import { logger } from "../../utils/logger.js";
 
-export * from './types.js';
-export * from './array-stats.js';
-export * from './numeric-stats.js';
-export * from './size-buckets.js';
+export * from "./types.js";
+export * from "./array-stats.js";
+export * from "./numeric-stats.js";
+export * from "./size-buckets.js";
 
 /**
  * Default profiler options
  */
 const DEFAULT_OPTIONS: ProfilerOptions = {
-  arrayLenPolicy: 'percentileClamp',
+  arrayLenPolicy: "percentileClamp",
   percentiles: [50, 90, 99],
   clampRange: [1, 99],
-  sizeProxy: 'leafFieldCount',
+  sizeProxy: "leafFieldCount",
 };
 
 /**
@@ -29,11 +32,11 @@ const DEFAULT_OPTIONS: ProfilerOptions = {
  */
 export function profileDocuments(
   documents: NormalizedDocument[],
-  options: Partial<ProfilerOptions> = {}
+  options: Partial<ProfilerOptions> = {},
 ): ConstraintsProfile {
   const opts = { ...DEFAULT_OPTIONS, ...options };
 
-  logger.info('Profiling documents', {
+  logger.info("Profiling documents", {
     count: documents.length,
     arrayLenPolicy: opts.arrayLenPolicy,
     sizeProxy: opts.sizeProxy,
@@ -55,10 +58,10 @@ export function profileDocuments(
     sizeBuckets,
     keyFields: {
       _id: {
-        type: 'ObjectId',
-        policy: 'objectid',
+        type: "ObjectId",
+        policy: "objectid",
         enforceUniqueness: true,
-        uniquenessScope: 'run',
+        uniquenessScope: "run",
       },
       additionalKeys: [],
     },
@@ -69,7 +72,7 @@ export function profileDocuments(
     },
   };
 
-  logger.info('Profiling complete', {
+  logger.info("Profiling complete", {
     arrayFieldsFound: arrayStats.size,
     numericFieldsFound: numericRanges.size,
     sizeBucketsCreated: sizeBuckets.length,

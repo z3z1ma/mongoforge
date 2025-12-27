@@ -38,17 +38,17 @@ export interface DistributionStats {
  * Pattern type for dynamic keys
  */
 export type DynamicKeyPattern =
-  | 'UUID'
-  | 'MONGODB_OBJECTID'
-  | 'ULID'
-  | 'NUMERIC_ID'
-  | 'PREFIXED_ID'
-  | 'CUSTOM';
+  | "UUID"
+  | "MONGODB_OBJECTID"
+  | "ULID"
+  | "NUMERIC_ID"
+  | "PREFIXED_ID"
+  | "CUSTOM";
 
 /**
  * Detection confidence level
  */
-export type ConfidenceLevel = 'high' | 'medium' | 'low';
+export type ConfidenceLevel = "high" | "medium" | "low";
 
 /**
  * Metadata about detected dynamic key pattern
@@ -156,24 +156,24 @@ export const DEFAULT_DYNAMIC_KEY_CONFIG: DynamicKeyDetectionConfig = {
   threshold: 50,
   patterns: [
     {
-      name: 'UUID',
-      regex: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
+      name: "UUID",
+      regex: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
     },
     {
-      name: 'MONGODB_OBJECTID',
-      regex: '^[0-9a-f]{24}$',
+      name: "MONGODB_OBJECTID",
+      regex: "^[0-9a-f]{24}$",
     },
     {
-      name: 'ULID',
-      regex: '^[0-9A-Z]{26}$',
+      name: "ULID",
+      regex: "^[0-9A-Z]{26}$",
     },
     {
-      name: 'NUMERIC_ID',
-      regex: '^\\d{6,20}$',
+      name: "NUMERIC_ID",
+      regex: "^\\d{6,20}$",
     },
     {
-      name: 'PREFIXED_ID',
-      regex: '^(user|doc|item|order)_[a-z0-9]{8,32}$',
+      name: "PREFIXED_ID",
+      regex: "^(user|doc|item|order)_[a-z0-9]{8,32}$",
     },
   ],
   minPatternMatch: 0.8,
