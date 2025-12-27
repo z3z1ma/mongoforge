@@ -7,6 +7,7 @@ import { GenerationSchema, SyntheticDocument } from "../../types/data-model.js";
 import { generate, initializeFaker } from "./faker-engine.js";
 import { registerCustomFormats } from "./custom-formats.js";
 import { logger } from "../../utils/logger.js";
+import { countDynamicKeySchemas } from "./schema-preprocessor.js";
 
 /**
  * Create a readable stream that yields synthetic documents
@@ -18,6 +19,10 @@ export class DocumentGeneratorStream extends Readable {
   private batchSize: number;
   private initialized = false;
   private seed?: string | number;
+
+  // Performance optimizations
+  private hasDynamicKeys = false;
+  private hasDistributions = false;
 
   constructor(
     schema: GenerationSchema,
@@ -45,8 +50,46 @@ export class DocumentGeneratorStream extends Readable {
     // Register custom formats
     registerCustomFormats();
 
+    // Precompute performance optimization flags
+    this.hasDynamicKeys = countDynamicKeySchemas(this.schema) > 0;
+    this.hasDistributions = this.checkForDistributions(this.schema);
+
     this.initialized = true;
-    logger.debug("DocumentGeneratorStream initialized", { seed: this.seed });
+    logger.debug("DocumentGeneratorStream initialized", {
+      seed: this.seed,
+      hasDynamicKeys: this.hasDynamicKeys,
+      hasDistributions: this.hasDistributions,
+    });
+  }
+
+  /**
+   * Deeply check if schema contains x-array-length-distribution annotations
+   */
+  private checkForDistributions(schema: any): boolean {
+    if (!schema || typeof schema !== "object") return false;
+
+    if (schema["x-array-length-distribution"]) return true;
+
+    // Check for _id field as well, since we want to apply overrides to it
+    if (schema.properties?._id) return true;
+
+    if (schema.properties) {
+      for (const prop of Object.values(schema.properties)) {
+        if (this.checkForDistributions(prop)) return true;
+      }
+    }
+
+    if (schema.items) {
+      if (Array.isArray(schema.items)) {
+        for (const item of schema.items) {
+          if (this.checkForDistributions(item)) return true;
+        }
+      } else {
+        if (this.checkForDistributions(schema.items)) return true;
+      }
+    }
+
+    return false;
   }
 
   async _read(): Promise<void> {
@@ -64,7 +107,11 @@ export class DocumentGeneratorStream extends Readable {
       const count = Math.min(this.batchSize, remaining);
 
       for (let i = 0; i < count; i++) {
-        const doc = await generate(this.schema);
+        // Pass precomputed flags to generate() for optimization
+        const doc = await generate(this.schema, {
+          hasDynamicKeys: this.hasDynamicKeys,
+          hasDistributions: this.hasDistributions,
+        });
         this.push(doc);
         this.generatedCount++;
       }

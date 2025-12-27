@@ -50,6 +50,17 @@ const UUID_DETECTOR: SemanticDetector = {
 };
 
 /**
+ * ObjectID detector (24-char hex)
+ */
+const OBJECTID_DETECTOR: SemanticDetector = {
+  name: "ObjectID",
+  fieldPatterns: [/_id$/i, /oid$/i, /object_?id/i],
+  valueValidator: (v) => typeof v === "string" && /^[0-9a-f]{24}$/i.test(v),
+  minConfidence: 0.9,
+  priority: 3, // Same as UUID
+};
+
+/**
  * Phone number detector
  */
 const PHONE_DETECTOR: SemanticDetector = {
@@ -119,6 +130,7 @@ export const BUILTIN_DETECTORS: SemanticDetector[] = [
   EMAIL_DETECTOR,
   URL_DETECTOR,
   UUID_DETECTOR,
+  OBJECTID_DETECTOR,
   PHONE_DETECTOR,
   PERSON_NAME_DETECTOR,
   IPV4_DETECTOR,

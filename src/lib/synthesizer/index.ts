@@ -110,6 +110,7 @@ const SEMANTIC_TYPE_TO_FORMAT: Record<string, string> = {
   Email: "email",
   URL: "url",
   UUID: "uuid",
+  ObjectID: "objectid",
   Phone: "phone",
   PersonName: "person-name",
   IPv4: "ipv4",

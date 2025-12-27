@@ -52,15 +52,22 @@ export function initializeFaker(seed?: string | number): void {
 
 /**
  * Preprocess schema to apply frequency distribution-based array lengths
+ * and other field-level extensions (like _id format overrides)
  * Walks through schema and replaces minItems/maxItems with sampled values from x-array-length-distribution
  */
-function preprocessSchemaForArrays(schema: any): any {
+function preprocessSchemaExtensions(schema: any, fieldName?: string): any {
   if (!schema || typeof schema !== "object") {
     return schema;
   }
 
   // Clone to avoid mutating original
-  const processed = { ...schema };
+  let processed = { ...schema };
+
+  // Optimization: Handle _id fields specifically to ensure they look like keys
+  if (fieldName === "_id" && processed.type === "string" && !processed.format) {
+    processed.format = "objectid";
+    logger.debug("Applied objectid format override to _id field");
+  }
 
   // Check if this is an array with x-array-length-distribution annotation
   if (
@@ -97,7 +104,7 @@ function preprocessSchemaForArrays(schema: any): any {
     processed.properties = Object.fromEntries(
       Object.entries(processed.properties).map(([key, value]) => [
         key,
-        preprocessSchemaForArrays(value),
+        preprocessSchemaExtensions(value, key),
       ]),
     );
   }
@@ -106,10 +113,10 @@ function preprocessSchemaForArrays(schema: any): any {
   if (processed.items) {
     if (Array.isArray(processed.items)) {
       processed.items = processed.items.map((item: any) =>
-        preprocessSchemaForArrays(item),
+        preprocessSchemaExtensions(item),
       );
     } else {
-      processed.items = preprocessSchemaForArrays(processed.items);
+      processed.items = preprocessSchemaExtensions(processed.items);
     }
   }
 
@@ -127,21 +134,29 @@ export async function generate(
     useFrequencyDistributions?: boolean;
     useDynamicKeys?: boolean;
     seed?: number;
+    hasDynamicKeys?: boolean; // Optimization: pre-calculated
+    hasDistributions?: boolean; // Optimization: pre-calculated
   } = {},
 ): Promise<any> {
   const {
     useFrequencyDistributions = true,
     useDynamicKeys = true,
     seed,
+    hasDynamicKeys: precomputedHasDynamicKeys,
+    hasDistributions: precomputedHasDistributions,
   } = options;
 
   let processedSchema = schema;
 
   // Step 1: Preprocess dynamic keys (must happen before array processing)
   if (useDynamicKeys) {
-    const dynamicKeyCount = countDynamicKeySchemas(schema);
-    if (dynamicKeyCount > 0) {
-      logger.debug("Preprocessing dynamic keys", { count: dynamicKeyCount });
+    // Only walk schema if we don't know for sure it has dynamic keys
+    const shouldProcess =
+      precomputedHasDynamicKeys !== undefined
+        ? precomputedHasDynamicKeys
+        : countDynamicKeySchemas(schema) > 0;
+
+    if (shouldProcess) {
       processedSchema = preprocessDynamicKeys(processedSchema, {
         seed,
         validateKeys: true,
@@ -151,7 +166,16 @@ export async function generate(
 
   // Step 2: Preprocess schema to apply frequency distributions for arrays
   if (useFrequencyDistributions) {
-    processedSchema = preprocessSchemaForArrays(processedSchema);
+    // Only walk schema if we don't know for sure it has distributions
+    // or if we need to apply other field-level overrides (like _id)
+    const shouldProcess =
+      precomputedHasDistributions !== undefined
+        ? precomputedHasDistributions
+        : true; // Default to true to be safe if not precomputed
+
+    if (shouldProcess) {
+      processedSchema = preprocessSchemaExtensions(processedSchema);
+    }
   }
 
   return jsf.resolve(processedSchema);
