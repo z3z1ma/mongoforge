@@ -400,7 +400,7 @@ describe('Key Pattern Detection Utilities', () => {
       // Should detect via count-based path (60 ≥ threshold of 50)
       expect(result.detected).toBe(true);
       expect(result.pattern).toBe(null); // No pattern matched
-      expect(result.customPattern).toBe('HIGH_CARDINALITY');
+      expect(result.customPattern).toBeUndefined();
       expect(result.matchRatio).toBe(0); // No pattern match
       expect(result.confidence).toBeGreaterThan(0.6); // Count-based confidence
     });

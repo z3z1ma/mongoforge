@@ -49,16 +49,12 @@ export class DynamicKeyGenerator {
   private counter = 0;
 
   constructor() {
-    // Ensure jsf is configured to use faker
-    jsf.extend("faker", () => faker);
-
-    // Set consistent options for schema-to-value generation
-    jsf.option({
-      alwaysFakeOptionals: true,
-      fillProperties: true,
-      failOnInvalidTypes: false,
-      failOnInvalidFormat: false,
-    });
+    // Ensure jsf is configured to use faker if not already
+    try {
+      jsf.extend("faker", () => faker);
+    } catch (e) {
+      // Ignore if already extended
+    }
   }
 
   /**
@@ -230,7 +226,7 @@ export class DynamicKeyGenerator {
    * Falls back to alphanumeric if pattern is not provided
    */
   private generateCustomKey(customPattern?: string): string {
-    if (customPattern) {
+    if (customPattern && customPattern !== "HIGH_CARDINALITY") {
       try {
         // Use json-schema-faker to generate a string matching the regex pattern
         return jsf.generate({
@@ -462,7 +458,6 @@ export function validateGeneratedKeys(
   }
 
   // CUSTOM patterns cannot be validated since we don't know the pattern
-  // HIGH_CARDINALITY and similar sentinel values are not actual regex patterns
   if (pattern === "CUSTOM") {
     return { valid: true, invalidKeys: [], matchRate: 1.0 };
   }

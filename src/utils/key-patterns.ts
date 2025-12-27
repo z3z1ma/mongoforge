@@ -307,7 +307,7 @@ export function detectDynamicKeys(
   return {
     detected,
     pattern,
-    customPattern: !pattern ? "HIGH_CARDINALITY" : undefined,
+    customPattern: undefined,
     confidence,
     confidenceLevel: getConfidenceLevel(confidence),
     totalKeys,

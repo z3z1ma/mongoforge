@@ -272,6 +272,7 @@ describe('Dynamic Key Generator', () => {
               name: { type: 'string' },
               age: { type: 'integer' },
             },
+            required: ['name', 'age'],
           },
         ],
         isUniformType: true,
