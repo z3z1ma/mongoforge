@@ -101,7 +101,11 @@ export class MongoInserter {
         const result = await this.collection.insertMany(batchToInsert, bulkOptions);
         insertedDocuments += result.insertedCount;
       } catch (error: any) {
-        logger.error('Bulk insert failed', error);
+        logger.debug('Bulk insert partially failed or interrupted', { 
+          message: error.message,
+          code: error.code,
+          insertedCount: error.result?.insertedCount 
+        });
         if (error.result?.insertedCount) {
           insertedDocuments += error.result.insertedCount;
         }
@@ -163,7 +167,15 @@ export class MongoInserter {
         updatedDocuments += result.modifiedCount;
         deletedDocuments += result.deletedCount;
       } catch (error: any) {
-        logger.error('Bulk write failed', error);
+        logger.debug('Bulk write partially failed or interrupted', {
+          message: error.message,
+          code: error.code,
+          result: error.result ? {
+            insertedCount: error.result.insertedCount,
+            modifiedCount: error.result.modifiedCount,
+            deletedCount: error.result.deletedCount
+          } : undefined
+        });
         if (error.result) {
           insertedDocuments += error.result.insertedCount || 0;
           updatedDocuments += error.result.modifiedCount || 0;
