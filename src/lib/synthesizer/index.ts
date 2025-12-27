@@ -210,6 +210,7 @@ function transformField(
       // Standard object with static keys
       property.properties = {};
       property.required = [];
+      property.additionalProperties = false; // Prevent json-schema-faker from adding random properties
 
       for (const [nestedFieldName, nestedField] of Object.entries(field.fields)) {
         const nestedPath = `${fieldPath}.${nestedFieldName}`;
@@ -318,7 +319,7 @@ export function synthesize(
     title: 'SyntheticDocument',
     properties,
     required,
-    additionalProperties: true,
+    additionalProperties: false,
   };
 
   logger.info('Generation schema synthesized', {

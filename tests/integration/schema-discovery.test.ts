@@ -305,7 +305,7 @@ describe('Phase 5: Schema Discovery Integration', () => {
     // Verify generation schema is ready for json-schema-faker
     expect(generationSchema.properties._id.format).toBe('objectid');
     expect(generationSchema.properties.email.type).toBe('string');
-    expect(generationSchema.additionalProperties).toBe(true);
+    expect(generationSchema.additionalProperties).toBe(false); // Prevent random properties
   });
 
   it('demonstrates CLI programmatic usage', async () => {

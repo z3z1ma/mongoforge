@@ -141,6 +141,7 @@ export interface GenerationSchemaProperty {
   items?: GenerationSchemaProperty;
   properties?: Record<string, GenerationSchemaProperty>;
   required?: string[];
+  additionalProperties?: boolean;
   minItems?: number;
   maxItems?: number;
   'x-gen'?: XGenExtensions;
