@@ -1,0 +1,76 @@
+name: Release binaries
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact: mongoforge-linux-x64
+          - os: macos-latest
+            artifact: mongoforge-macos-arm64
+          - os: windows-latest
+            artifact: mongoforge-windows-x64.exe
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install deps
+        run: bun install
+
+      - name: Build binary
+        run: |
+          bun build src/cli/index.ts \
+            --compile \
+            --minify \
+            --outfile mongoforge
+
+      - name: Strip binary (Linux/macOS)
+        if: runner.os != 'Windows'
+        run: |
+          strip mongoforge || true
+
+      - name: Rename artifact
+        run: |
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            mv mongoforge mongoforge.exe
+            mv mongoforge.exe ${{ matrix.artifact }}
+          else
+            mv mongoforge ${{ matrix.artifact }}
+          fi
+        shell: bash
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.artifact }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v7
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            **/mongoforge-*
