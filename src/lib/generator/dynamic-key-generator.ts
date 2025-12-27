@@ -380,7 +380,7 @@ function sampleTypeFromProbabilities(
   }
 
   try {
-    return sampleFromDistribution(distribution);
+    return Number(sampleFromDistribution(distribution));
   } catch (error) {
     logger.warn("Failed to sample type from probabilities, using first type", {
       error: error instanceof Error ? error.message : String(error),
@@ -429,7 +429,7 @@ export function selectKeyCount(
   countDistribution: FrequencyDistribution,
 ): number {
   try {
-    return sampleFromDistribution(countDistribution);
+    return Number(sampleFromDistribution(countDistribution));
   } catch (error) {
     logger.warn(
       "Failed to sample key count from distribution, using default 10",

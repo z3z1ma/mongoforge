@@ -93,11 +93,11 @@ describe('Frequency Map Utilities', () => {
 
       // Sample multiple times to test weighted selection
       // Increased from 100 to 1000 for more stable probabilistic testing
-      const samples: number[] = [];
+      const samples: string[] = [];
       for (let i = 0; i < 1000; i++) {
         const sample = sampleFromDistribution(distribution);
         samples.push(sample);
-        expect([1, 2, 3]).toContain(sample);
+        expect(["1", "2", "3"]).toContain(sample);
       }
 
       // Verify all values were sampled at least once (probabilistic test)
@@ -120,7 +120,7 @@ describe('Frequency Map Utilities', () => {
 
       for (let i = 0; i < 10; i++) {
         const sample = sampleFromDistribution(distribution);
-        expect(sample).toBe(42);
+        expect(sample).toBe("42");
       }
     });
 
@@ -139,7 +139,7 @@ describe('Frequency Map Utilities', () => {
       };
 
       const sample = sampleFromDistribution(distribution);
-      expect(sample).toBe(2);
+      expect(sample).toBe("2");
     });
   });
 
@@ -391,7 +391,7 @@ describe('Frequency Map Utilities', () => {
       // Step 3: Sample from distribution
       const samples: number[] = [];
       for (let i = 0; i < 100; i++) {
-        const sample = sampleFromDistribution(distribution);
+        const sample = Number(sampleFromDistribution(distribution));
         samples.push(sample);
         expect(sample).toBeGreaterThanOrEqual(1);
         expect(sample).toBeLessThanOrEqual(5);
