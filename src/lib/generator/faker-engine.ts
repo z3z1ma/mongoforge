@@ -45,6 +45,10 @@ export function initializeFaker(seed?: string | number): void {
     maxItems: 10,
     maxLength: 100,
     random: () => faker.number.float({ min: 0, max: 1 }),
+    // Prevent deep recursion in JSF itself
+    maxDepth: 10,
+    // Avoid resolve issues with deep schemas
+    resolveJsonPointer: true,
   });
 
   logger.debug("json-schema-faker initialized");
@@ -55,7 +59,14 @@ export function initializeFaker(seed?: string | number): void {
  * and other field-level extensions (like _id format overrides)
  * Walks through schema and replaces minItems/maxItems with sampled values from x-array-length-distribution
  */
-function preprocessSchemaExtensions(schema: any, fieldName?: string): any {
+function preprocessSchemaExtensions(
+  schema: any,
+  fieldName?: string,
+  depth = 0,
+): any {
+  // Prevent infinite recursion
+  if (depth > 15) return schema;
+
   if (!schema || typeof schema !== "object") {
     return schema;
   }
@@ -104,7 +115,7 @@ function preprocessSchemaExtensions(schema: any, fieldName?: string): any {
     processed.properties = Object.fromEntries(
       Object.entries(processed.properties).map(([key, value]) => [
         key,
-        preprocessSchemaExtensions(value, key),
+        preprocessSchemaExtensions(value, key, depth + 1),
       ]),
     );
   }
@@ -113,10 +124,14 @@ function preprocessSchemaExtensions(schema: any, fieldName?: string): any {
   if (processed.items) {
     if (Array.isArray(processed.items)) {
       processed.items = processed.items.map((item: any) =>
-        preprocessSchemaExtensions(item),
+        preprocessSchemaExtensions(item, undefined, depth + 1),
       );
     } else {
-      processed.items = preprocessSchemaExtensions(processed.items);
+      processed.items = preprocessSchemaExtensions(
+        processed.items,
+        undefined,
+        depth + 1,
+      );
     }
   }
 
@@ -198,6 +213,11 @@ export async function generateMany(
   const documents: any[] = [];
 
   for (let i = 0; i < count; i++) {
+    // Yield event loop periodically to prevent starvation
+    if (i > 0 && i % 100 === 0) {
+      await new Promise((resolve) => setImmediate(resolve));
+    }
+
     // Use seed + i for deterministic but varied generation
     const docSeed = options.seed !== undefined ? options.seed + i : undefined;
     const doc = await generate(schema, { ...options, seed: docSeed });

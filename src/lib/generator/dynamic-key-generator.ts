@@ -139,9 +139,12 @@ export class DynamicKeyGenerator {
   ): string[] {
     const keys: string[] = [];
     const generatedSet = new Set<string>();
+    let attempts = 0;
+    const maxAttempts = count * 10; // Allow some collisions but prevent infinite loops
 
     // Generate keys with uniqueness guarantee
-    while (keys.length < count) {
+    while (keys.length < count && attempts < maxAttempts) {
+      attempts++;
       const key = this.generateKey(pattern, customPattern, seed);
 
       // Ensure uniqueness (unlikely collision, but defensive)
@@ -149,6 +152,15 @@ export class DynamicKeyGenerator {
         keys.push(key);
         generatedSet.add(key);
       }
+    }
+
+    if (keys.length < count) {
+      logger.warn("Could not generate requested number of unique keys", {
+        requested: count,
+        generated: keys.length,
+        pattern,
+        attempts,
+      });
     }
 
     return keys;

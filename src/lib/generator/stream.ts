@@ -65,7 +65,10 @@ export class DocumentGeneratorStream extends Readable {
   /**
    * Deeply check if schema contains x-array-length-distribution annotations
    */
-  private checkForDistributions(schema: any): boolean {
+  private checkForDistributions(schema: any, depth = 0): boolean {
+    // Prevent infinite recursion on circular schemas
+    if (depth > 15) return false;
+
     if (!schema || typeof schema !== "object") return false;
 
     if (schema["x-array-length-distribution"]) return true;
@@ -75,17 +78,17 @@ export class DocumentGeneratorStream extends Readable {
 
     if (schema.properties) {
       for (const prop of Object.values(schema.properties)) {
-        if (this.checkForDistributions(prop)) return true;
+        if (this.checkForDistributions(prop, depth + 1)) return true;
       }
     }
 
     if (schema.items) {
       if (Array.isArray(schema.items)) {
         for (const item of schema.items) {
-          if (this.checkForDistributions(item)) return true;
+          if (this.checkForDistributions(item, depth + 1)) return true;
         }
       } else {
-        if (this.checkForDistributions(schema.items)) return true;
+        if (this.checkForDistributions(schema.items, depth + 1)) return true;
       }
     }
 
@@ -107,6 +110,11 @@ export class DocumentGeneratorStream extends Readable {
       const count = Math.min(this.batchSize, remaining);
 
       for (let i = 0; i < count; i++) {
+        // Yield event loop every batch to prevent starvation
+        if (i > 0 && i % 100 === 0) {
+          await new Promise((resolve) => setImmediate(resolve));
+        }
+
         // Pass precomputed flags to generate() for optimization
         const doc = await generate(this.schema, {
           hasDynamicKeys: this.hasDynamicKeys,
@@ -145,6 +153,11 @@ export async function* generateDocuments(
   count: number,
 ): AsyncGenerator<SyntheticDocument> {
   for (let i = 0; i < count; i++) {
+    // Yield event loop periodically
+    if (i > 0 && i % 100 === 0) {
+      await new Promise((resolve) => setImmediate(resolve));
+    }
+
     const doc = (await generate(schema)) as SyntheticDocument;
     yield doc;
 
