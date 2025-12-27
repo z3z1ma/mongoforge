@@ -322,6 +322,31 @@ function transformField(
     }
   }
 
+  // Extract enum stats if available for String/Number types
+  let enumStats:
+    | {
+        unique: number;
+        count: number;
+        distribution: any; // FrequencyDistribution
+      }
+    | undefined;
+
+  if (
+    field.types &&
+    (primaryType === "String" ||
+      primaryType === "Number" ||
+      primaryType === "Integer")
+  ) {
+    const typeDef = field.types.find((t) => t.name === primaryType);
+    if (typeDef && typeDef.valueDistribution && typeDef.unique !== undefined) {
+      enumStats = {
+        unique: typeDef.unique,
+        count: field.count,
+        distribution: typeDef.valueDistribution,
+      };
+    }
+  }
+
   // Build x-gen vendor extensions
   const xGen = buildXGenExtensions({
     fieldPath,
@@ -330,6 +355,7 @@ function transformField(
     arrayStats,
     arrayLenStrategy:
       constraints.config.arrayLenPolicy === "minmax" ? "minmax" : "percentile",
+    enumStats,
   });
 
   if (xGen) {

@@ -98,6 +98,55 @@ export function applyArrayLenExtension(
 }
 
 /**
+ * Apply x-gen.enum vendor extension
+ * Detects low-cardinality fields and stores their value distribution
+ */
+export function applyEnumExtension(
+  fieldPath: string,
+  stats:
+    | { unique: number; count: number; distribution: FrequencyDistribution }
+    | undefined,
+  existingExtensions: XGenExtensions = {},
+): XGenExtensions {
+  if (!stats) {
+    return existingExtensions;
+  }
+
+  // Heuristics for Enum detection
+  const MAX_ENUM_CARDINALITY = 50;
+  const MAX_ENUM_RATIO = 0.1;
+  const SMALL_CARDINALITY_THRESHOLD = 10; // Always treat as enum if <= 10 values
+
+  const { unique, count, distribution } = stats;
+
+  // Must have distribution data
+  if (!distribution || Object.keys(distribution).length === 0) {
+    return existingExtensions;
+  }
+
+  const isEnum =
+    unique <= MAX_ENUM_CARDINALITY &&
+    (unique / count <= MAX_ENUM_RATIO || unique <= SMALL_CARDINALITY_THRESHOLD);
+
+  if (!isEnum) {
+    return existingExtensions;
+  }
+
+  logger.debug("Applying x-gen.enum extension", {
+    fieldPath,
+    unique,
+    count,
+  });
+
+  return {
+    ...existingExtensions,
+    enum: {
+      distribution,
+    },
+  };
+}
+
+/**
  * Build complete x-gen extensions object for a field
  */
 export function buildXGenExtensions(options: {
@@ -106,6 +155,11 @@ export function buildXGenExtensions(options: {
   typeHint?: TypeHint;
   arrayStats?: ArrayLengthStats;
   arrayLenStrategy?: "minmax" | "percentile";
+  enumStats?: {
+    unique: number;
+    count: number;
+    distribution: FrequencyDistribution;
+  };
 }): XGenExtensions | undefined {
   let extensions: XGenExtensions = {};
 
@@ -129,6 +183,15 @@ export function buildXGenExtensions(options: {
       options.fieldPath,
       options.arrayStats,
       options.arrayLenStrategy || "percentile",
+      extensions,
+    );
+  }
+
+  // Apply enum extension
+  if (options.enumStats) {
+    extensions = applyEnumExtension(
+      options.fieldPath,
+      options.enumStats,
       extensions,
     );
   }
@@ -179,7 +242,7 @@ export function getRecommendedArrayLength(
   // If full frequency distribution is available, use it for exact weighted sampling
   if (arrayLen.distribution && Object.keys(arrayLen.distribution).length > 0) {
     try {
-      return sampleFromDistribution(arrayLen.distribution, randomValue);
+      return Number(sampleFromDistribution(arrayLen.distribution, randomValue));
     } catch (error) {
       logger.warn("Failed to sample from array length distribution", {
         error: error instanceof Error ? error.message : String(error),

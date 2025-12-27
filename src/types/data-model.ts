@@ -59,6 +59,7 @@ export interface InferredSchemaField {
     probability: number;
     unique?: number;
     values?: any[];
+    valueDistribution?: FrequencyDistribution; // Frequency distribution of values
     semanticType?: string; // 'Email', 'URL', 'UUID', 'Phone', 'PersonName', etc.
     semanticConfidence?: number; // 0.0 - 1.0
   }>;
@@ -181,11 +182,16 @@ export interface XGenNumericRange {
   allPositive: boolean;
 }
 
+export interface XGenEnum {
+  distribution: FrequencyDistribution;
+}
+
 export interface XGenExtensions {
   key?: boolean;
   mongoType?: string;
   arrayLen?: XGenArrayLen;
   numericRange?: XGenNumericRange;
+  enum?: XGenEnum;
   sizeWeight?: number;
 }
 

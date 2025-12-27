@@ -124,12 +124,31 @@ function transformField(field: any): InferredSchemaField {
     count: field.count,
     type: field.type,
     probability: field.probability,
-    types: field.types.map((t: any) => ({
-      name: t.name,
-      probability: t.probability,
-      unique: t.unique,
-      values: t.values?.values ? Array.from(t.values.values()) : undefined, // Extract from reservoir
-    })),
+    types: field.types.map((t: any) => {
+      const values = t.values?.values
+        ? Array.from(t.values.values())
+        : undefined;
+
+      // Calculate frequency distribution for potential enums (String/Number)
+      // This enables detecting low-cardinality fields later in synthesis
+      let valueDistribution: Record<string, number> | undefined;
+      if (
+        values &&
+        values.length > 0 &&
+        (t.name === "String" || t.name === "Number" || t.name === "Integer")
+      ) {
+        valueDistribution = calculateFrequencies(values as (string | number)[]);
+      }
+
+      return {
+        name: t.name,
+        probability: t.probability,
+        unique: t.unique,
+        values,
+        valueDistribution,
+        semanticType: t.semanticType, // Preserve if mongodb-schema detected it
+      };
+    }),
     lengthDistribution,
     fields: nestedFields,
   };

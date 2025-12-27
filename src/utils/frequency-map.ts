@@ -11,14 +11,16 @@ import type {
 /**
  * Calculate frequency distribution from an array of values
  *
- * @param values - Array of numeric values to analyze
+ * @param values - Array of numeric or string values to analyze
  * @returns Frequency distribution mapping stringified values to counts
  *
  * @example
  * calculateFrequencies([1, 2, 2, 3, 3, 3])
  * // Returns: { "1": 1, "2": 2, "3": 3 }
  */
-export function calculateFrequencies(values: number[]): FrequencyDistribution {
+export function calculateFrequencies(
+  values: (number | string)[],
+): FrequencyDistribution {
   const distribution: FrequencyDistribution = {};
 
   for (const value of values) {
@@ -32,11 +34,11 @@ export function calculateFrequencies(values: number[]): FrequencyDistribution {
  * Update a frequency distribution with a new value
  *
  * @param distribution - Frequency distribution to update
- * @param value - New numeric value to add
+ * @param value - New numeric or string value to add
  */
 export function updateFrequencies(
   distribution: FrequencyDistribution,
-  value: number,
+  value: number | string,
 ): void {
   const key = String(value);
   distribution[key] = (distribution[key] || 0) + 1;
@@ -48,16 +50,16 @@ export function updateFrequencies(
  *
  * @param distribution - Frequency distribution to sample from
  * @param randomValue - Optional random value between 0 and 1 (defaults to Math.random())
- * @returns Sampled numeric value
+ * @returns Sampled value as string (key from distribution)
  *
  * @example
  * sampleFromDistribution({ "1": 50, "2": 30, "3": 20 })
- * // Returns: 1, 2, or 3 (weighted by frequency)
+ * // Returns: "1", "2", or "3" (weighted by frequency)
  */
 export function sampleFromDistribution(
   distribution: FrequencyDistribution,
   randomValue = Math.random(),
-): number {
+): string {
   const entries = Object.entries(distribution);
 
   if (entries.length === 0) {
@@ -75,7 +77,7 @@ export function sampleFromDistribution(
   for (const [value, count] of entries) {
     cumulative += count;
     if (random < cumulative) {
-      return Number(value);
+      return value;
     }
   }
 
@@ -84,7 +86,7 @@ export function sampleFromDistribution(
   if (!lastEntry) {
     throw new Error("Distribution has no entries");
   }
-  return Number(lastEntry[0]);
+  return lastEntry[0];
 }
 
 /**

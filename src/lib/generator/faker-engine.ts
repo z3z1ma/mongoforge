@@ -86,7 +86,7 @@ function preprocessSchemaExtensions(
 
     try {
       // Sample a length from the distribution
-      const sampledLength = sampleFromDistribution(distribution);
+      const sampledLength = Number(sampleFromDistribution(distribution));
 
       // Override minItems/maxItems to force this specific length
       processed.minItems = sampledLength;
@@ -103,6 +103,34 @@ function preprocessSchemaExtensions(
           error: error instanceof Error ? error.message : String(error),
         },
       );
+    }
+  }
+
+  // Check if this field has x-gen.enum extension
+  if (processed["x-gen"]?.enum?.distribution) {
+    const distribution = processed["x-gen"].enum
+      .distribution as FrequencyDistribution;
+    try {
+      const sampledValue = sampleFromDistribution(distribution);
+      let finalValue: string | number = sampledValue;
+
+      // Try to convert to number if the schema type is numeric
+      if (processed.type === "number" || processed.type === "integer") {
+        const num = Number(sampledValue);
+        if (!isNaN(num)) {
+          finalValue = num;
+        }
+      }
+
+      // Override enum to force this specific value
+      processed.enum = [finalValue];
+      logger.debug("Applied enum distribution sampling", {
+        sampledValue: finalValue,
+      });
+    } catch (error) {
+      logger.warn("Failed to sample from enum distribution", {
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
   }
 
