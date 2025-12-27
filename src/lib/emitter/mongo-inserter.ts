@@ -91,63 +91,48 @@ export class MongoInserter {
       bypassDocumentValidation: false
     };
 
-    return new Promise((resolve, reject) => {
-      const batch: Document[] = [];
+    const batch: Document[] = [];
+    const batchSize = this.config.batchSize ?? 1000;
 
-      const processBatch = async () => {
-        if (batch.length === 0) return;
-
-        try {
-          const result = await this.collection.insertMany(batch, bulkOptions);
-          insertedDocuments += result.insertedCount;
-        } catch (error: any) {
-          logger.error('Bulk insert failed', error);
-          // Even on error, some documents may have been inserted
-          if (error.result?.insertedCount) {
-            insertedDocuments += error.result.insertedCount;
-          }
-          // Calculate failed inserts as batch size minus successful inserts
-          const successfulInBatch = error.result?.insertedCount || 0;
-          failedInserts += batch.length - successfulInBatch;
+    const processBatch = async () => {
+      if (batch.length === 0) return;
+      const batchToInsert = batch.splice(0, batch.length);
+      try {
+        const result = await this.collection.insertMany(batchToInsert, bulkOptions);
+        insertedDocuments += result.insertedCount;
+      } catch (error: any) {
+        logger.error('Bulk insert failed', error);
+        if (error.result?.insertedCount) {
+          insertedDocuments += error.result.insertedCount;
         }
+        const successfulInBatch = error.result?.insertedCount || 0;
+        failedInserts += batchToInsert.length - successfulInBatch;
+      }
+    };
 
-        batch.length = 0; // Clear batch
-      };
-
-      docStream.on('data', async (doc: Document) => {
+    try {
+      for await (const doc of docStream) {
         totalDocuments++;
         batch.push(doc);
-
-        // Pause stream if batch is full, process it, then resume
-        if (batch.length >= (this.config.batchSize ?? 1000)) {
-          docStream.pause();
-          processBatch().then(() => docStream.resume());
-        }
-      });
-
-      docStream.on('end', async () => {
-        // Process final batch
-        if (batch.length > 0) {
+        if (batch.length >= batchSize) {
           await processBatch();
         }
+      }
+      await processBatch(); // Final batch
+    } catch (error) {
+      logger.error('Document stream error', error);
+      throw error;
+    } finally {
+      await this.client.close();
+    }
 
-        const durationMs = Date.now() - startTime;
-        await this.client.close();
-
-        resolve({
-          totalDocuments,
-          insertedDocuments,
-          failedInserts,
-          durationMs
-        });
-      });
-
-      docStream.on('error', async (error) => {
-        logger.error('Document stream error', error);
-        await this.client.close();
-        reject(error);
-      });
-    });
+    const durationMs = Date.now() - startTime;
+    return {
+      totalDocuments,
+      insertedDocuments,
+      failedInserts,
+      durationMs
+    };
   }
 
   /**
@@ -166,36 +151,34 @@ export class MongoInserter {
       ordered: this.config.orderedInserts ?? false
     };
 
-    return new Promise((resolve, reject) => {
-      const batch: AnyBulkWriteOperation[] = [];
+    const batch: AnyBulkWriteOperation[] = [];
+    const batchSize = this.config.batchSize ?? 1000;
 
-      const processBatch = async () => {
-        if (batch.length === 0) return;
-
-        try {
-          const result = await this.collection.bulkWrite(batch, bulkOptions);
-          insertedDocuments += result.insertedCount;
-          updatedDocuments += result.modifiedCount;
-          deletedDocuments += result.deletedCount;
-        } catch (error: any) {
-          logger.error('Bulk write failed', error);
-          if (error.result) {
-            insertedDocuments += error.result.insertedCount || 0;
-            updatedDocuments += error.result.modifiedCount || 0;
-            deletedDocuments += error.result.deletedCount || 0;
-          }
-          const successfulInBatch = (error.result?.insertedCount || 0) + 
-                                  (error.result?.modifiedCount || 0) + 
-                                  (error.result?.deletedCount || 0);
-          failedOps += batch.length - successfulInBatch;
+    const processBatch = async () => {
+      if (batch.length === 0) return;
+      const batchToWrite = batch.splice(0, batch.length);
+      try {
+        const result = await this.collection.bulkWrite(batchToWrite, bulkOptions);
+        insertedDocuments += result.insertedCount;
+        updatedDocuments += result.modifiedCount;
+        deletedDocuments += result.deletedCount;
+      } catch (error: any) {
+        logger.error('Bulk write failed', error);
+        if (error.result) {
+          insertedDocuments += error.result.insertedCount || 0;
+          updatedDocuments += error.result.modifiedCount || 0;
+          deletedDocuments += error.result.deletedCount || 0;
         }
+        const successfulInBatch = (error.result?.insertedCount || 0) + 
+                                (error.result?.modifiedCount || 0) + 
+                                (error.result?.deletedCount || 0);
+        failedOps += batchToWrite.length - successfulInBatch;
+      }
+    };
 
-        batch.length = 0;
-      };
-
-      opStream.on('data', async (op: CDCOperation) => {
+    try {
+      for await (const op of opStream) {
         totalOperations++;
-        
         let mongoOp: AnyBulkWriteOperation;
         switch (op.type) {
           case 'insert':
@@ -214,41 +197,30 @@ export class MongoInserter {
             break;
           default:
             logger.warn(`Unknown operation type: ${(op as any).type}`);
-            return;
+            continue;
         }
-
         batch.push(mongoOp);
-
-        if (batch.length >= (this.config.batchSize ?? 1000)) {
-          opStream.pause();
-          processBatch().then(() => opStream.resume());
-        }
-      });
-
-      opStream.on('end', async () => {
-        if (batch.length > 0) {
+        if (batch.length >= batchSize) {
           await processBatch();
         }
+      }
+      await processBatch(); // Final batch
+    } catch (error) {
+      logger.error('Operation stream error', error);
+      throw error;
+    } finally {
+      await this.client.close();
+    }
 
-        const durationMs = Date.now() - startTime;
-        await this.client.close();
-
-        resolve({
-          totalDocuments: totalOperations,
-          insertedDocuments,
-          updatedDocuments,
-          deletedDocuments,
-          failedInserts: failedOps,
-          durationMs
-        });
-      });
-
-      opStream.on('error', async (error) => {
-        logger.error('Operation stream error', error);
-        await this.client.close();
-        reject(error);
-      });
-    });
+    const durationMs = Date.now() - startTime;
+    return {
+      totalDocuments: totalOperations,
+      insertedDocuments,
+      updatedDocuments,
+      deletedDocuments,
+      failedInserts: failedOps,
+      durationMs
+    };
   }
 
   /**
