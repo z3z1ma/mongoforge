@@ -66,8 +66,8 @@ export class DocumentGeneratorStream extends Readable {
    * Deeply check if schema contains x-array-length-distribution annotations
    */
   private checkForDistributions(schema: any, depth = 0): boolean {
-    // Prevent infinite recursion on circular schemas
-    if (depth > 15) return false;
+    // Prevent infinite recursion on circular schemas, but allow deep valid ones
+    if (depth > 100) return false;
 
     if (!schema || typeof schema !== "object") return false;
 

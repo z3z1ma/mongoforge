@@ -344,8 +344,8 @@ export function extractDynamicKeyMetadata(
  * @returns Count of schemas with dynamic keys
  */
 export function countDynamicKeySchemas(schema: any, depth = 0): number {
-  // Prevent infinite recursion
-  if (depth > 15) return 0;
+  // Prevent infinite recursion, but allow deep valid ones
+  if (depth > 100) return 0;
 
   if (!schema || typeof schema !== "object") {
     return 0;

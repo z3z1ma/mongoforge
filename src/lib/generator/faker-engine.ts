@@ -45,10 +45,9 @@ export function initializeFaker(seed?: string | number): void {
     maxItems: 10,
     maxLength: 100,
     random: () => faker.number.float({ min: 0, max: 1 }),
-    // Prevent deep recursion in JSF itself
-    maxDepth: 10,
-    // Avoid resolve issues with deep schemas
-    resolveJsonPointer: true,
+    // Allow deep schemas but protect against true infinite recursion
+    refDepthMax: 100,
+    resolveJsonPath: true,
   });
 
   logger.debug("json-schema-faker initialized");
@@ -64,8 +63,8 @@ function preprocessSchemaExtensions(
   fieldName?: string,
   depth = 0,
 ): any {
-  // Prevent infinite recursion
-  if (depth > 15) return schema;
+  // Prevent infinite recursion, but allow deep valid ones
+  if (depth > 100) return schema;
 
   if (!schema || typeof schema !== "object") {
     return schema;
