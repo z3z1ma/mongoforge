@@ -12,3 +12,4 @@ export * from '../lib/generator/types';
 export * from '../lib/emitter/types';
 export * from '../lib/validator/types';
 export * from '../lib/reporter/types';
+export * from './cdc';
