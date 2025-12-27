@@ -224,6 +224,34 @@ async function executeInfer(options: InferCommandOptions): Promise<void> {
 
     logger.info('Profiling complete', profileMeta);
 
+    // Strip array stats for paths nested under dynamic key fields to prevent bloat
+    // For fields with dynamic keys, storing stats for individual nested keys is wasteful
+    if (dynamicKeyAnalyses && dynamicKeyAnalyses.size > 0) {
+      const dynamicKeyPaths = new Set(
+        Array.from(dynamicKeyAnalyses.entries())
+          .filter(([_, analysis]) => analysis.isDynamic)
+          .map(([path, _]) => path)
+      );
+
+      let removedCount = 0;
+      for (const [arrayPath, _] of constraints.arrayStats) {
+        for (const dynamicPath of dynamicKeyPaths) {
+          if (arrayPath.startsWith(dynamicPath + '.')) {
+            constraints.arrayStats.delete(arrayPath);
+            removedCount++;
+            break;
+          }
+        }
+      }
+
+      if (removedCount > 0) {
+        logger.info('Stripped array stats nested under dynamic key fields', {
+          removedEntries: removedCount,
+          remainingEntries: constraints.arrayStats.size,
+        });
+      }
+    }
+
     // Apply additional key field configuration
     for (const keyField of config.keys.keyFields) {
       constraints.keyFields.additionalKeys.push({
