@@ -178,10 +178,14 @@ describe('Phase 5: Schema Discovery Integration', () => {
     expect(fieldPaths.has('profile.bio')).toBe(true);
     expect(fieldPaths.has('profile.location')).toBe(true);
 
-    // Get array field paths with observed lengths
+    // Get array field paths with length frequency distributions
     const arrayPaths = getArrayFieldPaths(inferredSchema);
     expect(arrayPaths.has('tags')).toBe(true);
-    expect(arrayPaths.get('tags')).toBeDefined();
+    const tagsDistribution = arrayPaths.get('tags');
+    expect(tagsDistribution).toBeDefined();
+    // Verify it's a frequency distribution (length → count mapping)
+    expect(typeof tagsDistribution).toBe('object');
+    expect(Object.keys(tagsDistribution!).length).toBeGreaterThan(0);
 
     /**
      * STEP 5: Profile constraints (array stats, size buckets)

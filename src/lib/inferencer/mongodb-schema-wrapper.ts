@@ -5,6 +5,7 @@
 import parseSchema from 'mongodb-schema';
 import { NormalizedDocument, InferredSchema, InferredSchemaField } from '../../types/data-model.js';
 import { logger } from '../../utils/logger.js';
+import { calculateFrequencies } from '../../utils/frequency-map.js';
 
 /**
  * Options for schema inference
@@ -70,13 +71,17 @@ export async function inferSchema(
       // Use the last segment of path as the field name
       const fieldName = field.path[field.path.length - 1] || field.name;
 
-      // Extract lengths from ArraySchemaType if present
-      let lengths: number[] | undefined;
+      // Extract lengths from ArraySchemaType and convert to frequency distribution
+      let lengthDistribution: Record<string, number> | undefined;
       let nestedFields: Record<string, InferredSchemaField> | undefined;
 
       for (const schemaType of field.types) {
         if (schemaType.name === 'Array' && 'lengths' in schemaType) {
-          lengths = schemaType.lengths;
+          // Convert array of lengths to frequency distribution
+          const lengths = schemaType.lengths as number[];
+          if (lengths && lengths.length > 0) {
+            lengthDistribution = calculateFrequencies(lengths);
+          }
         }
         if (schemaType.name === 'Document' && 'fields' in schemaType) {
           nestedFields = transformNestedFields(schemaType.fields);
@@ -90,7 +95,7 @@ export async function inferSchema(
         type: field.type,
         probability: field.probability,
         types: field.types.map((t: any) => ({ name: t.name, probability: t.probability })),
-        lengths,
+        lengthDistribution,
         fields: nestedFields,
       };
     }
@@ -121,13 +126,17 @@ function transformNestedFields(fields: any[]): Record<string, InferredSchemaFiel
   for (const field of fields) {
     const fieldName = field.path[field.path.length - 1] || field.name;
 
-    // Extract lengths and nested fields from types
-    let lengths: number[] | undefined;
+    // Extract lengths and nested fields from types, converting lengths to frequency distribution
+    let lengthDistribution: Record<string, number> | undefined;
     let nestedFields: Record<string, InferredSchemaField> | undefined;
 
     for (const schemaType of field.types) {
       if (schemaType.name === 'Array' && 'lengths' in schemaType) {
-        lengths = schemaType.lengths;
+        // Convert array of lengths to frequency distribution
+        const lengths = schemaType.lengths as number[];
+        if (lengths && lengths.length > 0) {
+          lengthDistribution = calculateFrequencies(lengths);
+        }
       }
       if (schemaType.name === 'Document' && 'fields' in schemaType) {
         nestedFields = transformNestedFields(schemaType.fields);
@@ -141,7 +150,7 @@ function transformNestedFields(fields: any[]): Record<string, InferredSchemaFiel
       type: field.type,
       probability: field.probability,
       types: field.types.map((t: any) => ({ name: t.name, probability: t.probability })),
-      lengths,
+      lengthDistribution,
       fields: nestedFields,
     };
   }
@@ -150,10 +159,10 @@ function transformNestedFields(fields: any[]): Record<string, InferredSchemaFiel
 
 /**
  * Get array field paths from inferred schema
- * Returns map of field paths to their observed lengths
+ * Returns map of field paths to their length frequency distributions
  */
-export function getArrayFieldPaths(schema: InferredSchema): Map<string, number[]> {
-  const arrayPaths = new Map<string, number[]>();
+export function getArrayFieldPaths(schema: InferredSchema): Map<string, Record<string, number>> {
+  const arrayPaths = new Map<string, Record<string, number>>();
   const allPaths = extractFieldPaths(schema);
 
   for (const [path, field] of allPaths) {
@@ -162,8 +171,8 @@ export function getArrayFieldPaths(schema: InferredSchema): Map<string, number[]
       ? field.type.includes('Array')
       : field.type === 'Array';
 
-    if (hasArrayType && field.lengths && field.lengths.length > 0) {
-      arrayPaths.set(path, field.lengths);
+    if (hasArrayType && field.lengthDistribution && Object.keys(field.lengthDistribution).length > 0) {
+      arrayPaths.set(path, field.lengthDistribution);
     }
   }
 

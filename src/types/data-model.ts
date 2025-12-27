@@ -4,10 +4,10 @@
  */
 
 import { ObjectId } from 'mongodb';
-import type { ArrayLengthStats, DynamicKeyMetadata, DynamicKeyValueSchema } from './dynamic-keys.js';
+import type { ArrayLengthStats, DynamicKeyMetadata, DynamicKeyValueSchema, FrequencyDistribution } from './dynamic-keys.js';
 
 // Re-export types from dynamic-keys to maintain compatibility
-export type { ArrayLengthStats };
+export type { ArrayLengthStats, FrequencyDistribution };
 
 /**
  * SampleDocument - Raw document retrieved from MongoDB during discovery phase
@@ -55,7 +55,7 @@ export interface InferredSchemaField {
     unique?: number;
     values?: any[];
   }>;
-  lengths?: number[]; // For arrays
+  lengthDistribution?: FrequencyDistribution; // For arrays: length → count mapping
   fields?: Record<string, InferredSchemaField>; // For nested documents
 }
 
