@@ -2,9 +2,7 @@
  * Profiler module types
  */
 
-import {
-  ConstraintsProfile,
-} from "../../types/data-model";
+import { ConstraintsProfile } from "../../types/data-model";
 
 export interface ProfilerOptions {
   arrayLenPolicy: "minmax" | "percentileClamp";

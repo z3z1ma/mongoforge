@@ -11,9 +11,7 @@ import {
 } from "../../types/data-model.js";
 import { ArrayLengthStats } from "../../types/dynamic-keys.js";
 import { logger } from "../../utils/logger.js";
-import {
-  sampleFromDistribution,
-} from "../../utils/frequency-map.js";
+import { sampleFromDistribution } from "../../utils/frequency-map.js";
 
 /**
  * Apply x-gen.key vendor extension

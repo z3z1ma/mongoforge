@@ -2,11 +2,9 @@
  * Sampler module - orchestrates MongoDB document sampling
  */
 
+import { SampleDocument } from "../../types/data-model.js";
 import { MongoConnector, createConnector } from "./connector.js";
-import {
-  createStrategy,
-  SamplingStrategy,
-} from "./strategies.js";
+import { createStrategy, SamplingStrategy } from "./strategies.js";
 import { SamplerOptions, SamplerResult } from "./types.js";
 import { logger } from "../../utils/logger.js";
 
@@ -82,6 +80,56 @@ export class Sampler {
       throw error;
     } finally {
       // Always close connection
+      if (this.connector) {
+        await this.connector.close();
+      }
+    }
+  }
+
+  /**
+   * Execute sampling operation as a stream
+   */
+  async *sampleStream(
+    options: SamplerOptions,
+  ): AsyncIterableIterator<SampleDocument> {
+    try {
+      // Create strategy from options if not set in constructor
+      if (!this.strategy) {
+        this.strategy = createStrategy(options.strategy);
+      }
+
+      // Connect to MongoDB
+      this.connector = await createConnector({
+        uri: options.uri,
+        database: options.database,
+        collection: options.collection,
+      });
+
+      logger.info("Starting document sampling stream", {
+        collection: options.collection,
+        strategy: options.strategy,
+        sampleSize: options.sampleSize,
+      });
+
+      // Get collection
+      const collection = this.connector.getCollection(options.collection);
+
+      // Execute sampling strategy stream
+      const stream = this.strategy.sampleStream(
+        collection,
+        options.sampleSize,
+        options.timeWindow,
+      );
+
+      for await (const doc of stream) {
+        yield doc;
+      }
+    } catch (error) {
+      logger.error("Sampling stream failed", error);
+      throw error;
+    } finally {
+      // Note: closing connection here might be premature if the stream is still being consumed.
+      // However, AsyncIterableIterator execution will reach finally after loop completion or break.
       if (this.connector) {
         await this.connector.close();
       }

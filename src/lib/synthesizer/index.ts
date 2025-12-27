@@ -18,9 +18,7 @@ import {
 } from "./vendor-keywords.js";
 import { logger } from "../../utils/logger.js";
 import type { ObjectKeysAnalysis } from "../inferencer/dynamic-key-detector.js";
-import type {
-  DynamicKeyValueSchema,
-} from "../../types/dynamic-keys.js";
+import type { DynamicKeyValueSchema } from "../../types/dynamic-keys.js";
 
 export * from "./types.js";
 export * from "./vendor-keywords.js";

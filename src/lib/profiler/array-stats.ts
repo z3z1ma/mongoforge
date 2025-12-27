@@ -31,7 +31,8 @@ export class ArrayStatsAccumulator {
   private traverse(obj: any, pathPrefix = ""): void {
     if (obj === null || typeof obj !== "object") return;
 
-    for (const [key, value] of Object.entries(obj)) {
+    for (const key in obj) {
+      const value = obj[key];
       const fieldPath = pathPrefix ? `${pathPrefix}.${key}` : key;
 
       // Skip metadata fields
@@ -51,7 +52,8 @@ export class ArrayStatsAccumulator {
         );
 
         // Traverse array elements if they are objects
-        value.forEach((item) => {
+        for (let i = 0; i < value.length; i++) {
+          const item = value[i];
           if (
             typeof item === "object" &&
             item !== null &&
@@ -59,7 +61,7 @@ export class ArrayStatsAccumulator {
           ) {
             this.traverse(item, `${fieldPath}[]`);
           }
-        });
+        }
       } else if (typeof value === "object" && value !== null) {
         // Traverse nested objects
         this.traverse(value, fieldPath);

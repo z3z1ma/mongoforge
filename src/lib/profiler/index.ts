@@ -7,9 +7,15 @@ import {
   ConstraintsProfile,
 } from "../../types/data-model.js";
 import { ProfilerOptions, ProfilerResult } from "./types.js";
-import { calculateAllArrayStats } from "./array-stats.js";
-import { calculateAllNumericStats } from "./numeric-stats.js";
-import { createSizeBuckets } from "./size-buckets.js";
+import {
+  calculateAllArrayStats,
+  ArrayStatsAccumulator,
+} from "./array-stats.js";
+import {
+  calculateAllNumericStats,
+  NumericStatsAccumulator,
+} from "./numeric-stats.js";
+import { createSizeBuckets, SizeBucketAccumulator } from "./size-buckets.js";
 import { logger } from "../../utils/logger.js";
 
 export * from "./types.js";
@@ -86,9 +92,100 @@ export function profileDocuments(
  */
 export class Profiler {
   private options: ProfilerOptions;
+  private arrayAccumulator: ArrayStatsAccumulator;
+  private numericAccumulator: NumericStatsAccumulator;
+  private sizeAccumulator: SizeBucketAccumulator;
+  private documentCount = 0;
 
   constructor(options: Partial<ProfilerOptions> = {}) {
     this.options = { ...DEFAULT_OPTIONS, ...options };
+    this.arrayAccumulator = new ArrayStatsAccumulator();
+    this.numericAccumulator = new NumericStatsAccumulator();
+
+    // Default bucket config if none provided
+    const bucketConfig = [
+      { id: "small", min: 0, max: 10 },
+      { id: "medium", min: 11, max: 100 },
+      { id: "large", min: 101, max: 1000000 },
+    ];
+    this.sizeAccumulator = new SizeBucketAccumulator(
+      this.options.sizeProxy,
+      bucketConfig,
+    );
+  }
+
+  /**
+   * Observe a single document for profiling
+   */
+  observe(doc: NormalizedDocument): void {
+    this.arrayAccumulator.addDocument(doc);
+    this.numericAccumulator.addDocument(doc);
+    this.sizeAccumulator.addDocument(doc);
+    this.documentCount++;
+  }
+
+  /**
+   * Profile a stream of documents
+   */
+  async profileStream(
+    documents: AsyncIterable<NormalizedDocument>,
+  ): Promise<ProfilerResult> {
+    logger.info("Starting profile stream", {
+      arrayLenPolicy: this.options.arrayLenPolicy,
+      sizeProxy: this.options.sizeProxy,
+    });
+
+    for await (const doc of documents) {
+      this.observe(doc);
+    }
+
+    return this.getProfileResult();
+  }
+
+  /**
+   * Get the final profile result
+   */
+  getProfileResult(): ProfilerResult {
+    const arrayStats = this.arrayAccumulator.getStats();
+    const numericRanges = this.numericAccumulator.getStats();
+    const sizeBuckets = this.sizeAccumulator.getBuckets();
+
+    const profile: ConstraintsProfile = {
+      arrayStats,
+      numericRanges,
+      sizeBuckets,
+      keyFields: {
+        _id: {
+          type: "ObjectId",
+          policy: "objectid",
+          enforceUniqueness: true,
+          uniquenessScope: "run",
+        },
+        additionalKeys: [],
+      },
+      config: {
+        arrayLenPolicy: this.options.arrayLenPolicy,
+        percentiles: this.options.percentiles,
+        clampRange: this.options.clampRange,
+      },
+    };
+
+    logger.info("Profiling complete", {
+      documentsAnalyzed: this.documentCount,
+      arrayFieldsFound: arrayStats.size,
+      numericFieldsFound: numericRanges.size,
+      sizeBucketsCreated: sizeBuckets.length,
+    });
+
+    return {
+      profile,
+      metadata: {
+        documentsAnalyzed: this.documentCount,
+        arrayFieldsFound: arrayStats.size,
+        numericFieldsFound: numericRanges.size,
+        sizeBucketsCreated: sizeBuckets.length,
+      },
+    };
   }
 
   profile(documents: NormalizedDocument[]): ProfilerResult {

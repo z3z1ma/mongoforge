@@ -324,10 +324,7 @@ export function createGenerateCommand(): Command {
                   path:
                     config.output.path === "stdout"
                       ? "stdout"
-                      : resolve(
-                          config.output.dir || ".",
-                          config.output.path,
-                        ),
+                      : resolve(config.output.dir || ".", config.output.path),
                 }),
           },
           metrics: insertionMetrics

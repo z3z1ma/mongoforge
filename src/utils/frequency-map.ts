@@ -90,89 +90,57 @@ export function sampleFromDistribution(
 }
 
 /**
- * Calculate a specific percentile from a frequency distribution
- *
- * @param distribution - Frequency distribution
- * @param percentile - Percentile to calculate (0.0 - 1.0)
- * @returns Value at the specified percentile
- *
- * @example
- * getPercentile({ "1": 50, "2": 30, "5": 20 }, 0.5)
- * // Returns: 2 (median)
- */
-export function getPercentile(
-  distribution: FrequencyDistribution,
-  percentile: number,
-): number {
-  if (percentile < 0 || percentile > 1) {
-    throw new Error("Percentile must be between 0.0 and 1.0");
-  }
-
-  const entries = Object.entries(distribution)
-    .map(([value, count]) => ({ value: Number(value), count }))
-    .sort((a, b) => a.value - b.value);
-
-  if (entries.length === 0) {
-    throw new Error("Cannot calculate percentile of empty distribution");
-  }
-
-  const total = entries.reduce((sum, entry) => sum + entry.count, 0);
-  const targetCount = total * percentile;
-
-  let cumulative = 0;
-  for (const entry of entries) {
-    cumulative += entry.count;
-    if (cumulative >= targetCount) {
-      return entry.value;
-    }
-  }
-
-  // Fallback to maximum value
-  const lastEntry = entries[entries.length - 1];
-  if (!lastEntry) {
-    throw new Error("Distribution has no entries");
-  }
-  return lastEntry.value;
-}
-
-/**
  * Calculate comprehensive distribution statistics
  *
  * @param distribution - Frequency distribution
  * @returns Statistical summary including min, max, median, p95, total, and unique
- *
- * @example
- * calculateDistributionStats({ "1": 450, "2": 350, "3": 150 })
- * // Returns: { min: 1, max: 3, median: 2, p95: 3, total: 950, unique: 3 }
  */
 export function calculateDistributionStats(
   distribution: FrequencyDistribution,
 ): DistributionStats {
-  const entries = Object.entries(distribution)
-    .map(([value, count]) => ({ value: Number(value), count }))
-    .sort((a, b) => a.value - b.value);
+  const sortedEntries: { value: number; count: number }[] = [];
 
-  if (entries.length === 0) {
+  for (const key in distribution) {
+    sortedEntries.push({ value: Number(key), count: distribution[key] });
+  }
+
+  if (sortedEntries.length === 0) {
     throw new Error("Cannot calculate stats for empty distribution");
   }
 
-  const total = entries.reduce((sum, entry) => sum + entry.count, 0);
-  const firstEntry = entries[0];
-  const lastEntry = entries[entries.length - 1];
+  sortedEntries.sort((a, b) => a.value - b.value);
 
-  if (!firstEntry || !lastEntry) {
-    throw new Error("Distribution has no entries");
+  let total = 0;
+  for (let i = 0; i < sortedEntries.length; i++) {
+    total += sortedEntries[i].count;
   }
 
-  const min = firstEntry.value;
-  const max = lastEntry.value;
-  const unique = entries.length;
+  const min = sortedEntries[0].value;
+  const max = sortedEntries[sortedEntries.length - 1].value;
+  const unique = sortedEntries.length;
 
-  // Calculate median (50th percentile)
-  const median = getPercentile(distribution, 0.5);
+  // Calculate percentiles in a single pass to be efficient
+  let median = min;
+  let p95 = min;
+  const medianTarget = total * 0.5;
+  const p95Target = total * 0.95;
 
-  // Calculate 95th percentile
-  const p95 = getPercentile(distribution, 0.95);
+  let cumulative = 0;
+  let medianFound = false;
+  let p95Found = false;
+
+  for (let i = 0; i < sortedEntries.length; i++) {
+    cumulative += sortedEntries[i].count;
+    if (!medianFound && cumulative >= medianTarget) {
+      median = sortedEntries[i].value;
+      medianFound = true;
+    }
+    if (!p95Found && cumulative >= p95Target) {
+      p95 = sortedEntries[i].value;
+      p95Found = true;
+      break; // Found everything we need
+    }
+  }
 
   return {
     min,
@@ -182,4 +150,44 @@ export function calculateDistributionStats(
     total,
     unique,
   };
+}
+
+/**
+ * Calculate a specific percentile from a frequency distribution
+ * Note: Use calculateDistributionStats if you need multiple stats to be more efficient.
+ */
+export function getPercentile(
+  distribution: FrequencyDistribution,
+  percentile: number,
+): number {
+  if (percentile < 0 || percentile > 1) {
+    throw new Error("Percentile must be between 0.0 and 1.0");
+  }
+
+  const sortedEntries: { value: number; count: number }[] = [];
+  for (const key in distribution) {
+    sortedEntries.push({ value: Number(key), count: distribution[key] });
+  }
+
+  if (sortedEntries.length === 0) {
+    throw new Error("Cannot calculate percentile of empty distribution");
+  }
+
+  sortedEntries.sort((a, b) => a.value - b.value);
+
+  let total = 0;
+  for (let i = 0; i < sortedEntries.length; i++) {
+    total += sortedEntries[i].count;
+  }
+
+  const targetCount = total * percentile;
+  let cumulative = 0;
+  for (let i = 0; i < sortedEntries.length; i++) {
+    cumulative += sortedEntries[i].count;
+    if (cumulative >= targetCount) {
+      return sortedEntries[i].value;
+    }
+  }
+
+  return sortedEntries[sortedEntries.length - 1].value;
 }

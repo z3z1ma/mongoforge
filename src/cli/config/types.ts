@@ -162,6 +162,7 @@ export interface InferCommandOptions {
   requiredThreshold?: number;
   dynamicKeyThreshold?: number;
   noDynamicKeys?: boolean;
+  storeValues?: boolean;
   config?: string;
   logLevel?: string;
 }

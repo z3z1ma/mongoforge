@@ -17,13 +17,15 @@ function countLeafFields(obj: any): number {
     }
 
     if (Array.isArray(value)) {
-      value.forEach((item) => traverse(item));
+      for (let i = 0; i < value.length; i++) {
+        traverse(value[i]);
+      }
       return;
     }
 
     if (typeof value === "object") {
-      for (const v of Object.values(value)) {
-        traverse(v);
+      for (const key in value) {
+        traverse(value[key]);
       }
       return;
     }
@@ -45,13 +47,15 @@ function sumArrayLengths(obj: any): number {
   function traverse(value: any): void {
     if (Array.isArray(value)) {
       sum += value.length;
-      value.forEach((item) => traverse(item));
+      for (let i = 0; i < value.length; i++) {
+        traverse(value[i]);
+      }
       return;
     }
 
     if (typeof value === "object" && value !== null) {
-      for (const v of Object.values(value)) {
-        traverse(v);
+      for (const key in value) {
+        traverse(value[key]);
       }
     }
   }

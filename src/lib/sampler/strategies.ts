@@ -13,6 +13,11 @@ export interface SamplingStrategy {
     size: number,
     options?: any,
   ): Promise<SampleDocument[]>;
+  sampleStream(
+    collection: Collection,
+    size: number,
+    options?: any,
+  ): AsyncIterable<SampleDocument>;
 }
 
 /**
@@ -39,6 +44,28 @@ export class RandomSamplingStrategy implements SamplingStrategy {
       },
     })) as SampleDocument[];
   }
+
+  async *sampleStream(
+    collection: Collection,
+    size: number,
+  ): AsyncIterable<SampleDocument> {
+    logger.debug("Executing random sampling stream strategy", { size });
+
+    const pipeline = [{ $sample: { size } }];
+    const cursor = collection.aggregate(pipeline);
+
+    let index = 0;
+    for await (const doc of cursor) {
+      yield {
+        ...doc,
+        __metadata: {
+          collectionName: collection.collectionName,
+          sampledAt: new Date(),
+          sampleIndex: index++,
+        },
+      } as SampleDocument;
+    }
+  }
 }
 
 /**
@@ -63,6 +90,27 @@ export class FirstNSamplingStrategy implements SamplingStrategy {
         sampleIndex: index,
       },
     })) as SampleDocument[];
+  }
+
+  async *sampleStream(
+    collection: Collection,
+    size: number,
+  ): AsyncIterable<SampleDocument> {
+    logger.debug("Executing first-N sampling stream strategy", { size });
+
+    const cursor = collection.find({}).limit(size);
+
+    let index = 0;
+    for await (const doc of cursor) {
+      yield {
+        ...doc,
+        __metadata: {
+          collectionName: collection.collectionName,
+          sampledAt: new Date(),
+          sampleIndex: index++,
+        },
+      } as SampleDocument;
+    }
   }
 }
 
@@ -126,6 +174,50 @@ export class TimeWindowedSamplingStrategy implements SamplingStrategy {
         sampleIndex: index,
       },
     })) as SampleDocument[];
+  }
+
+  async *sampleStream(
+    collection: Collection,
+    size: number,
+    options?: TimeWindowOptions,
+  ): AsyncIterable<SampleDocument> {
+    if (!options) {
+      throw new Error(
+        "TimeWindowedSamplingStrategy requires options with field, start, and end",
+      );
+    }
+
+    logger.debug("Executing time-windowed sampling stream strategy", {
+      size,
+      field: options.field,
+      start: options.start,
+      end: options.end,
+    });
+
+    const filter: any = {
+      [options.field]: {
+        $gte: options.start,
+        $lte: options.end,
+      },
+    };
+
+    // Use $sample for random sampling within window
+    // Note: for very large windows, we might want to check count first if size is very small,
+    // but $sample is generally efficient.
+    const pipeline = [{ $match: filter }, { $sample: { size } }];
+    const cursor = collection.aggregate(pipeline);
+
+    let index = 0;
+    for await (const doc of cursor) {
+      yield {
+        ...doc,
+        __metadata: {
+          collectionName: collection.collectionName,
+          sampledAt: new Date(),
+          sampleIndex: index++,
+        },
+      } as SampleDocument;
+    }
   }
 }
 

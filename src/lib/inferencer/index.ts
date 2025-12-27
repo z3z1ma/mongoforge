@@ -6,6 +6,7 @@ import { NormalizedDocument, InferredSchema } from "../../types/data-model.js";
 import { InferencerOptions, InferencerResult } from "./types.js";
 import {
   inferSchema,
+  inferSchemaStream,
   extractFieldPaths,
 } from "./mongodb-schema-wrapper.js";
 import { logger } from "../../utils/logger.js";
@@ -101,7 +102,33 @@ export async function infer(
   });
 
   const schema = await inferSchema(documents, opts);
+  return postProcessSchema(schema, opts);
+}
 
+/**
+ * Infer schema from a stream of normalized documents
+ */
+export async function inferStream(
+  documents: AsyncIterable<NormalizedDocument>,
+  options: Partial<InferencerOptions> = {},
+): Promise<InferredSchema> {
+  const opts = { ...DEFAULT_OPTIONS, ...options };
+
+  logger.info("Starting schema stream inference", {
+    options: opts,
+  });
+
+  const schema = await inferSchemaStream(documents, opts);
+  return postProcessSchema(schema, opts);
+}
+
+/**
+ * Internal helper for schema post-processing (semantic types)
+ */
+function postProcessSchema(
+  schema: InferredSchema,
+  opts: InferencerOptions,
+): InferredSchema {
   // Apply semantic type detection if enabled
   if (opts.semanticTypes) {
     let semanticTypesDetected = 0;
@@ -140,7 +167,7 @@ export async function infer(
     }
   }
 
-  logger.info("Schema inference complete", {
+  logger.info("Schema inference post-processing complete", {
     fieldsDiscovered: Object.keys(schema.fields).length,
     documentCount: schema.count,
   });
@@ -188,26 +215,8 @@ export class Inferencer {
       });
 
       // Strip nested fields from dynamic key fields to prevent bloat in inferred.schema.json
-      // For fields with dynamic keys, storing individual keys is wasteful - we only need the metadata
-      // Keep fields as empty object {} so synthesizer condition passes, but remove individual keys
       if (dynamicKeysDetected > 0) {
-        for (const [fieldPath, analysis] of dynamicKeyAnalyses) {
-          if (analysis.isDynamic) {
-            const field = fieldPaths.get(fieldPath);
-            if (field && field.fields) {
-              const removedCount = Object.keys(field.fields).length;
-              field.fields = {}; // Empty object instead of delete - synthesizer needs this to exist
-              logger.debug("Stripped nested fields from dynamic key field", {
-                fieldPath,
-                removedFieldsCount: removedCount,
-                pattern: analysis.detection?.pattern,
-              });
-            }
-          }
-        }
-        logger.info("Stripped nested fields from dynamic key fields", {
-          dynamicFieldsProcessed: dynamicKeysDetected,
-        });
+        this.stripDynamicFields(fieldPaths, dynamicKeyAnalyses);
       }
     }
 
@@ -220,5 +229,50 @@ export class Inferencer {
       },
       dynamicKeyAnalyses,
     };
+  }
+
+  /**
+   * Infer schema from a stream of documents
+   * Note: dynamic key detection currently requires all documents in memory
+   * and will be skipped with a warning if used with inferStream.
+   */
+  async inferStream(
+    documents: AsyncIterable<NormalizedDocument>,
+  ): Promise<InferencerResult> {
+    const schema = await inferStream(documents, this.options);
+    const fieldPaths = extractFieldPaths(schema);
+
+    if (this.options.dynamicKeyDetection) {
+      logger.warn(
+        "Dynamic key detection is currently not supported in streaming mode and will be skipped.",
+      );
+    }
+
+    return {
+      schema,
+      metadata: {
+        documentsAnalyzed: schema.count,
+        fieldsDiscovered: fieldPaths.size,
+        dynamicKeysDetected: 0,
+      },
+    };
+  }
+
+  private stripDynamicFields(
+    fieldPaths: Map<string, any>,
+    dynamicKeyAnalyses: Map<string, ObjectKeysAnalysis>,
+  ) {
+    for (const [fieldPath, analysis] of dynamicKeyAnalyses) {
+      if (analysis.isDynamic) {
+        const field = fieldPaths.get(fieldPath);
+        if (field && field.fields) {
+          field.fields = {};
+          logger.debug("Stripped nested fields from dynamic key field", {
+            fieldPath,
+            pattern: analysis.detection?.pattern,
+          });
+        }
+      }
+    }
   }
 }

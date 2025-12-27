@@ -3,6 +3,7 @@
  */
 
 import parseSchema from "mongodb-schema";
+import { Readable } from "stream";
 import {
   NormalizedDocument,
   InferredSchema,
@@ -91,6 +92,57 @@ export async function inferSchema(
     return inferredSchema;
   } catch (error) {
     logger.error("Schema inference failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw error;
+  }
+}
+
+/**
+ * Infer schema from a stream of normalized documents
+ */
+export async function inferSchemaStream(
+  documents: AsyncIterable<NormalizedDocument>,
+  options: InferOptions = {},
+): Promise<InferredSchema> {
+  logger.info("Inferring schema from document stream", {
+    semanticTypes: options.semanticTypes ?? false,
+    storeValues: options.storeValues ?? false,
+  });
+
+  let count = 0;
+  async function* cleanGenerator() {
+    for await (const doc of documents) {
+      count++;
+      // Remove __typeHints metadata before passing to mongodb-schema
+      const { __typeHints, ...cleanDoc } = doc as any;
+      yield cleanDoc;
+    }
+  }
+
+  const stream = Readable.from(cleanGenerator());
+
+  try {
+    // mongodb-schema v12+ parseSchema accepts a stream
+    const schema = await parseSchema(stream, options);
+
+    // Transform schema.fields array to Record<string, InferredSchemaField>
+    const fieldsRecord = transformFields(schema.fields);
+
+    logger.info("Schema stream inference complete", {
+      fieldsInferred: Object.keys(fieldsRecord).length,
+      documentCount: schema.count || count,
+    });
+
+    // Transform mongodb-schema output to our InferredSchema type
+    const inferredSchema: InferredSchema = {
+      count: schema.count || count,
+      fields: fieldsRecord,
+    };
+
+    return inferredSchema;
+  } catch (error) {
+    logger.error("Schema stream inference failed", {
       error: error instanceof Error ? error.message : String(error),
     });
     throw error;

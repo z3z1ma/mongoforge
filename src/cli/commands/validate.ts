@@ -16,11 +16,7 @@ import {
 } from "../../types/data-model.js";
 import { normalizeArrayStats } from "../../lib/profiler/array-stats.js";
 
-import {
-  MongoForgeError,
-  ErrorCode,
-  FileIOError,
-} from "../../utils/errors.js";
+import { MongoForgeError, ErrorCode, FileIOError } from "../../utils/errors.js";
 
 /**
  * T085: Implement NDJSON input reader as an async generator

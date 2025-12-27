@@ -12,9 +12,7 @@ import { Normalizer } from "../../lib/normalizer/index.js";
 import { Inferencer } from "../../lib/inferencer/index.js";
 import { Profiler } from "../../lib/profiler/index.js";
 import { Synthesizer } from "../../lib/synthesizer/index.js";
-import {
-  TypeHint,
-} from "../../types/data-model.js";
+import { TypeHint } from "../../types/data-model.js";
 import { logger } from "../../utils/logger.js";
 import { loadDynamicKeyConfig } from "../../utils/config-loader.js";
 import { MongoForgeError, ErrorCode } from "../../utils/errors.js";
@@ -160,7 +158,8 @@ function validateInferConfig(config: InferConfig): void {
     50, 90, 99,
   ];
   config.constraints.clampRange = config.constraints.clampRange || [1, 99];
-  config.constraints.sizeProxy = config.constraints.sizeProxy || "leafFieldCount";
+  config.constraints.sizeProxy =
+    config.constraints.sizeProxy || "leafFieldCount";
 
   config.keys = config.keys || ({} as any);
   config.keys.idPolicy = config.keys.idPolicy || "inferred";
@@ -170,146 +169,13 @@ function validateInferConfig(config: InferConfig): void {
 
   config.synthesis = config.synthesis || ({} as any);
   config.synthesis.enforceRequired = config.synthesis.enforceRequired ?? true;
-  config.synthesis.requiredThreshold = config.synthesis.requiredThreshold ?? 0.95;
+  config.synthesis.requiredThreshold =
+    config.synthesis.requiredThreshold ?? 0.95;
 }
 
 /**
- * Step 1: Sample documents from MongoDB
+ * Step 5: Synthesize generation schema
  */
-async function sampleFromMongo(config: InferConfig): Promise<any[]> {
-  logger.info("Sampling documents from MongoDB");
-
-  // Map CLI strategy to sampler strategy
-  const samplingStrategy =
-    config.sampling.strategy === "first-n"
-      ? ("firstN" as const)
-      : config.sampling.strategy === "time-windowed"
-        ? ("timeWindowed" as const)
-        : ("random" as const);
-
-  const samplerOptions = {
-    uri: config.source.uri,
-    database: config.source.database,
-    collection: config.source.collection,
-    sampleSize: config.sampling.sampleSize,
-    strategy: samplingStrategy,
-    timeWindow: config.sampling.timeField
-      ? {
-          field: config.sampling.timeField,
-          start: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // Default: last 30 days
-          end: new Date(),
-        }
-      : undefined,
-  };
-
-  const sampler = new Sampler(samplerOptions);
-  const samplerResult = await sampler.sample(samplerOptions);
-
-  logger.info("Sampling complete", { count: samplerResult.documents.length });
-  return samplerResult.documents;
-}
-
-/**
- * Step 2: Normalize documents
- */
-function normalizeDocuments(samples: any[]): {
-  normalized: any[];
-  typeHints: Map<string, TypeHint>;
-} {
-  logger.info("Normalizing documents");
-  const normalizer = new Normalizer();
-  const { documents: normalized, typeHints } = normalizer.normalize(samples);
-
-  logger.info("Normalization complete", {
-    count: normalized.length,
-    uniqueTypeHints: typeHints.size,
-  });
-
-  return { normalized, typeHints };
-}
-
-/**
- * Step 3: Infer schema with dynamic key detection
- */
-async function performSchemaInference(
-  normalized: any[],
-  dynamicKeyConfig: any,
-): Promise<any> {
-  logger.info("Inferring schema");
-  const inferencer = new Inferencer({
-    semanticTypes: true,
-    storeValues: true,
-    dynamicKeyDetection: dynamicKeyConfig,
-  });
-
-  const result = await inferencer.infer(normalized);
-
-  logger.info("Schema inference complete", {
-    ...result.metadata,
-    dynamicKeysDetected: result.metadata.dynamicKeysDetected || 0,
-  });
-
-  return result;
-}
-
-/**
- * Step 4: Profile constraints and handle dynamic key stripping
- */
-function profileConstraints(
-  normalized: any[],
-  config: InferConfig,
-  dynamicKeyAnalyses?: Map<string, any>,
-): any {
-  logger.info("Profiling constraints");
-  const profiler = new Profiler({
-    arrayLenPolicy: config.constraints.arrayLenPolicy,
-    percentiles: config.constraints.percentiles,
-    clampRange: config.constraints.clampRange,
-    sizeProxy: config.constraints.sizeProxy,
-  });
-
-  const { profile: constraints, metadata } = profiler.profile(normalized);
-
-  // Strip array stats for paths nested under dynamic key fields to prevent bloat
-  if (dynamicKeyAnalyses && dynamicKeyAnalyses.size > 0) {
-    const dynamicKeyPaths = new Set(
-      Array.from(dynamicKeyAnalyses.entries())
-        .filter(([_, analysis]) => analysis.isDynamic)
-        .map(([path, _]) => path),
-    );
-
-    let removedCount = 0;
-    for (const [arrayPath, _] of constraints.arrayStats) {
-      for (const dynamicPath of dynamicKeyPaths) {
-        if (arrayPath.startsWith(dynamicPath + ".")) {
-          constraints.arrayStats.delete(arrayPath);
-          removedCount++;
-          break;
-        }
-      }
-    }
-
-    if (removedCount > 0) {
-      logger.info("Stripped array stats nested under dynamic key fields", {
-        removedEntries: removedCount,
-        remainingEntries: constraints.arrayStats.size,
-      });
-    }
-  }
-
-  // Apply additional key field configuration
-  for (const keyField of config.keys.keyFields) {
-    constraints.keyFields.additionalKeys.push({
-      fieldPath: keyField,
-      type: "string",
-      enforceUniqueness: config.keys.enforceUniqueKeys,
-      uniquenessScope: config.keys.uniquenessScope,
-    });
-  }
-
-  logger.info("Profiling complete", metadata);
-  return { constraints, metadata };
-}
 
 /**
  * Step 5: Synthesize generation schema
@@ -384,16 +250,30 @@ async function executeInfer(options: InferCommandOptions): Promise<void> {
     // Create output directory
     mkdirSync(config.output.dir, { recursive: true });
 
-    // Step 1: Sampling
-    const samples = await sampleFromMongo(config);
-    if (samples.length === 0) {
-      throw new Error("No documents found in the source collection");
-    }
+    // Step 1-4: Streaming Pipeline (Sampling -> Normalization -> Inference & Profiling)
+    const samplerOptions = {
+      uri: config.source.uri,
+      database: config.source.database,
+      collection: config.source.collection,
+      sampleSize: config.sampling.sampleSize,
+      strategy: (config.sampling.strategy === "first-n"
+        ? "firstN"
+        : config.sampling.strategy === "time-windowed"
+          ? "timeWindowed"
+          : "random") as any,
+      timeWindow: config.sampling.timeField
+        ? {
+            field: config.sampling.timeField,
+            start: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+            end: new Date(),
+          }
+        : undefined,
+    };
 
-    // Step 2: Normalization
-    const { normalized, typeHints } = normalizeDocuments(samples);
+    const sampler = new Sampler();
+    const normalizer = new Normalizer();
 
-    // Step 3: Schema Inference
+    // Prepare dynamic key configuration
     const dynamicKeyCliOptions = {
       dynamicKeyThreshold: options.dynamicKeyThreshold,
       noDynamicKeys: options.noDynamicKeys,
@@ -406,25 +286,89 @@ async function executeInfer(options: InferCommandOptions): Promise<void> {
       dynamicKeyConfigSection,
     );
 
+    const inferencer = new Inferencer({
+      semanticTypes: options.storeValues !== false,
+      storeValues: options.storeValues !== false,
+      dynamicKeyDetection: dynamicKeyConfig,
+    });
+
+    const profiler = new Profiler({
+      arrayLenPolicy: config.constraints.arrayLenPolicy,
+      percentiles: config.constraints.percentiles,
+      clampRange: config.constraints.clampRange,
+      sizeProxy: config.constraints.sizeProxy,
+    });
+
+    // Create the streaming pipeline
+    const sampleStream = sampler.sampleStream(samplerOptions);
+    const normalizedStream = normalizer.normalizeStream(sampleStream);
+
+    // Multiplex the stream to both the inferencer and the profiler
+    async function* multiplexedStream() {
+      for await (const doc of normalizedStream) {
+        profiler.observe(doc);
+        yield doc;
+      }
+    }
+
+    // Run inference (this consumes the stream and also triggers profiling via multiplexedStream)
     const {
       schema: inferredSchema,
       metadata: inferMeta,
       dynamicKeyAnalyses,
-    } = await performSchemaInference(normalized, dynamicKeyConfig);
+    } = await inferencer.inferStream(multiplexedStream());
 
+    const typeHints = normalizer.getTypeHints();
+
+    // Step 4: Finalize constraints
+    const { profile: constraints, metadata: profileMeta } =
+      profiler.getProfileResult();
+
+    // Strip array stats for paths nested under dynamic key fields to prevent bloat
+    if (dynamicKeyAnalyses && dynamicKeyAnalyses.size > 0) {
+      const dynamicKeyPaths = new Set(
+        Array.from(dynamicKeyAnalyses.entries())
+          .filter(([_, analysis]) => analysis.isDynamic)
+          .map(([path, _]) => path),
+      );
+
+      let removedCount = 0;
+      for (const [arrayPath, _] of constraints.arrayStats) {
+        for (const dynamicPath of dynamicKeyPaths) {
+          if (arrayPath.startsWith(dynamicPath + ".")) {
+            constraints.arrayStats.delete(arrayPath);
+            removedCount++;
+            break;
+          }
+        }
+      }
+
+      if (removedCount > 0) {
+        logger.info("Stripped array stats nested under dynamic key fields", {
+          removedEntries: removedCount,
+          remainingEntries: constraints.arrayStats.size,
+        });
+      }
+    }
+
+    // Apply additional key field configuration
+    for (const keyField of config.keys.keyFields) {
+      constraints.keyFields.additionalKeys.push({
+        fieldPath: keyField,
+        type: "string",
+        enforceUniqueness: config.keys.enforceUniqueKeys,
+        uniquenessScope: config.keys.uniquenessScope,
+      });
+    }
+
+    // Save inferred schema
     const inferredSchemaPath = resolve(
       config.output.dir,
       "inferred.schema.json",
     );
     writeJsonArtifact(inferredSchemaPath, inferredSchema);
 
-    // Step 4: Constraints Profiling
-    const { constraints, metadata: profileMeta } = profileConstraints(
-      normalized,
-      config,
-      dynamicKeyAnalyses,
-    );
-
+    // Save constraints
     const constraintsPath = resolve(config.output.dir, "constraints.json");
     writeJsonArtifact(constraintsPath, constraints);
 
@@ -456,7 +400,7 @@ async function executeInfer(options: InferCommandOptions): Promise<void> {
         constraints: constraintsPath,
       },
       summary: {
-        sampledDocuments: samples.length,
+        sampledDocuments: inferMeta.documentsAnalyzed,
         fieldsInferred: inferMeta.fieldsDiscovered,
         arrayPathsTracked: profileMeta.arrayFieldsFound,
         dynamicKeysDetected: inferMeta.dynamicKeysDetected || 0,
@@ -519,22 +463,13 @@ export function createInferCommand(): Command {
       "--array-len-policy <policy>",
       "Array length policy: minmax, percentileClamp",
     )
-    .option(
-      "--percentiles <values>",
-      "Percentiles to track (comma-separated)",
-    )
-    .option(
-      "--clamp-range <range>",
-      "Percentile clamping range [low,high]",
-    )
+    .option("--percentiles <values>", "Percentiles to track (comma-separated)")
+    .option("--clamp-range <range>", "Percentile clamping range [low,high]")
     .option(
       "--id-policy <policy>",
       "ID policy: objectid, uuid, string, number, inferred",
     )
-    .option(
-      "--key-fields <fields>",
-      "Additional key fields (comma-separated)",
-    )
+    .option("--key-fields <fields>", "Additional key fields (comma-separated)")
     .option("--enforce-unique-keys", "Enforce uniqueness for key fields")
     .option("--uniqueness-scope <scope>", "Uniqueness scope: batch, run")
     .option(
@@ -554,6 +489,10 @@ export function createInferCommand(): Command {
     .option(
       "--no-dynamic-keys",
       "Disable dynamic key detection and inference for objects with highly variable keys",
+    )
+    .option(
+      "--no-store-values",
+      "Disable storing sample values in the schema (reduces memory usage but disables semantic type detection)",
     )
     .option("--config <path>", "Path to configuration file (JSON/YAML)")
     .option(

@@ -70,12 +70,45 @@ export function normalizeDocuments(
  */
 export class Normalizer {
   private options: NormalizerOptions;
+  private collectedTypeHints = new Map<string, TypeHint>();
 
   constructor(options: NormalizerOptions = {}) {
     this.options = options;
   }
 
   normalize(documents: SampleDocument[]): NormalizerResult {
-    return normalizeDocuments(documents, this.options);
+    const result = normalizeDocuments(documents, this.options);
+    // Sync collected hints for consistency
+    for (const [path, hint] of result.typeHints.entries()) {
+      this.collectedTypeHints.set(path, hint);
+    }
+    return result;
+  }
+
+  /**
+   * Normalize an async stream of documents
+   */
+  async *normalizeStream(
+    documents: AsyncIterable<SampleDocument>,
+  ): AsyncIterableIterator<NormalizedDocument> {
+    for await (const doc of documents) {
+      const normalizedDoc = normalizeDocument(doc);
+
+      // Collect type hints on the fly
+      for (const [path, hint] of Object.entries(normalizedDoc.__typeHints)) {
+        if (!this.collectedTypeHints.has(path)) {
+          this.collectedTypeHints.set(path, hint);
+        }
+      }
+
+      yield normalizedDoc;
+    }
+  }
+
+  /**
+   * Get type hints collected during streaming
+   */
+  getTypeHints(): Map<string, TypeHint> {
+    return this.collectedTypeHints;
   }
 }

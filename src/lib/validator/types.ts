@@ -2,10 +2,7 @@
  * Validator module types
  */
 
-import {
-  ValidationReport,
-  GenerationSchema,
-} from "../../types/data-model";
+import { ValidationReport, GenerationSchema } from "../../types/data-model";
 
 export interface ValidatorOptions {
   schema: GenerationSchema;

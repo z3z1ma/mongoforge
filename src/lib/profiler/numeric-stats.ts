@@ -23,7 +23,8 @@ function calculateMean(distribution: Record<string, number>): number {
   let sum = 0;
   let count = 0;
 
-  for (const [valueStr, freq] of Object.entries(distribution)) {
+  for (const valueStr in distribution) {
+    const freq = distribution[valueStr];
     const value = Number(valueStr);
     sum += value * freq;
     count += freq;
@@ -42,13 +43,133 @@ function calculateStdDev(
   let sumSquaredDiff = 0;
   let count = 0;
 
-  for (const [valueStr, freq] of Object.entries(distribution)) {
+  for (const valueStr in distribution) {
+    const freq = distribution[valueStr];
     const value = Number(valueStr);
     sumSquaredDiff += Math.pow(value - mean, 2) * freq;
     count += freq;
   }
 
   return count > 1 ? Math.sqrt(sumSquaredDiff / (count - 1)) : 0;
+}
+
+/**
+ * Accumulator for incremental numeric statistics profiling
+ */
+export class NumericStatsAccumulator {
+  private distributions = new Map<string, Record<string, number>>();
+  private distributionSizes = new Map<string, number>();
+  private valuesAnalyzed = new Map<string, number>();
+  private allPositive = new Map<string, boolean>();
+  private allInteger = new Map<string, boolean>();
+
+  /**
+   * Add a document to the accumulation
+   */
+  addDocument(doc: any): void {
+    this.traverse(doc);
+  }
+
+  /**
+   * Recursive traversal to find numeric fields and record their values
+   */
+  private traverse(obj: any, pathPrefix = ""): void {
+    if (obj === null || typeof obj !== "object") return;
+
+    for (const key in obj) {
+      const value = obj[key];
+      const fieldPath = pathPrefix ? `${pathPrefix}.${key}` : key;
+
+      // Skip metadata fields
+      if (key.startsWith("__")) continue;
+
+      if (typeof value === "number" && !isNaN(value) && isFinite(value)) {
+        this.recordValue(fieldPath, value);
+      } else if (Array.isArray(value)) {
+        // Traverse array elements
+        const arrayFieldPath = `${fieldPath}[]`;
+        for (let i = 0; i < value.length; i++) {
+          const item = value[i];
+          if (typeof item === "number" && !isNaN(item) && isFinite(item)) {
+            this.recordValue(arrayFieldPath, item);
+          } else if (typeof item === "object" && item !== null) {
+            this.traverse(item, arrayFieldPath);
+          }
+        }
+      } else if (typeof value === "object" && value !== null) {
+        // Traverse nested objects
+        this.traverse(value, fieldPath);
+      }
+    }
+  }
+
+  private recordValue(fieldPath: string, value: number): void {
+    // Record frequency with cardinality limit to prevent OOM
+    let distribution = this.distributions.get(fieldPath);
+    const valStr = String(value);
+
+    if (!distribution) {
+      distribution = {};
+      this.distributions.set(fieldPath, distribution);
+      this.distributionSizes.set(fieldPath, 0);
+    }
+
+    // Only track individual frequencies if cardinality is reasonably low
+    // If it exceeds 1000 unique values, it's likely not an enum and we save memory
+    const currentSize = this.distributionSizes.get(fieldPath) || 0;
+    if (distribution[valStr] !== undefined) {
+      distribution[valStr]++;
+    } else if (currentSize < 1000) {
+      distribution[valStr] = 1;
+      this.distributionSizes.set(fieldPath, currentSize + 1);
+    }
+
+    // Track total count
+    this.valuesAnalyzed.set(
+      fieldPath,
+      (this.valuesAnalyzed.get(fieldPath) || 0) + 1,
+    );
+
+    // Track positivity
+    if (value < 0) {
+      this.allPositive.set(fieldPath, false);
+    } else if (!this.allPositive.has(fieldPath)) {
+      this.allPositive.set(fieldPath, true);
+    }
+
+    // Track integer type
+    if (!Number.isInteger(value)) {
+      this.allInteger.set(fieldPath, false);
+    } else if (!this.allInteger.has(fieldPath)) {
+      this.allInteger.set(fieldPath, true);
+    }
+  }
+
+  /**
+   * Get calculated statistics for all tracked numeric fields
+   */
+  getStats(): Map<string, NumericRangeStats> {
+    const stats = new Map<string, NumericRangeStats>();
+
+    for (const [fieldPath, distribution] of this.distributions.entries()) {
+      const distStats = calculateDistributionStats(distribution);
+      const mean = calculateMean(distribution);
+      const stdDev = calculateStdDev(distribution, mean);
+
+      stats.set(fieldPath, {
+        fieldPath,
+        distribution,
+        stats: distStats,
+        valuesAnalyzed: this.valuesAnalyzed.get(fieldPath) || 0,
+        valueType: this.allInteger.get(fieldPath) ? "integer" : "float",
+        allPositive: this.allPositive.get(fieldPath) ?? true,
+        mean,
+        stdDev,
+      });
+    }
+
+    return stats;
+  }
 }
 
 /**

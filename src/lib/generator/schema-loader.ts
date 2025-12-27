@@ -4,9 +4,7 @@
  */
 
 import fs from "fs/promises";
-import type {
-  GenerationSchema,
-} from "../../types/data-model.js";
+import type { GenerationSchema } from "../../types/data-model.js";
 import { logger } from "../../utils/logger.js";
 
 /**
