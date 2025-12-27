@@ -8,17 +8,19 @@ import { inferSchema, extractFieldPaths, getArrayFieldPaths } from './mongodb-sc
 import { logger } from '../../utils/logger.js';
 import { analyzeObjectKeys, type ObjectKeysAnalysis } from './dynamic-key-detector.js';
 import { DEFAULT_DYNAMIC_KEY_CONFIG, type DynamicKeyDetectionConfig } from '../../types/dynamic-keys.js';
+import { applySemanticTypes, BUILTIN_DETECTORS } from './semantic-detectors.js';
 
 export * from './types.js';
 export * from './mongodb-schema-wrapper.js';
 export * from './dynamic-key-detector.js';
+export * from './semantic-detectors.js';
 
 /**
  * Default inferencer options
  */
 const DEFAULT_OPTIONS: InferencerOptions = {
-  semanticTypes: false,
-  storeValues: false,
+  semanticTypes: true,
+  storeValues: true, // Required for semantic type detection
 };
 
 /**
@@ -74,6 +76,44 @@ export async function infer(
   });
 
   const schema = await inferSchema(documents, opts);
+
+  // Apply semantic type detection if enabled
+  if (opts.semanticTypes) {
+    let semanticTypesDetected = 0;
+
+    // Recursively apply semantic types to all fields
+    function applyToAllFields(fields: Record<string, any>) {
+      for (const [fieldName, field] of Object.entries(fields)) {
+        applySemanticTypes(field, BUILTIN_DETECTORS);
+
+        // Check if semantic type was detected
+        if (field.types) {
+          const stringType = field.types.find((t: any) => t.name === 'String');
+          if (stringType?.semanticType) {
+            semanticTypesDetected++;
+            logger.debug('Semantic type detected', {
+              fieldPath: field.path,
+              semanticType: stringType.semanticType,
+              confidence: stringType.semanticConfidence,
+            });
+          }
+        }
+
+        // Recurse into nested fields
+        if (field.fields) {
+          applyToAllFields(field.fields);
+        }
+      }
+    }
+
+    applyToAllFields(schema.fields);
+
+    if (semanticTypesDetected > 0) {
+      logger.info('Semantic type detection complete', {
+        typesDetected: semanticTypesDetected,
+      });
+    }
+  }
 
   logger.info('Schema inference complete', {
     fieldsDiscovered: Object.keys(schema.fields).length,

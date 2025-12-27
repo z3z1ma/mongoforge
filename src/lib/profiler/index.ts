@@ -5,11 +5,13 @@
 import { NormalizedDocument, ConstraintsProfile } from '../../types/data-model.js';
 import { ProfilerOptions, ProfilerResult } from './types.js';
 import { calculateAllArrayStats } from './array-stats.js';
+import { calculateAllNumericStats } from './numeric-stats.js';
 import { createSizeBuckets } from './size-buckets.js';
 import { logger } from '../../utils/logger.js';
 
 export * from './types.js';
 export * from './array-stats.js';
+export * from './numeric-stats.js';
 export * from './size-buckets.js';
 
 /**
@@ -40,12 +42,16 @@ export function profileDocuments(
   // Extract array statistics
   const arrayStats = calculateAllArrayStats(documents);
 
+  // Extract numeric range statistics
+  const numericRanges = calculateAllNumericStats(documents);
+
   // Create size buckets
   const sizeBuckets = createSizeBuckets(documents, opts.sizeProxy);
 
   // Build constraints profile
   const profile: ConstraintsProfile = {
     arrayStats,
+    numericRanges,
     sizeBuckets,
     keyFields: {
       _id: {
@@ -65,6 +71,7 @@ export function profileDocuments(
 
   logger.info('Profiling complete', {
     arrayFieldsFound: arrayStats.size,
+    numericFieldsFound: numericRanges.size,
     sizeBucketsCreated: sizeBuckets.length,
   });
 
@@ -89,6 +96,7 @@ export class Profiler {
       metadata: {
         documentsAnalyzed: documents.length,
         arrayFieldsFound: profile.arrayStats.size,
+        numericFieldsFound: profile.numericRanges.size,
         sizeBucketsCreated: profile.sizeBuckets.length,
       },
     };

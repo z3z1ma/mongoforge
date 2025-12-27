@@ -51,20 +51,19 @@ function generateBase64(): string {
  * Register all custom formats with json-schema-faker
  */
 export function registerCustomFormats(): void {
-  // ObjectId format
+  // MongoDB type formats
   jsf.format('objectid', generateObjectId);
-
-  // Date-time format (override default)
   jsf.format('date-time', generateDateTime);
-
-  // UUID format
   jsf.format('uuid', generateUUID);
-
-  // Decimal format
   jsf.format('decimal', generateDecimal);
-
-  // Base64 format
   jsf.format('base64', generateBase64);
+
+  // Semantic type formats
+  jsf.format('email', () => faker.internet.email());
+  jsf.format('url', () => faker.internet.url());
+  jsf.format('phone', () => faker.phone.number());
+  jsf.format('person-name', () => faker.person.fullName());
+  jsf.format('ipv4', () => faker.internet.ipv4());
 }
 
 /**

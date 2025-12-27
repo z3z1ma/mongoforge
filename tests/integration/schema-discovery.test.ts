@@ -295,6 +295,19 @@ describe('Phase 5: Schema Discovery Integration', () => {
     expect(profileProperty.properties?.bio).toBeDefined();
     expect(profileProperty.properties?.location).toBeDefined();
 
+    // Verify age numeric field has minimum/maximum constraints and x-gen.numericRange extension
+    const ageProperty = generationSchema.properties.age;
+    expect(ageProperty).toBeDefined();
+    expect(ageProperty.type).toBe('number');
+    expect(ageProperty.minimum).toBeDefined();
+    expect(ageProperty.maximum).toBeDefined();
+    expect(ageProperty.minimum).toBe(25); // Min age from test data
+    expect(ageProperty.maximum).toBe(35); // Max age from test data
+    expect(ageProperty['x-gen']?.numericRange).toBeDefined();
+    expect(ageProperty['x-gen']?.numericRange?.mean).toBeGreaterThan(0);
+    expect(ageProperty['x-gen']?.numericRange?.type).toBe('integer');
+    expect(ageProperty['x-gen']?.numericRange?.allPositive).toBe(true);
+
     /**
      * STEP 8: Verify complete workflow produces valid artifacts
      */

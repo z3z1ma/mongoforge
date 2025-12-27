@@ -82,14 +82,43 @@ function mapTypeToJsonSchema(mongoSchemaType: string | string[]): string | strin
 }
 
 /**
- * Map mongodb-schema type to JSON Schema format
+ * Map semantic types to JSON Schema format
  */
-function getJsonSchemaFormat(mongoSchemaType: string, typeHint?: TypeHint): string | undefined {
-  // Use type hint if available
+const SEMANTIC_TYPE_TO_FORMAT: Record<string, string> = {
+  Email: 'email',
+  URL: 'url',
+  UUID: 'uuid',
+  Phone: 'phone',
+  PersonName: 'person-name',
+  IPAddress: 'ipv4',
+};
+
+/**
+ * Map mongodb-schema type to JSON Schema format
+ * Checks for semantic types first, then type hints, then MongoDB types
+ */
+function getJsonSchemaFormat(
+  mongoSchemaType: string,
+  field: InferredSchemaField,
+  typeHint?: TypeHint
+): string | undefined {
+  // Priority 1: MongoDB type hints (ObjectId, Date, etc.)
   if (typeHint?.jsonSchemaFormat) {
     return typeHint.jsonSchemaFormat;
   }
 
+  // Priority 2: Semantic types (Email, URL, UUID, etc.)
+  if (field.types) {
+    const stringType = field.types.find((t) => t.name === 'String');
+    if (stringType?.semanticType) {
+      const format = SEMANTIC_TYPE_TO_FORMAT[stringType.semanticType];
+      if (format) {
+        return format;
+      }
+    }
+  }
+
+  // Priority 3: MongoDB types
   const formatMap: Record<string, string> = {
     ObjectID: 'objectid',
     Date: 'date-time',
@@ -124,7 +153,7 @@ function transformField(
   }
 
   const jsonSchemaType = mapTypeToJsonSchema(primaryType);
-  const format = getJsonSchemaFormat(primaryType as string, typeHint);
+  const format = getJsonSchemaFormat(primaryType as string, field, typeHint);
 
   // Ensure we always have a valid type
   const validType = jsonSchemaType || 'string';
@@ -135,6 +164,34 @@ function transformField(
 
   if (format) {
     property.format = format;
+  }
+
+  // Apply numeric constraints (minimum/maximum) from profiler
+  if (primaryType === 'Number') {
+    const numericStats = constraints.numericRanges.get(fieldPath);
+    if (numericStats) {
+      property.minimum = numericStats.stats.min;
+      property.maximum = numericStats.stats.max;
+
+      // Add x-gen.numericRange extension for additional metadata
+      if (!property['x-gen']) {
+        property['x-gen'] = {};
+      }
+      property['x-gen'].numericRange = {
+        mean: numericStats.mean,
+        median: numericStats.stats.median,
+        p95: numericStats.stats.p95,
+        type: numericStats.valueType,
+        allPositive: numericStats.allPositive,
+      };
+
+      logger.debug('Applied numeric constraints', {
+        fieldPath,
+        min: property.minimum,
+        max: property.maximum,
+        type: numericStats.valueType,
+      });
+    }
   }
 
   // Handle array types

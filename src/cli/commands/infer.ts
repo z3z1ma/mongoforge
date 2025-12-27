@@ -268,6 +268,7 @@ async function executeInfer(options: InferCommandOptions): Promise<void> {
     const constraintsJson = {
       ...constraints,
       arrayStats: Object.fromEntries(constraints.arrayStats),
+      numericRanges: Object.fromEntries(constraints.numericRanges),
     };
     writeFileSync(constraintsPath, JSON.stringify(constraintsJson, null, 2), 'utf-8');
 

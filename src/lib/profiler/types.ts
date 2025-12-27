@@ -21,6 +21,7 @@ export interface ProfilerResult {
   metadata: {
     documentsAnalyzed: number;
     arrayFieldsFound: number;
+    numericFieldsFound: number;
     sizeBucketsCreated: number;
   };
 }
