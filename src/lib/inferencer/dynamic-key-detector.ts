@@ -384,7 +384,7 @@ function getValueType(value: any): string {
 /**
  * Infer a simple JSON Schema for a value (recursive)
  */
-function inferValueSchema(value: any, type: string, depth: number = 0): any {
+export function inferValueSchema(value: any, type: string, depth: number = 0): any {
   // Prevent infinite recursion
   if (depth > 10) {
     return { type };

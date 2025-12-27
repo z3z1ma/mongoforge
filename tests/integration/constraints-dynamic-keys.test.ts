@@ -64,10 +64,19 @@ describe('Constraints - Dynamic Key Bloat Prevention', () => {
     const normalizer = new Normalizer();
     const { documents: normalized } = normalizer.normalize(rawDocs);
 
-    // Step 2: Infer schema with dynamic key detection
+    // Step 2: Infer schema with dynamic key detection (via Profiler)
     const inferencer = new Inferencer({
       semanticTypes: false,
       storeValues: false,
+    });
+    const { schema: inferredSchema } = await inferencer.infer(normalized);
+
+    // Step 3: Profile constraints with dynamic key detection
+    const profiler = new Profiler({
+      arrayLenPolicy: 'percentileClamp',
+      percentiles: [50, 95],
+      clampRange: [10, 90],
+      sizeProxy: 'leafFieldCount',
       dynamicKeyDetection: {
         threshold: 5,
         patterns: [],
@@ -77,7 +86,8 @@ describe('Constraints - Dynamic Key Bloat Prevention', () => {
         forceDynamicPaths: [],
       },
     });
-    const { schema: inferredSchema, dynamicKeyAnalyses } = await inferencer.infer(normalized);
+    const { profile: constraints } = profiler.profile(normalized);
+    const dynamicKeyAnalyses = constraints.dynamicKeyStats;
 
     // Verify dynamic key was detected
     expect(dynamicKeyAnalyses).toBeDefined();
@@ -85,15 +95,6 @@ describe('Constraints - Dynamic Key Bloat Prevention', () => {
     const userMapAnalysis = dynamicKeyAnalyses!.get('userAccountLevelDataMap');
     expect(userMapAnalysis).toBeDefined();
     expect(userMapAnalysis!.isDynamic).toBe(true);
-
-    // Step 3: Profile constraints (WITHOUT the fix, this would include bloated entries)
-    const profiler = new Profiler({
-      arrayLenPolicy: 'percentileClamp',
-      percentiles: [50, 95],
-      clampRange: [10, 90],
-      sizeProxy: 'leafFieldCount',
-    });
-    const { profile: constraints } = profiler.profile(normalized);
 
     // IMPORTANT: In the real CLI (infer.ts), we now filter out nested paths
     // Let's simulate that filtering here to test it works:
@@ -154,15 +155,17 @@ describe('Constraints - Dynamic Key Bloat Prevention', () => {
     const inferencer = new Inferencer({
       semanticTypes: false,
       storeValues: false,
-      dynamicKeyDetection: false,
     });
-    const { dynamicKeyAnalyses } = await inferencer.infer(normalized);
+    await inferencer.infer(normalized);
 
     const profiler = new Profiler();
     const { profile: constraints } = profiler.profile(normalized);
+    const dynamicKeyAnalyses = constraints.dynamicKeyStats;
 
     // No dynamic keys detected (detection was disabled)
-    expect(dynamicKeyAnalyses).toBeUndefined();
+    // In streaming mode, this returns an empty Map, not undefined
+    expect(dynamicKeyAnalyses).toBeDefined();
+    expect(dynamicKeyAnalyses?.size).toBe(0);
 
     // All array stats should be preserved
     expect(constraints.arrayStats.has('config.tags')).toBe(true);

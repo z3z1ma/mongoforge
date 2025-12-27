@@ -42,9 +42,12 @@ describe('Dynamic Keys - End-to-End Pipeline', () => {
         }))
       );
 
-      // 3. Infer schema with dynamic key detection enabled
-      // Use lower threshold for test fixtures (8-12 keys)
-      const inferencer = new Inferencer({
+      // 3. Infer schema
+      const inferencer = new Inferencer();
+      const { schema: inferredSchema } = await inferencer.infer(normalized);
+
+      // 4. Profile constraints with dynamic key detection enabled
+      const profiler = new Profiler({
         dynamicKeyDetection: {
           threshold: 5, // Lower than fixture key count (8-12)
           patterns: [
@@ -60,8 +63,8 @@ describe('Dynamic Keys - End-to-End Pipeline', () => {
           forceDynamicPaths: [],
         },
       });
-      const { schema: inferredSchema, dynamicKeyAnalyses } =
-        await inferencer.infer(normalized);
+      const { profile: constraints } = profiler.profile(normalized);
+      const dynamicKeyAnalyses = constraints.dynamicKeyStats;
 
       // Verify dynamic keys were detected in accountBalances
       expect(dynamicKeyAnalyses).toBeDefined();
@@ -73,17 +76,12 @@ describe('Dynamic Keys - End-to-End Pipeline', () => {
       expect(accountBalancesAnalysis?.isDynamic).toBe(true);
       expect(accountBalancesAnalysis?.detection?.pattern).toBe('UUID');
 
-      // 4. Profile constraints
-      const profiler = new Profiler();
-      const { profile: constraints } = profiler.profile(normalized);
-
       // 5. Synthesize generation schema
       const synthesizer = new Synthesizer();
       const generationSchema = synthesizer.synthesize(
         inferredSchema,
         constraints,
-        typeHints,
-        dynamicKeyAnalyses
+        typeHints
       );
 
       // 6. Preprocess schema for generation
@@ -141,9 +139,12 @@ describe('Dynamic Keys - End-to-End Pipeline', () => {
         }))
       );
 
-      // 3. Infer schema with dynamic key detection enabled
-      // Use lower threshold for test fixtures (8-12 keys)
-      const inferencer = new Inferencer({
+      // 3. Infer schema
+      const inferencer = new Inferencer();
+      const { schema: inferredSchema } = await inferencer.infer(normalized);
+
+      // 4. Profile constraints with dynamic key detection enabled
+      const profiler = new Profiler({
         dynamicKeyDetection: {
           threshold: 5, // Lower than fixture key count (8-12)
           patterns: [
@@ -159,8 +160,8 @@ describe('Dynamic Keys - End-to-End Pipeline', () => {
           forceDynamicPaths: [],
         },
       });
-      const { schema: inferredSchema, dynamicKeyAnalyses } =
-        await inferencer.infer(normalized);
+      const { profile: constraints } = profiler.profile(normalized);
+      const dynamicKeyAnalyses = constraints.dynamicKeyStats;
 
       // Verify dynamic keys were detected in taskOwners
       expect(dynamicKeyAnalyses).toBeDefined();
@@ -171,17 +172,12 @@ describe('Dynamic Keys - End-to-End Pipeline', () => {
       expect(taskOwnersAnalysis?.isDynamic).toBe(true);
       expect(taskOwnersAnalysis?.detection?.pattern).toBe('MONGODB_OBJECTID');
 
-      // 4. Profile constraints
-      const profiler = new Profiler();
-      const { profile: constraints } = profiler.profile(normalized);
-
       // 5. Synthesize generation schema
       const synthesizer = new Synthesizer();
       const generationSchema = synthesizer.synthesize(
         inferredSchema,
         constraints,
-        typeHints,
-        dynamicKeyAnalyses
+        typeHints
       );
 
       // 6. Preprocess schema for generation
@@ -239,9 +235,12 @@ describe('Dynamic Keys - End-to-End Pipeline', () => {
         }))
       );
 
-      // 3. Infer schema with dynamic key detection enabled
-      // Use lower threshold for test fixtures (8-12 keys)
-      const inferencer = new Inferencer({
+      // 3. Infer schema
+      const inferencer = new Inferencer();
+      const { schema: inferredSchema } = await inferencer.infer(normalized);
+
+      // 4. Profile constraints with dynamic key detection enabled
+      const profiler = new Profiler({
         dynamicKeyDetection: {
           threshold: 5, // Lower than fixture key count (8-12)
           patterns: [
@@ -257,8 +256,8 @@ describe('Dynamic Keys - End-to-End Pipeline', () => {
           forceDynamicPaths: [],
         },
       });
-      const { schema: inferredSchema, dynamicKeyAnalyses } =
-        await inferencer.infer(normalized);
+      const { profile: constraints } = profiler.profile(normalized);
+      const dynamicKeyAnalyses = constraints.dynamicKeyStats;
 
       // Verify dynamic keys were detected in productInventory
       expect(dynamicKeyAnalyses).toBeDefined();
@@ -269,17 +268,12 @@ describe('Dynamic Keys - End-to-End Pipeline', () => {
       expect(productInventoryAnalysis?.isDynamic).toBe(true);
       expect(productInventoryAnalysis?.detection?.pattern).toBe('NUMERIC_ID');
 
-      // 4. Profile constraints
-      const profiler = new Profiler();
-      const { profile: constraints } = profiler.profile(normalized);
-
       // 5. Synthesize generation schema
       const synthesizer = new Synthesizer();
       const generationSchema = synthesizer.synthesize(
         inferredSchema,
         constraints,
-        typeHints,
-        dynamicKeyAnalyses
+        typeHints
       );
 
       // 6. Preprocess schema for generation

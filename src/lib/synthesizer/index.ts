@@ -116,6 +116,7 @@ const SEMANTIC_TYPE_TO_FORMAT: Record<string, string> = {
 function getJsonSchemaFormat(
   mongoSchemaType: string,
   field: InferredSchemaField,
+  constraints: ConstraintsProfile,
   typeHint?: TypeHint,
 ): string | undefined {
   // Priority 1: MongoDB type hints (ObjectId, Date, etc.)
@@ -129,7 +130,16 @@ function getJsonSchemaFormat(
     return SEMANTIC_TYPE_TO_FORMAT[mongoSchemaType];
   }
 
-  // Priority 2b: Check for our custom semantic types on String types
+  // Priority 2b: Check for semantic types in profiler stats
+  const semanticStats = constraints.semanticStats?.get(field.path);
+  if (semanticStats?.bestMatch) {
+    const format = SEMANTIC_TYPE_TO_FORMAT[semanticStats.bestMatch.type];
+    if (format) {
+      return format;
+    }
+  }
+
+  // Priority 2c: Check for our custom semantic types on String types (legacy/fallback)
   if (field.types) {
     const stringType = field.types.find((t) => t.name === "String");
     if (stringType?.semanticType) {
@@ -177,7 +187,12 @@ function transformField(
   }
 
   const jsonSchemaType = mapTypeToJsonSchema(primaryType);
-  const format = getJsonSchemaFormat(primaryType as string, field, typeHint);
+  const format = getJsonSchemaFormat(
+    primaryType as string,
+    field,
+    constraints,
+    typeHint,
+  );
 
   // Ensure we always have a valid type
   const validType = jsonSchemaType || "string";
@@ -375,11 +390,14 @@ export function synthesize(
 ): GenerationSchema {
   const opts = { ...DEFAULT_OPTIONS, ...options };
 
+  // Use dynamic key stats from profile if available, otherwise fall back to explicit argument
+  const effectiveDynamicKeyAnalyses = constraints.dynamicKeyStats || dynamicKeyAnalyses;
+
   logger.info("Synthesizing generation schema", {
     fieldsInferred: Object.keys(inferredSchema.fields).length,
     arrayStatsCount: constraints.arrayStats.size,
     enforceRequired: opts.enforceRequired,
-    dynamicKeyFields: dynamicKeyAnalyses?.size || 0,
+    dynamicKeyFields: effectiveDynamicKeyAnalyses?.size || 0,
   });
 
   // Build set of key fields (T054)
@@ -400,7 +418,7 @@ export function synthesize(
       constraints,
       typeHints,
       keyFields,
-      dynamicKeyAnalyses,
+      effectiveDynamicKeyAnalyses,
       opts.requiredThreshold,
     );
     properties[fieldName] = property;

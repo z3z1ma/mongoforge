@@ -286,17 +286,14 @@ async function executeInfer(options: InferCommandOptions): Promise<void> {
       dynamicKeyConfigSection,
     );
 
-    const inferencer = new Inferencer({
-      semanticTypes: options.storeValues !== false,
-      storeValues: options.storeValues !== false,
-      dynamicKeyDetection: dynamicKeyConfig,
-    });
+    const inferencer = new Inferencer({});
 
     const profiler = new Profiler({
       arrayLenPolicy: config.constraints.arrayLenPolicy,
       percentiles: config.constraints.percentiles,
       clampRange: config.constraints.clampRange,
       sizeProxy: config.constraints.sizeProxy,
+      dynamicKeyDetection: dynamicKeyConfig,
     });
 
     // Create the streaming pipeline
@@ -315,7 +312,6 @@ async function executeInfer(options: InferCommandOptions): Promise<void> {
     const {
       schema: inferredSchema,
       metadata: inferMeta,
-      dynamicKeyAnalyses,
     } = await inferencer.inferStream(multiplexedStream());
 
     const typeHints = normalizer.getTypeHints();
@@ -325,9 +321,9 @@ async function executeInfer(options: InferCommandOptions): Promise<void> {
       profiler.getProfileResult();
 
     // Strip array stats for paths nested under dynamic key fields to prevent bloat
-    if (dynamicKeyAnalyses && dynamicKeyAnalyses.size > 0) {
+    if (constraints.dynamicKeyStats && constraints.dynamicKeyStats.size > 0) {
       const dynamicKeyPaths = new Set(
-        Array.from(dynamicKeyAnalyses.entries())
+        Array.from(constraints.dynamicKeyStats.entries())
           .filter(([_, analysis]) => analysis.isDynamic)
           .map(([path, _]) => path),
       );
@@ -379,7 +375,6 @@ async function executeInfer(options: InferCommandOptions): Promise<void> {
         constraints,
         typeHints,
         config,
-        dynamicKeyAnalyses,
       );
 
     const generationSchemaPath = resolve(
@@ -403,7 +398,7 @@ async function executeInfer(options: InferCommandOptions): Promise<void> {
         sampledDocuments: inferMeta.documentsAnalyzed,
         fieldsInferred: inferMeta.fieldsDiscovered,
         arrayPathsTracked: profileMeta.arrayFieldsFound,
-        dynamicKeysDetected: inferMeta.dynamicKeysDetected || 0,
+        dynamicKeysDetected: profileMeta.dynamicKeyFieldsFound || 0,
         durationMs: duration,
       },
     };

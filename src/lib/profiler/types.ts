@@ -2,21 +2,34 @@
  * Profiler module types
  */
 
-import { ConstraintsProfile } from "../../types/data-model";
+import {
+  ConstraintsProfile,
+  ArrayLenPolicy,
+  SizeProxyType,
+} from "../../types/data-model.js";
+import { DynamicKeyDetectionConfig } from "../../types/dynamic-keys.js";
 
+/**
+ * Options for the profiler
+ */
 export interface ProfilerOptions {
-  arrayLenPolicy: "minmax" | "percentileClamp";
+  arrayLenPolicy: ArrayLenPolicy;
   percentiles: number[];
   clampRange: [number, number];
-  sizeProxy: "leafFieldCount" | "arrayLengthSum" | "byteSize";
+  sizeProxy: SizeProxyType;
+  dynamicKeyDetection?: DynamicKeyDetectionConfig;
+}
+
+export interface ProfilerMetadata {
+  documentsAnalyzed: number;
+  arrayFieldsFound: number;
+  numericFieldsFound: number;
+  semanticFieldsFound: number;
+  dynamicKeyFieldsFound: number;
+  sizeBucketsCreated: number;
 }
 
 export interface ProfilerResult {
   profile: ConstraintsProfile;
-  metadata: {
-    documentsAnalyzed: number;
-    arrayFieldsFound: number;
-    numericFieldsFound: number;
-    sizeBucketsCreated: number;
-  };
+  metadata: ProfilerMetadata;
 }

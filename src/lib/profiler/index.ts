@@ -15,12 +15,22 @@ import {
   calculateAllNumericStats,
   NumericStatsAccumulator,
 } from "./numeric-stats.js";
+import {
+  calculateAllSemanticStats,
+  SemanticStatsAccumulator,
+} from "./semantic-stats.js";
+import {
+  calculateAllDynamicKeyStats,
+  DynamicKeyStatsAccumulator,
+} from "./dynamic-key-stats.js";
 import { createSizeBuckets, SizeBucketAccumulator } from "./size-buckets.js";
 import { logger } from "../../utils/logger.js";
 
 export * from "./types.js";
 export * from "./array-stats.js";
 export * from "./numeric-stats.js";
+export * from "./semantic-stats.js";
+export * from "./dynamic-key-stats.js";
 export * from "./size-buckets.js";
 
 /**
@@ -54,6 +64,15 @@ export function profileDocuments(
   // Extract numeric range statistics
   const numericRanges = calculateAllNumericStats(documents);
 
+  // Extract semantic type statistics
+  const semanticStats = calculateAllSemanticStats(documents);
+
+  // Extract dynamic key statistics
+  const dynamicKeyStats = calculateAllDynamicKeyStats(
+    documents,
+    opts.dynamicKeyDetection,
+  );
+
   // Create size buckets
   const sizeBuckets = createSizeBuckets(documents, opts.sizeProxy);
 
@@ -61,6 +80,8 @@ export function profileDocuments(
   const profile: ConstraintsProfile = {
     arrayStats,
     numericRanges,
+    semanticStats,
+    dynamicKeyStats,
     sizeBuckets,
     keyFields: {
       _id: {
@@ -78,13 +99,14 @@ export function profileDocuments(
     },
   };
 
-  logger.info("Profiling complete", {
-    arrayFieldsFound: arrayStats.size,
-    numericFieldsFound: numericRanges.size,
-    sizeBucketsCreated: sizeBuckets.length,
-  });
-
-  return profile;
+      logger.info("Profiling complete", {
+      arrayFieldsFound: arrayStats.size,
+      numericFieldsFound: numericRanges.size,
+      semanticFieldsFound: semanticStats.size,
+      dynamicKeyFieldsFound: dynamicKeyStats.size,
+      sizeBucketsCreated: sizeBuckets.length,
+    });
+    return profile;
 }
 
 /**
@@ -94,6 +116,8 @@ export class Profiler {
   private options: ProfilerOptions;
   private arrayAccumulator: ArrayStatsAccumulator;
   private numericAccumulator: NumericStatsAccumulator;
+  private semanticAccumulator: SemanticStatsAccumulator;
+  private dynamicKeyAccumulator: DynamicKeyStatsAccumulator;
   private sizeAccumulator: SizeBucketAccumulator;
   private documentCount = 0;
 
@@ -101,6 +125,10 @@ export class Profiler {
     this.options = { ...DEFAULT_OPTIONS, ...options };
     this.arrayAccumulator = new ArrayStatsAccumulator();
     this.numericAccumulator = new NumericStatsAccumulator();
+    this.semanticAccumulator = new SemanticStatsAccumulator();
+    this.dynamicKeyAccumulator = new DynamicKeyStatsAccumulator(
+      this.options.dynamicKeyDetection,
+    );
 
     // Default bucket config if none provided
     const bucketConfig = [
@@ -120,6 +148,8 @@ export class Profiler {
   observe(doc: NormalizedDocument): void {
     this.arrayAccumulator.addDocument(doc);
     this.numericAccumulator.addDocument(doc);
+    this.semanticAccumulator.addDocument(doc);
+    this.dynamicKeyAccumulator.addDocument(doc);
     this.sizeAccumulator.addDocument(doc);
     this.documentCount++;
   }
@@ -148,11 +178,15 @@ export class Profiler {
   getProfileResult(): ProfilerResult {
     const arrayStats = this.arrayAccumulator.getStats();
     const numericRanges = this.numericAccumulator.getStats();
+    const semanticStats = this.semanticAccumulator.getStats();
+    const dynamicKeyStats = this.dynamicKeyAccumulator.getStats();
     const sizeBuckets = this.sizeAccumulator.getBuckets();
 
     const profile: ConstraintsProfile = {
       arrayStats,
       numericRanges,
+      semanticStats,
+      dynamicKeyStats,
       sizeBuckets,
       keyFields: {
         _id: {
@@ -174,6 +208,8 @@ export class Profiler {
       documentsAnalyzed: this.documentCount,
       arrayFieldsFound: arrayStats.size,
       numericFieldsFound: numericRanges.size,
+      semanticFieldsFound: semanticStats.size,
+      dynamicKeyFieldsFound: dynamicKeyStats.size,
       sizeBucketsCreated: sizeBuckets.length,
     });
 
@@ -183,6 +219,8 @@ export class Profiler {
         documentsAnalyzed: this.documentCount,
         arrayFieldsFound: arrayStats.size,
         numericFieldsFound: numericRanges.size,
+        semanticFieldsFound: semanticStats.size,
+        dynamicKeyFieldsFound: dynamicKeyStats.size,
         sizeBucketsCreated: sizeBuckets.length,
       },
     };
@@ -197,6 +235,8 @@ export class Profiler {
         documentsAnalyzed: documents.length,
         arrayFieldsFound: profile.arrayStats.size,
         numericFieldsFound: profile.numericRanges.size,
+        semanticFieldsFound: profile.semanticStats.size,
+        dynamicKeyFieldsFound: profile.dynamicKeyStats?.size || 0,
         sizeBucketsCreated: profile.sizeBuckets.length,
       },
     };

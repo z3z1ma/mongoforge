@@ -10,9 +10,25 @@ import type {
   DynamicKeyValueSchema,
   FrequencyDistribution,
 } from "./dynamic-keys.js";
+import type { ObjectKeysAnalysis } from "../lib/inferencer/dynamic-key-detector.js";
 
 // Re-export types from dynamic-keys to maintain compatibility
 export type { ArrayLengthStats, FrequencyDistribution };
+
+/**
+ * Statistics about semantic types for a field path
+ */
+export interface SemanticStats {
+  fieldPath: string;
+  sampleSize: number;
+  // Map of detector name -> count
+  matches: Record<string, number>;
+  // The most likely semantic type
+  bestMatch?: {
+    type: string;
+    confidence: number;
+  };
+}
 
 /**
  * SampleDocument - Raw document retrieved from MongoDB during discovery phase
@@ -149,6 +165,8 @@ export interface NumericRangeStats {
 export interface ConstraintsProfile {
   arrayStats: Map<string, ArrayLengthStats>;
   numericRanges: Map<string, NumericRangeStats>;
+  semanticStats: Map<string, SemanticStats>;
+  dynamicKeyStats?: Map<string, ObjectKeysAnalysis>;
   sizeBuckets: DocumentSizeBucket[];
   keyFields: {
     _id: KeyFieldConfig;
