@@ -103,7 +103,8 @@ function preprocessSchemaExtensions(
           error: error instanceof Error ? error.message : String(error),
         },
       );
-    }  }
+    }
+  }
 
   // Recursively process nested properties
   if (processed.properties) {
