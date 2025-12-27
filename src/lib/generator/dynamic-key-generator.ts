@@ -51,6 +51,14 @@ export class DynamicKeyGenerator {
   constructor() {
     // Ensure jsf is configured to use faker
     jsf.extend("faker", () => faker);
+
+    // Set consistent options for schema-to-value generation
+    jsf.option({
+      alwaysFakeOptionals: true,
+      fillProperties: true,
+      failOnInvalidTypes: false,
+      failOnInvalidFormat: false,
+    });
   }
 
   /**
