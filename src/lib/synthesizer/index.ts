@@ -107,7 +107,13 @@ function getJsonSchemaFormat(
     return typeHint.jsonSchemaFormat;
   }
 
-  // Priority 2: Semantic types (Email, URL, UUID, etc.)
+  // Priority 2a: Check if mongoSchemaType itself is a semantic type
+  // (mongodb-schema changes type name from "String" to "Email" when detected)
+  if (SEMANTIC_TYPE_TO_FORMAT[mongoSchemaType]) {
+    return SEMANTIC_TYPE_TO_FORMAT[mongoSchemaType];
+  }
+
+  // Priority 2b: Check for our custom semantic types on String types
   if (field.types) {
     const stringType = field.types.find((t) => t.name === 'String');
     if (stringType?.semanticType) {
