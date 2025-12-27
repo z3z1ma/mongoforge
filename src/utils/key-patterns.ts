@@ -54,6 +54,7 @@ export const DYNAMIC_KEY_PATTERNS: CompiledPattern[] = [
  */
 export interface PatternMatch {
   pattern: DynamicKeyPattern;
+  regex?: string;
   matchCount: number;
   totalKeys: number;
   matchRatio: number;
@@ -140,6 +141,7 @@ export function calculatePatternMatch(
 
   return {
     pattern: pattern.name,
+    regex: pattern.regex.source,
     matchCount,
     totalKeys,
     matchRatio,
@@ -304,10 +306,15 @@ export function detectDynamicKeys(
   // Final confidence threshold check
   const detected = confidence >= config.confidenceThreshold;
 
+  // Determine if we should pass the regex as a custom pattern
+  // We do this if it matched a custom-defined pattern in the config
+  const isBuiltIn = DYNAMIC_KEY_PATTERNS.some((p) => p.name === pattern);
+  const customPattern = !isBuiltIn ? bestMatch?.regex : undefined;
+
   return {
     detected,
     pattern,
-    customPattern: undefined,
+    customPattern,
     confidence,
     confidenceLevel: getConfidenceLevel(confidence),
     totalKeys,

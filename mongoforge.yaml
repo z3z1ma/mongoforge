@@ -1,0 +1,10 @@
+# mongoforge.yaml - Configuration for custom ID detection
+infer:
+  dynamicKeys:
+    # Lower threshold to trigger detection even with fewer unique keys
+    threshold: 20
+    patterns:
+      - name: "BASE64_URL_ID"
+        regex: "^[a-zA-Z0-9_-]{22}$"
+    # Ensure at least 90% of keys match to avoid false positives
+    minPatternMatch: 0.9
