@@ -180,7 +180,7 @@ export class MongoInserter {
           bulkOptions,
         );
         insertedDocuments += result.insertedCount;
-        updatedDocuments += result.modifiedCount;
+        updatedDocuments += result.matchedCount;
         deletedDocuments += result.deletedCount;
       } catch (error: any) {
         logger.debug("Bulk write partially failed or interrupted", {
@@ -189,6 +189,7 @@ export class MongoInserter {
           result: error.result
             ? {
                 insertedCount: error.result.insertedCount,
+                matchedCount: error.result.matchedCount,
                 modifiedCount: error.result.modifiedCount,
                 deletedCount: error.result.deletedCount,
               }
@@ -196,7 +197,7 @@ export class MongoInserter {
         });
         if (error.result) {
           insertedDocuments += error.result.insertedCount || 0;
-          updatedDocuments += error.result.modifiedCount || 0;
+          updatedDocuments += error.result.matchedCount || 0;
           deletedDocuments += error.result.deletedCount || 0;
         }
         const successfulInBatch =
