@@ -26,7 +26,9 @@ import {
  * T085: Implement NDJSON input reader as an async generator
  * Yields documents from file or stdin
  */
-async function* streamNDJSONDocuments(inputPath: string): AsyncIterableIterator<any> {
+async function* streamNDJSONDocuments(
+  inputPath: string,
+): AsyncIterableIterator<any> {
   // Handle stdin vs file
   const input =
     inputPath === "stdin" || inputPath === "-"
@@ -63,8 +65,14 @@ async function loadJSONFile<T>(path: string, description: string): Promise<T> {
     const content = await readFile(path, "utf8");
     return JSON.parse(content) as T;
   } catch (err) {
-    if (err instanceof Error && "code" in (err as any) && (err as any).code === "ENOENT") {
-      throw new FileIOError(`${description} not found at: ${path}`, undefined, { cause: err });
+    if (
+      err instanceof Error &&
+      "code" in (err as any) &&
+      (err as any).code === "ENOENT"
+    ) {
+      throw new FileIOError(`${description} not found at: ${path}`, undefined, {
+        cause: err,
+      });
     }
     throw new FileIOError(
       `Failed to load ${description} from ${path}`,
@@ -167,10 +175,15 @@ export function createValidateCommand(): Command {
 
         // Stream and validate documents
         const documentStream = streamNDJSONDocuments(options.inputPath);
-        const report = await validateDocumentStream(documentStream, schema, constraints, {
-          arrayLengthTolerance,
-          sizeBucketTolerance,
-        });
+        const report = await validateDocumentStream(
+          documentStream,
+          schema,
+          constraints,
+          {
+            arrayLengthTolerance,
+            sizeBucketTolerance,
+          },
+        );
 
         if (report.schemaConformance.totalDocuments === 0) {
           throw new Error("No documents found in input");

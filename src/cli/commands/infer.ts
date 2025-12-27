@@ -19,11 +19,7 @@ import {
 } from "../../types/data-model.js";
 import { logger } from "../../utils/logger.js";
 import { loadDynamicKeyConfig } from "../../utils/config-loader.js";
-import {
-  MongoForgeError,
-  ErrorCode,
-  ConfigError,
-} from "../../utils/errors.js";
+import { MongoForgeError, ErrorCode, ConfigError } from "../../utils/errors.js";
 
 /**
  * Merge CLI options with config file
@@ -462,7 +458,8 @@ async function executeInfer(options: InferCommandOptions): Promise<void> {
     if (error instanceof MongoForgeError) {
       forgeError = error;
     } else {
-      const isMongo = error instanceof Error && error.message.includes("MongoDB");
+      const isMongo =
+        error instanceof Error && error.message.includes("MongoDB");
       forgeError = new MongoForgeError(
         isMongo ? ErrorCode.MONGO_CONNECTION_ERROR : ErrorCode.GENERAL_ERROR,
         error instanceof Error ? error.message : String(error),

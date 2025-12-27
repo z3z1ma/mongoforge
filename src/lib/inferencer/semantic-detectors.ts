@@ -91,7 +91,8 @@ const PERSON_NAME_DETECTOR: SemanticDetector = {
 const IPV4_DETECTOR: SemanticDetector = {
   name: "IPv4",
   fieldPatterns: [/ip_?addr/i, /ip_?address/i, /ipv4/i, /client_ip/i],
-  valueValidator: (v) => typeof v === "string" && /^(\d{1,3}\.){3}\d{1,3}$/.test(v),
+  valueValidator: (v) =>
+    typeof v === "string" && /^(\d{1,3}\.){3}\d{1,3}$/.test(v),
   minConfidence: 0.9,
   priority: 6,
 };

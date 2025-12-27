@@ -157,8 +157,10 @@ export function generateValidEmail(): string {
 
 // Custom ObjectId with Timestamp Prefix
 export function generateTimestampPrefixedObjectId(): string {
-  // Use faker to get a date to keep it deterministic with faker.seed()
-  const date = faker.date.recent();
+  // Use a fixed reference date for determinism across runs with the same seed
+  // If we don't provide a refDate, faker.date.recent() defaults to new Date(),
+  // which makes the output non-deterministic even with a fixed seed.
+  const date = faker.date.recent({ refDate: "2025-01-01T00:00:00Z" });
   const timestamp = Math.floor(date.getTime() / 1000); // Unix timestamp
   const timestampHex = timestamp.toString(16).padStart(8, "0");
 
