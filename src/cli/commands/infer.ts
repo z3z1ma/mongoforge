@@ -43,7 +43,7 @@ function mergeInferConfig(
     : undefined;
 
   // Build config from CLI options
-  const cliConfig: Partial<InferConfig> = {
+  const cliConfig: any = {
     source: options.sourceUri
       ? {
           uri: options.sourceUri,
