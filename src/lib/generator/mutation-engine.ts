@@ -37,7 +37,6 @@ export class MutationGenerator {
         payload: { _id: id }
       };
     }
-// ... rest of the file stays same
 
     const strategy = this.config.updateStrategy === 'mixed'
       ? (Math.random() > 0.5 ? 'regenerate' : 'partial')
@@ -91,4 +90,3 @@ export class MutationGenerator {
     };
   }
 }
-

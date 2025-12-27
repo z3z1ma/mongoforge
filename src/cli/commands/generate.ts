@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import { Readable, pipeline } from 'stream';
 import { promisify } from 'util';
-import { createReadStream, createWriteStream } from 'fs';
+import { createWriteStream } from 'fs';
 import { createMongoInserter } from '../../lib/emitter/mongo-inserter.js';
 import { createNDJSONWriter } from '../../lib/emitter/ndjson-writer.js';
 import { createJSONWriter } from '../../lib/emitter/json-writer.js';
@@ -63,7 +63,8 @@ export function createGenerateCommand(): Command {
             throw new Error('--target-uri, --target-db, and --target-collection are required for mongo-cdc mode');
           }
 
-          const cache = new DocumentIDCache(parseInt(opts.idCacheSize));
+          const cacheSize = parseInt(opts.idCacheSize);
+          const cache = new DocumentIDCache(cacheSize);
           const ratios = parseRatios(opts.operationRatios);
           const config: MutationConfig = {
             targetUri: opts.targetUri,
@@ -74,7 +75,7 @@ export function createGenerateCommand(): Command {
             batchSize: batchSize,
             updateStrategy: 'partial',
             deleteBehavior: 'remove',
-            idCacheSize: parseInt(opts.idCacheSize)
+            idCacheSize: cacheSize
           };
 
           const inserter = await createMongoInserter({
@@ -91,11 +92,8 @@ export function createGenerateCommand(): Command {
           const warmupCount = parseInt(opts.warmupInserts);
           if (warmupCount > 0) {
             logger.info(`Running warmup phase: ${warmupCount} inserts`);
-            const warmupStream = createGeneratorStream(schema, warmupCount, batchSize, opts.seed);
             
             // We need to capture IDs from warmup stream. 
-            // This is tricky because bulkInsert doesn't return IDs.
-            // For now, let's just use the cdcStream with 100% inserts for warmup.
             const warmupConfig: MutationConfig = { ...config, ratios: { insert: 100, update: 0, delete: 0 } };
             const warmupCDCStream = createCDCStream(schema, warmupConfig, cache, warmupCount);
             await inserter.bulkWrite(warmupCDCStream);
@@ -103,9 +101,6 @@ export function createGenerateCommand(): Command {
           }
 
           const cdcStream = createCDCStream(schema, config, cache, docCount);
-          // We need a NEW inserter because the previous one closed in bulkWrite end listener
-          // Actually, let's fix MongoInserter to NOT close client automatically if we want to reuse it,
-          // or just create a new one. The current implementation closes it.
           const cdcInserter = await createMongoInserter({
             uri: opts.targetUri,
             database: opts.targetDb,
@@ -195,10 +190,10 @@ function parseRatios(ratioStr: string) {
   const parts = ratioStr.split(',');
   for (const part of parts) {
     const [type, val] = part.split(':');
+    if (val === undefined) continue;
     if (type === 'update') ratios.update = parseInt(val);
     if (type === 'delete') ratios.delete = parseInt(val);
     if (type === 'insert') ratios.insert = parseInt(val);
   }
   return ratios;
 }
-

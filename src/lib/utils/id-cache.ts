@@ -22,9 +22,11 @@ export class DocumentIDCache {
       return;
     }
 
-    if (this.ids.length >= this.maxSize) {
+    if (this.ids.length >= this.maxSize && this.ids.length > 0) {
       const oldestId = this.ids[0];
-      this.remove(oldestId);
+      if (oldestId !== undefined) {
+        this.remove(oldestId);
+      }
     }
 
     const index = this.ids.length;
@@ -59,6 +61,12 @@ export class DocumentIDCache {
     }
 
     const lastId = this.ids[this.ids.length - 1];
+    if (lastId === undefined) {
+      this.ids.pop();
+      this.indices.delete(id);
+      this.tombstones.delete(id);
+      return;
+    }
     
     // Swap last element with the one to be removed
     this.ids[index] = lastId;
@@ -69,7 +77,6 @@ export class DocumentIDCache {
     this.indices.delete(id);
     this.tombstones.delete(id);
   }
-
 
   /**
    * Returns a random ID from the cache.
@@ -102,5 +109,6 @@ export class DocumentIDCache {
   clear(): void {
     this.ids = [];
     this.indices.clear();
+    this.tombstones.clear();
   }
 }

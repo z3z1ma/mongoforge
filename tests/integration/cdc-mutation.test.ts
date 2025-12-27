@@ -15,12 +15,16 @@ describe('CDC Mutation Integration', () => {
   let client: MongoClient;
 
   const testSchema: GenerationSchema = {
+    $schema: 'http://json-schema.org/draft-07/schema#',
     type: 'object',
+    title: 'Test User',
     properties: {
-      name: { type: 'string', faker: 'person.fullName' },
-      email: { type: 'string', faker: 'internet.email' },
+      name: { type: 'string', format: 'person-name' },
+      email: { type: 'string', format: 'email' },
       age: { type: 'integer', minimum: 18, maximum: 80 }
-    }
+    },
+    required: ['name', 'email'],
+    additionalProperties: false
   };
 
   beforeAll(async () => {
@@ -98,8 +102,6 @@ describe('CDC Mutation Integration', () => {
 
     const updatedDoc = await collection.findOne({ _id: 'user-0' });
     expect(updatedDoc).toBeDefined();
-    // Since it was a partial update, some fields should still be there, 
-    // and at least one field from the schema might have been updated.
   });
 
   it('should handle regenerate strategy', async () => {
@@ -148,7 +150,7 @@ describe('CDC Mutation Integration', () => {
     // Seed cache
     for (let i = 0; i < 50; i++) {
       cache.add(`seed-${i}`);
-      await collection.insertOne({ _id: `seed-${i}`, name: `Seed ${i}` });
+      await collection.insertOne({ _id: `seed-${i}`, name: `Seed ${i}`, email: `seed${i}@example.com` });
     }
 
     const config: MutationConfig = {
