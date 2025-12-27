@@ -3,6 +3,14 @@ import { loadGenerationSchema, saveGenerationSchema } from '../../../src/lib/gen
 import fs from 'node:fs/promises';
 
 vi.mock('node:fs/promises');
+vi.mock('../../../src/utils/logger.js', () => ({
+  logger: {
+    info: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+    warn: vi.fn(),
+  }
+}));
 
 describe('schema-loader', () => {
   const mockPath = '/tmp/test-schema.json';

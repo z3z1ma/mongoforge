@@ -72,7 +72,7 @@ export function mapBinData(value: Binary): { value: string; hint: TypeHint } {
  */
 export function mapValue(
   value: any,
-  fieldPath: string,
+  _fieldPath: string,
 ): { value: any; hint: TypeHint | null } {
   // ObjectId
   if (value instanceof ObjectId) {

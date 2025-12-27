@@ -19,6 +19,19 @@ export class SchemaValidator {
       allErrors: true, // Collect all validation errors
       verbose: true, // Include schema and data in errors
     });
+
+    // Register custom formats to prevent "unknown format" warnings
+    this.ajv.addFormat("objectid", /^[0-9a-fA-F]{24}$/);
+    this.ajv.addFormat("date-time", true);
+    this.ajv.addFormat("email", true);
+    this.ajv.addFormat("uuid", true);
+    this.ajv.addFormat("decimal", true);
+    this.ajv.addFormat("base64", true);
+    this.ajv.addFormat("url", true);
+    this.ajv.addFormat("ipv4", true);
+    this.ajv.addFormat("ipv6", true);
+    this.ajv.addFormat("phone", true);
+    this.ajv.addFormat("person-name", true);
   }
 
   /**

@@ -12,9 +12,7 @@ import type {
   DynamicKeyDetectionConfig,
   DynamicKeyMetadata,
   DynamicKeyValueSchema,
-  FrequencyDistribution,
 } from "../../types/dynamic-keys.js";
-import type { InferredSchema } from "../../types/data-model.js";
 import {
   detectDynamicKeys,
   type DetectionResult,
@@ -321,7 +319,7 @@ export function buildDynamicKeyMetadata(
   detection: DetectionResult,
   keyCounts: number[],
   documentsAnalyzed: number,
-  valueSchema: DynamicKeyValueSchema,
+  _valueSchema: DynamicKeyValueSchema,
 ): DynamicKeyMetadata {
   // Calculate frequency distribution of key counts
   const countDistribution = calculateFrequencies(keyCounts);

@@ -1,5 +1,5 @@
 import { Command } from "commander";
-import { Readable, pipeline } from "stream";
+import { pipeline } from "stream";
 import { promisify } from "util";
 import { createWriteStream } from "fs";
 import { createMongoInserter } from "../../lib/emitter/mongo-inserter.js";

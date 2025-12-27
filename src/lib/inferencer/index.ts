@@ -7,7 +7,6 @@ import { InferencerOptions, InferencerResult } from "./types.js";
 import {
   inferSchema,
   extractFieldPaths,
-  getArrayFieldPaths,
 } from "./mongodb-schema-wrapper.js";
 import { logger } from "../../utils/logger.js";
 import {
@@ -93,7 +92,7 @@ export async function infer(
 
     // Recursively apply semantic types to all fields
     function applyToAllFields(fields: Record<string, any>) {
-      for (const [fieldName, field] of Object.entries(fields)) {
+      for (const [_fieldName, field] of Object.entries(fields)) {
         applySemanticTypes(field, BUILTIN_DETECTORS);
 
         // Check if semantic type was detected

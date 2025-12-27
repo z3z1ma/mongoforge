@@ -35,7 +35,7 @@ export function normalizeDocument(doc: SampleDocument): NormalizedDocument {
  */
 export function normalizeDocuments(
   documents: SampleDocument[],
-  options: NormalizerOptions = {},
+  _options: NormalizerOptions = {},
 ): NormalizerResult {
   logger.info("Normalizing documents", { count: documents.length });
 

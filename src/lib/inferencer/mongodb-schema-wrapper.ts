@@ -148,13 +148,8 @@ function transformFields(fields: any[]): Record<string, InferredSchemaField> {
 }
 
 /**
- * Helper to transform nested fields array to Record
+ * Helper to transform mongodb-schema fields array to Record<string, InferredSchemaField>
  */
-function transformNestedFields(
-  fields: any[],
-): Record<string, InferredSchemaField> {
-  return transformFields(fields);
-}
 
 /**
  * Get array field paths from inferred schema

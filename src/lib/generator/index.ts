@@ -26,13 +26,11 @@ export * from "./schema-preprocessor.js";
  */
 export class Generator {
   private schema: GenerationSchema;
-  private constraints: ConstraintsProfile;
   private seed?: string | number;
   private initialized = false;
 
   constructor(options: GeneratorOptions) {
     this.schema = options.schema;
-    this.constraints = options.constraints;
     this.seed = options.seed;
   }
 

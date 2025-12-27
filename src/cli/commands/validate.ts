@@ -19,7 +19,6 @@ import {
   MongoForgeError,
   ErrorCode,
   FileIOError,
-  ValidationError,
 } from "../../utils/errors.js";
 
 /**

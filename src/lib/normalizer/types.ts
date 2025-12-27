@@ -4,7 +4,6 @@
 
 import {
   NormalizedDocument,
-  SampleDocument,
   TypeHint,
 } from "../../types/data-model";
 

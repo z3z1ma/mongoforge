@@ -7,7 +7,6 @@ import { ArrayLengthStats } from "../../types/dynamic-keys.js";
 import {
   calculateFrequencies,
   calculateDistributionStats,
-  getPercentile,
   updateFrequencies,
 } from "../../utils/frequency-map.js";
 import { FrequencyDistribution } from "../../types/dynamic-keys.js";

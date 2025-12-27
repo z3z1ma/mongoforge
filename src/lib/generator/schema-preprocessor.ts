@@ -9,7 +9,6 @@
 import {
   DynamicKeyGenerator,
   selectKeyCount,
-  generateDynamicKeyValue,
   validateGeneratedKeys,
 } from "./dynamic-key-generator.js";
 import type { DynamicKeyMetadata } from "../../types/dynamic-keys.js";
@@ -309,7 +308,7 @@ function expandDynamicKeys(
  * @param keyName - The key name (for logging)
  * @returns JSON Schema for this key's value
  */
-function createSchemaFromValueSchema(valueSchema: any, keyName: string): any {
+function createSchemaFromValueSchema(valueSchema: any, _keyName: string): any {
   if (!valueSchema) {
     return { type: "string" };
   }

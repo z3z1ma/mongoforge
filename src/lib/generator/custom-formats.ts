@@ -4,7 +4,6 @@
 
 import jsf from "json-schema-faker";
 import { faker } from "@faker-js/faker";
-import { ObjectId } from "mongodb";
 
 /**
  * Generate valid ObjectId string (24-char hex) deterministically using faker

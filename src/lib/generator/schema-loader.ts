@@ -6,7 +6,6 @@
 import fs from "fs/promises";
 import type {
   GenerationSchema,
-  ConstraintsProfile,
 } from "../../types/data-model.js";
 import { logger } from "../../utils/logger.js";
 

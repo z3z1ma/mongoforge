@@ -3,10 +3,7 @@
  */
 
 import {
-  ArrayLengthStats,
   ConstraintsProfile,
-  DocumentSizeBucket,
-  NormalizedDocument,
 } from "../../types/data-model";
 
 export interface ProfilerOptions {

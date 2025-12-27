@@ -6,20 +6,18 @@ import { Command } from "commander";
 import { writeFileSync, mkdirSync } from "fs";
 import { resolve } from "path";
 import { InferCommandOptions, InferConfig } from "../config/types.js";
-import { parseConfigFile, validateConfigSection } from "../config/parser.js";
+import { parseConfigFile } from "../config/parser.js";
 import { Sampler } from "../../lib/sampler/index.js";
 import { Normalizer } from "../../lib/normalizer/index.js";
 import { Inferencer } from "../../lib/inferencer/index.js";
 import { Profiler } from "../../lib/profiler/index.js";
 import { Synthesizer } from "../../lib/synthesizer/index.js";
 import {
-  GenerationSchema,
-  ConstraintsProfile,
   TypeHint,
 } from "../../types/data-model.js";
 import { logger } from "../../utils/logger.js";
 import { loadDynamicKeyConfig } from "../../utils/config-loader.js";
-import { MongoForgeError, ErrorCode, ConfigError } from "../../utils/errors.js";
+import { MongoForgeError, ErrorCode } from "../../utils/errors.js";
 
 /**
  * Merge CLI options with config file
@@ -331,7 +329,7 @@ function synthesizeGenerationSchema(
 function writeJsonArtifact(path: string, data: any): void {
   // Handle Map and other non-JSON objects
   const serializable = JSON.parse(
-    JSON.stringify(data, (key, value) => {
+    JSON.stringify(data, (_key, value) => {
       if (value instanceof Map) {
         return Object.fromEntries(value);
       }
@@ -415,7 +413,7 @@ async function executeInfer(options: InferCommandOptions): Promise<void> {
     writeJsonArtifact(constraintsPath, constraints);
 
     // Step 5: Synthesis
-    const { schema: generationSchema, metadata: synthMeta } =
+    const { schema: generationSchema, metadata: _synthMeta } =
       synthesizeGenerationSchema(
         inferredSchema,
         constraints,

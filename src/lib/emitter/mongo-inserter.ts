@@ -208,7 +208,8 @@ export class MongoInserter {
     };
 
     try {
-      for await (const op of opStream) {
+      for await (const rawOp of opStream) {
+        const op = rawOp as CDCOperation;
         totalOperations++;
         let mongoOp: AnyBulkWriteOperation;
         switch (op.type) {

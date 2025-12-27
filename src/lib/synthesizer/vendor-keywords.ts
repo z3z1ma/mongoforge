@@ -7,13 +7,10 @@ import {
   XGenExtensions,
   XGenArrayLen,
   TypeHint,
-  InferredSchemaField,
-  ConstraintsProfile,
 } from "../../types/data-model.js";
 import { ArrayLengthStats } from "../../types/dynamic-keys.js";
 import { logger } from "../../utils/logger.js";
 import {
-  calculateFrequencies,
   sampleFromDistribution,
 } from "../../utils/frequency-map.js";
 

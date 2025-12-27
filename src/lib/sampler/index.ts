@@ -5,11 +5,9 @@
 import { MongoConnector, createConnector } from "./connector.js";
 import {
   createStrategy,
-  TimeWindowOptions,
   SamplingStrategy,
 } from "./strategies.js";
 import { SamplerOptions, SamplerResult } from "./types.js";
-import { SampleDocument } from "../../types/data-model.js";
 import { logger } from "../../utils/logger.js";
 
 export * from "./types.js";

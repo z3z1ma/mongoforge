@@ -18,7 +18,7 @@ export class NDJSONWriter extends Transform {
 
   _transform(
     chunk: any,
-    encoding: BufferEncoding,
+    _encoding: BufferEncoding,
     callback: TransformCallback,
   ): void {
     try {

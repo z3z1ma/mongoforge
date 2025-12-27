@@ -182,7 +182,6 @@ export function validateDynamicKeyConfig(
   }
 
   // Validate path lists don't overlap
-  const staticSet = new Set(config.forceStaticPaths);
   const dynamicSet = new Set(config.forceDynamicPaths);
 
   for (const path of config.forceStaticPaths) {

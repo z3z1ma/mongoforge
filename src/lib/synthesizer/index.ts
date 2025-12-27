@@ -14,17 +14,11 @@ import { SynthesizerOptions, SynthesizerResult } from "./types.js";
 import {
   buildXGenExtensions,
   extractArrayConstraints,
-  applyArrayLenExtension,
   addArrayLengthDistribution,
 } from "./vendor-keywords.js";
-import {
-  extractFieldPaths,
-  isFieldRequired,
-} from "../inferencer/mongodb-schema-wrapper.js";
 import { logger } from "../../utils/logger.js";
 import type { ObjectKeysAnalysis } from "../inferencer/dynamic-key-detector.js";
 import type {
-  DynamicKeyMetadata,
   DynamicKeyValueSchema,
 } from "../../types/dynamic-keys.js";
 
