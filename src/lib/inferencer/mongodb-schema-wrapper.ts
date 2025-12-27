@@ -75,44 +75,7 @@ export async function inferSchema(
     const schema = await parseSchema(cleanDocs, options);
 
     // Transform schema.fields array to Record<string, InferredSchemaField>
-    const fieldsRecord: Record<string, InferredSchemaField> = {};
-    for (const field of schema.fields) {
-      // Use the last segment of path as the field name
-      const fieldName = field.path[field.path.length - 1] || field.name;
-
-      // Extract lengths from ArraySchemaType and convert to frequency distribution
-      let lengthDistribution: Record<string, number> | undefined;
-      let nestedFields: Record<string, InferredSchemaField> | undefined;
-
-      for (const schemaType of field.types) {
-        if (schemaType.name === "Array" && "lengths" in schemaType) {
-          // Convert array of lengths to frequency distribution
-          const lengths = schemaType.lengths as number[];
-          if (lengths && lengths.length > 0) {
-            lengthDistribution = calculateFrequencies(lengths);
-          }
-        }
-        if (schemaType.name === "Document" && "fields" in schemaType) {
-          nestedFields = transformNestedFields(schemaType.fields);
-        }
-      }
-
-      fieldsRecord[fieldName] = {
-        name: field.name,
-        path: field.path.join("."),
-        count: field.count,
-        type: field.type,
-        probability: field.probability,
-        types: field.types.map((t: any) => ({
-          name: t.name,
-          probability: t.probability,
-          unique: t.unique,
-          values: t.values?.values ? Array.from(t.values.values()) : undefined, // Extract from reservoir
-        })),
-        lengthDistribution,
-        fields: nestedFields,
-      };
-    }
+    const fieldsRecord = transformFields(schema.fields);
 
     logger.info("Schema inference complete", {
       fieldsInferred: Object.keys(fieldsRecord).length,
@@ -135,49 +98,62 @@ export async function inferSchema(
 }
 
 /**
+ * Helper to transform a single mongodb-schema field to InferredSchemaField
+ */
+function transformField(field: any): InferredSchemaField {
+  // Extract lengths and nested fields from types, converting lengths to frequency distribution
+  let lengthDistribution: Record<string, number> | undefined;
+  let nestedFields: Record<string, InferredSchemaField> | undefined;
+
+  for (const schemaType of field.types) {
+    if (schemaType.name === "Array" && "lengths" in schemaType) {
+      // Convert array of lengths to frequency distribution
+      const lengths = schemaType.lengths as number[];
+      if (lengths && lengths.length > 0) {
+        lengthDistribution = calculateFrequencies(lengths);
+      }
+    }
+    if (schemaType.name === "Document" && "fields" in schemaType) {
+      nestedFields = transformFields(schemaType.fields);
+    }
+  }
+
+  return {
+    name: field.name,
+    path: field.path.join("."),
+    count: field.count,
+    type: field.type,
+    probability: field.probability,
+    types: field.types.map((t: any) => ({
+      name: t.name,
+      probability: t.probability,
+      unique: t.unique,
+      values: t.values?.values ? Array.from(t.values.values()) : undefined, // Extract from reservoir
+    })),
+    lengthDistribution,
+    fields: nestedFields,
+  };
+}
+
+/**
+ * Helper to transform mongodb-schema fields array to Record<string, InferredSchemaField>
+ */
+function transformFields(fields: any[]): Record<string, InferredSchemaField> {
+  const record: Record<string, InferredSchemaField> = {};
+  for (const field of fields) {
+    const fieldName = field.path[field.path.length - 1] || field.name;
+    record[fieldName] = transformField(field);
+  }
+  return record;
+}
+
+/**
  * Helper to transform nested fields array to Record
  */
 function transformNestedFields(
   fields: any[],
 ): Record<string, InferredSchemaField> {
-  const record: Record<string, InferredSchemaField> = {};
-  for (const field of fields) {
-    const fieldName = field.path[field.path.length - 1] || field.name;
-
-    // Extract lengths and nested fields from types, converting lengths to frequency distribution
-    let lengthDistribution: Record<string, number> | undefined;
-    let nestedFields: Record<string, InferredSchemaField> | undefined;
-
-    for (const schemaType of field.types) {
-      if (schemaType.name === "Array" && "lengths" in schemaType) {
-        // Convert array of lengths to frequency distribution
-        const lengths = schemaType.lengths as number[];
-        if (lengths && lengths.length > 0) {
-          lengthDistribution = calculateFrequencies(lengths);
-        }
-      }
-      if (schemaType.name === "Document" && "fields" in schemaType) {
-        nestedFields = transformNestedFields(schemaType.fields);
-      }
-    }
-
-    record[fieldName] = {
-      name: field.name,
-      path: field.path.join("."),
-      count: field.count,
-      type: field.type,
-      probability: field.probability,
-      types: field.types.map((t: any) => ({
-        name: t.name,
-        probability: t.probability,
-        unique: t.unique,
-        values: t.values?.values ? Array.from(t.values.values()) : undefined, // Extract from reservoir
-      })),
-      lengthDistribution,
-      fields: nestedFields,
-    };
-  }
-  return record;
+  return transformFields(fields);
 }
 
 /**
