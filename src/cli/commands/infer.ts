@@ -197,8 +197,8 @@ async function executeInfer(options: InferCommandOptions): Promise<void> {
     // Step 4: Infer schema with dynamic key detection
     logger.info('Inferring schema');
     const inferencer = new Inferencer({
-      semanticTypes: false,
-      storeValues: false,
+      semanticTypes: true,
+      storeValues: true,
       dynamicKeyDetection: dynamicKeyConfig,
     });
     const { schema: inferredSchema, metadata: inferMeta, dynamicKeyAnalyses } = await inferencer.infer(normalized);

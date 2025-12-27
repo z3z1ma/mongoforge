@@ -67,6 +67,12 @@ function mapTypeToJsonSchema(mongoSchemaType: string | string[]): string | strin
     Decimal128: 'string',
     Binary: 'string',
     Null: 'null',
+    // mongodb-schema semantic types (all map to string with format)
+    Email: 'string',
+    URL: 'string',
+    UUID: 'string',
+    Phone: 'string',
+    IPAddress: 'string',
   };
 
   if (Array.isArray(mongoSchemaType)) {
