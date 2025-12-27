@@ -51,35 +51,38 @@ function mergeInferConfig(
           collection: options.sourceCollection!,
         }
       : undefined,
-    sampling: options.sampleSize
-      ? {
-          sampleSize: options.sampleSize,
-          strategy: options.samplingStrategy || "random",
-          timeField: options.timeField,
-        }
-      : undefined,
-    constraints: options.arrayLenPolicy
-      ? {
-          arrayLenPolicy: options.arrayLenPolicy,
-          percentiles: percentiles || [50, 90, 99],
-          clampRange: clampRange || [1, 99],
-          sizeProxy: "leafFieldCount",
-        }
-      : undefined,
-    keys: options.idPolicy
-      ? {
-          idPolicy: options.idPolicy,
-          keyFields: keyFields || [],
-          enforceUniqueKeys: options.enforceUniqueKeys ?? false,
-          uniquenessScope: options.uniquenessScope || "run",
-        }
-      : undefined,
+    sampling:
+      options.sampleSize || options.samplingStrategy || options.timeField
+        ? {
+            sampleSize: options.sampleSize as number,
+            strategy: options.samplingStrategy as any,
+            timeField: options.timeField,
+          }
+        : undefined,
+    constraints:
+      options.arrayLenPolicy || percentiles || clampRange
+        ? {
+            arrayLenPolicy: options.arrayLenPolicy as any,
+            percentiles: percentiles as number[],
+            clampRange: clampRange as [number, number],
+            sizeProxy: "leafFieldCount",
+          }
+        : undefined,
+    keys:
+      options.idPolicy || keyFields || options.enforceUniqueKeys !== undefined
+        ? {
+            idPolicy: options.idPolicy as any,
+            keyFields: keyFields as string[],
+            enforceUniqueKeys: options.enforceUniqueKeys as boolean,
+            uniquenessScope: options.uniquenessScope as any,
+          }
+        : undefined,
     synthesis:
       options.enforceRequired !== undefined ||
       options.requiredThreshold !== undefined
         ? {
-            enforceRequired: options.enforceRequired ?? true,
-            requiredThreshold: options.requiredThreshold ?? 0.95,
+            enforceRequired: options.enforceRequired,
+            requiredThreshold: options.requiredThreshold,
           }
         : undefined,
     output: options.outputDir
@@ -89,20 +92,27 @@ function mergeInferConfig(
       : undefined,
   };
 
+  // Helper to merge nested objects filtering out undefined values
+  const mergeSection = (configFileSection: any, cliConfigSection: any) => {
+    if (!cliConfigSection) return configFileSection;
+    if (!configFileSection) return cliConfigSection;
+
+    return {
+      ...configFileSection,
+      ...Object.fromEntries(
+        Object.entries(cliConfigSection).filter(([_, v]) => v !== undefined),
+      ),
+    };
+  };
+
   // Merge with config file (CLI options take precedence)
   const merged: InferConfig = {
-    source: { ...configFile?.source, ...cliConfig.source } as any,
-    sampling: { ...configFile?.sampling, ...cliConfig.sampling } as any,
-    constraints: {
-      ...configFile?.constraints,
-      ...cliConfig.constraints,
-    } as any,
-    keys: { ...configFile?.keys, ...cliConfig.keys } as any,
-    synthesis: {
-      ...configFile?.synthesis,
-      ...cliConfig.synthesis,
-    } as any,
-    output: { ...configFile?.output, ...cliConfig.output } as any,
+    source: mergeSection(configFile?.source, cliConfig.source),
+    sampling: mergeSection(configFile?.sampling, cliConfig.sampling),
+    constraints: mergeSection(configFile?.constraints, cliConfig.constraints),
+    keys: mergeSection(configFile?.keys, cliConfig.keys),
+    synthesis: mergeSection(configFile?.synthesis, cliConfig.synthesis),
+    output: mergeSection(configFile?.output, cliConfig.output),
   };
 
   return merged;
@@ -138,23 +148,29 @@ function validateInferConfig(config: InferConfig): void {
   }
 
   // Set defaults if missing
+  config.sampling = config.sampling || ({} as any);
+  config.sampling.strategy = config.sampling.strategy || "random";
+
   config.output = config.output || { dir: "./output" };
-  config.constraints = config.constraints || {
-    arrayLenPolicy: "percentileClamp",
-    percentiles: [50, 90, 99],
-    clampRange: [1, 99],
-    sizeProxy: "leafFieldCount",
-  };
-  config.keys = config.keys || {
-    idPolicy: "inferred",
-    keyFields: [],
-    enforceUniqueKeys: false,
-    uniquenessScope: "run",
-  };
-  config.synthesis = config.synthesis || {
-    enforceRequired: true,
-    requiredThreshold: 0.95,
-  };
+
+  config.constraints = config.constraints || ({} as any);
+  config.constraints.arrayLenPolicy =
+    config.constraints.arrayLenPolicy || "percentileClamp";
+  config.constraints.percentiles = config.constraints.percentiles || [
+    50, 90, 99,
+  ];
+  config.constraints.clampRange = config.constraints.clampRange || [1, 99];
+  config.constraints.sizeProxy = config.constraints.sizeProxy || "leafFieldCount";
+
+  config.keys = config.keys || ({} as any);
+  config.keys.idPolicy = config.keys.idPolicy || "inferred";
+  config.keys.keyFields = config.keys.keyFields || [];
+  config.keys.enforceUniqueKeys = config.keys.enforceUniqueKeys ?? false;
+  config.keys.uniquenessScope = config.keys.uniquenessScope || "run";
+
+  config.synthesis = config.synthesis || ({} as any);
+  config.synthesis.enforceRequired = config.synthesis.enforceRequired ?? true;
+  config.synthesis.requiredThreshold = config.synthesis.requiredThreshold ?? 0.95;
 }
 
 /**
@@ -496,37 +512,31 @@ export function createInferCommand(): Command {
     .option(
       "--sampling-strategy <strategy>",
       "Sampling strategy: random, first-n, time-windowed",
-      "random",
     )
     .option("--time-field <field>", "Field for time-windowed sampling")
-    .option("--output-dir <path>", "Directory for output artifacts", "./output")
+    .option("--output-dir <path>", "Directory for output artifacts")
     .option(
       "--array-len-policy <policy>",
       "Array length policy: minmax, percentileClamp",
-      "percentileClamp",
     )
     .option(
       "--percentiles <values>",
       "Percentiles to track (comma-separated)",
-      "50,90,99",
     )
     .option(
       "--clamp-range <range>",
       "Percentile clamping range [low,high]",
-      "1,99",
     )
     .option(
       "--id-policy <policy>",
       "ID policy: objectid, uuid, string, number, inferred",
-      "inferred",
     )
     .option(
       "--key-fields <fields>",
       "Additional key fields (comma-separated)",
-      "",
     )
-    .option("--enforce-unique-keys", "Enforce uniqueness for key fields", false)
-    .option("--uniqueness-scope <scope>", "Uniqueness scope: batch, run", "run")
+    .option("--enforce-unique-keys", "Enforce uniqueness for key fields")
+    .option("--uniqueness-scope <scope>", "Uniqueness scope: batch, run")
     .option(
       "--required-threshold <number>",
       "Probability threshold for required fields (default: 0.95)",
@@ -549,7 +559,6 @@ export function createInferCommand(): Command {
     .option(
       "--log-level <level>",
       "Logging verbosity: error, warn, info, debug",
-      "info",
     )
     .action(executeInfer);
 

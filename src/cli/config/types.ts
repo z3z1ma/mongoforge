@@ -93,6 +93,7 @@ export interface TargetConfig {
 export interface GenerationOutputConfig {
   format: "ndjson" | "json";
   path: string; // File path or 'stdout'
+  dir?: string; // Optional output directory
   splitFilesBy?: "size" | "count";
   splitSize?: number;
 }
@@ -172,6 +173,7 @@ export interface GenerateCommandOptions {
   seed?: string;
   outputFormat?: "ndjson" | "json";
   outputPath?: string;
+  outputDir?: string;
   splitFilesBy?: "size" | "count";
   splitSize?: number;
   targetUri?: string;

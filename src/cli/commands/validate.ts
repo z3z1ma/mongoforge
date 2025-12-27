@@ -5,7 +5,8 @@
 
 import { Command } from "commander";
 import { createReadStream } from "fs";
-import { readFile, writeFile } from "fs/promises";
+import { readFile, writeFile, mkdir } from "fs/promises";
+import { dirname } from "path";
 import * as readline from "readline";
 import { validateDocumentStream } from "../../lib/validator/index.js";
 import {
@@ -194,6 +195,8 @@ export function createValidateCommand(): Command {
 
         // Write output
         if (options.outputPath && options.outputPath !== "stdout") {
+          const outputDir = dirname(options.outputPath);
+          await mkdir(outputDir, { recursive: true });
           await writeFile(options.outputPath, output, "utf8");
           console.log(`Validation report written to: ${options.outputPath}`);
         } else {

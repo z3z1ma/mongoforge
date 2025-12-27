@@ -1,7 +1,8 @@
 import { Command } from "commander";
 import { pipeline } from "stream";
 import { promisify } from "util";
-import { createWriteStream } from "fs";
+import { createWriteStream, mkdirSync, existsSync } from "fs";
+import { resolve, dirname } from "path";
 import { createMongoInserter } from "../../lib/emitter/mongo-inserter.js";
 import { createNDJSONWriter } from "../../lib/emitter/ndjson-writer.js";
 import { createJSONWriter } from "../../lib/emitter/json-writer.js";
@@ -31,10 +32,11 @@ function mergeGenerateConfig(
     docCount: options.docCount,
     seed: options.seed,
     output:
-      options.outputFormat || options.outputPath
+      options.outputFormat || options.outputPath || options.outputDir
         ? {
             format: (options.outputFormat as any) || "ndjson",
             path: options.outputPath || "stdout",
+            dir: options.outputDir,
             splitFilesBy: options.splitFilesBy,
             splitSize: options.splitSize,
           }
@@ -97,6 +99,7 @@ export function createGenerateCommand(): Command {
     )
     .option("--seed <seed>", "Seed for deterministic generation")
     .option("--output-path <path>", 'Output path (or "stdout")')
+    .option("--output-dir <path>", "Output directory for generated files")
     .option(
       "--output-format <format>",
       "Output format: ndjson, json, mongo-cdc",
@@ -268,10 +271,24 @@ export function createGenerateCommand(): Command {
             batchSize,
             config.seed,
           );
+
+          let outputPath = config.output.path;
+          if (config.output.dir && outputPath !== "stdout") {
+            outputPath = resolve(config.output.dir, outputPath);
+          }
+
+          if (outputPath !== "stdout") {
+            const dir = dirname(outputPath);
+            if (!existsSync(dir)) {
+              mkdirSync(dir, { recursive: true });
+              logger.info("Created output directory", { dir });
+            }
+          }
+
           const outputStream =
-            config.output.path === "stdout"
+            outputPath === "stdout"
               ? process.stdout
-              : createWriteStream(config.output.path);
+              : createWriteStream(outputPath);
 
           // Create format writer based on output format option
           const formatWriter =
@@ -304,7 +321,13 @@ export function createGenerateCommand(): Command {
                 }
               : {
                   format: config.output.format,
-                  path: config.output.path,
+                  path:
+                    config.output.path === "stdout"
+                      ? "stdout"
+                      : resolve(
+                          config.output.dir || ".",
+                          config.output.path,
+                        ),
                 }),
           },
           metrics: insertionMetrics
