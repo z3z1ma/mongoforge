@@ -80,26 +80,28 @@ function preprocessSchemaRecursive(
     return schema;
   }
 
+  let currentSchema = schema;
+
   // Check for x-dynamic-keys annotation first (highest priority)
-  if (schema["x-dynamic-keys"]) {
-    return expandDynamicKeys(schema, generator, options);
+  if (currentSchema["x-dynamic-keys"]) {
+    currentSchema = expandDynamicKeys(currentSchema, generator, options);
   }
 
   // Optimization: Quick check if we need to recurse at all
   // If no properties, items, or combiners, just return schema
   if (
-    !schema.properties &&
-    !schema.items &&
-    !schema.oneOf &&
-    !schema.anyOf &&
-    !schema.allOf &&
-    !schema.additionalProperties
+    !currentSchema.properties &&
+    !currentSchema.items &&
+    !currentSchema.oneOf &&
+    !currentSchema.anyOf &&
+    !currentSchema.allOf &&
+    !currentSchema.additionalProperties
   ) {
-    return schema;
+    return currentSchema;
   }
 
   // Clone only when we know we might mutate (recurse)
-  const processed = { ...schema };
+  const processed = { ...currentSchema };
 
   // Recursively process nested properties
   if (processed.properties) {

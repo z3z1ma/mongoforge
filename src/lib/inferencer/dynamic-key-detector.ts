@@ -82,12 +82,34 @@ export function countUniqueKeys(
   documents: any[],
   fieldPath: string,
 ): Set<string> {
-  const uniqueKeys = new Set<string>();
+  const objects: any[] = [];
 
   for (const doc of documents) {
     const value = getValueAtPath(doc, fieldPath);
     if (value && typeof value === "object" && !Array.isArray(value)) {
-      for (const key of Object.keys(value)) {
+      objects.push(value);
+    }
+  }
+
+  return countUniqueKeysFromObjects(objects, fieldPath);
+}
+
+/**
+ * Count unique keys from a list of objects
+ *
+ * @param objects - Array of objects to analyze
+ * @param fieldPath - Optional path for logging
+ * @returns Set of unique keys observed
+ */
+export function countUniqueKeysFromObjects(
+  objects: any[],
+  fieldPath?: string,
+): Set<string> {
+  const uniqueKeys = new Set<string>();
+
+  for (const obj of objects) {
+    if (obj && typeof obj === "object" && !Array.isArray(obj)) {
+      for (const key of Object.keys(obj)) {
         uniqueKeys.add(key);
       }
     }
@@ -95,7 +117,7 @@ export function countUniqueKeys(
 
   // Debug logging for fields with many keys
   if (uniqueKeys.size > 50) {
-    logger.debug("Found field with high key count", {
+    logger.debug("Found high key count in objects", {
       fieldPath,
       uniqueKeyCount: uniqueKeys.size,
       exampleKeys: Array.from(uniqueKeys).slice(0, 5),
@@ -123,26 +145,84 @@ function getValueAtPath(obj: any, path: string): any {
 }
 
 /**
- * Collect key counts per document for frequency distribution
+ * Collect key counts from a list of objects
  *
- * @param documents - Array of documents to analyze
- * @param fieldPath - Dot-notation path to the object field
- * @returns Array of key counts (one per document)
+ * @param objects - Array of objects to analyze
+ * @returns Array of key counts
  */
-function collectKeyCountsPerDocument(
-  documents: any[],
-  fieldPath: string,
-): number[] {
+function collectKeyCountsFromObjects(objects: any[]): number[] {
   const counts: number[] = [];
 
-  for (const doc of documents) {
-    const value = getValueAtPath(doc, fieldPath);
-    if (value && typeof value === "object" && !Array.isArray(value)) {
-      counts.push(Object.keys(value).length);
+  for (const obj of objects) {
+    if (obj && typeof obj === "object" && !Array.isArray(obj)) {
+      counts.push(Object.keys(obj).length);
     }
   }
 
   return counts;
+}
+
+/**
+ * Analyze a collection of objects for dynamic key patterns
+ *
+ * @param objects - Array of objects to analyze
+ * @param fieldPath - Dot-notation path for identification and logging
+ * @param config - Detection configuration
+ * @param depth - Current recursion depth
+ * @returns Analysis result
+ */
+export function analyzeObjectsDirectly(
+  objects: any[],
+  fieldPath: string,
+  config: DynamicKeyDetectionConfig,
+  depth: number = 0,
+): ObjectKeysAnalysis {
+  // Count unique keys
+  const uniqueKeys = countUniqueKeysFromObjects(objects, fieldPath);
+
+  // Collect key counts per object
+  const keyCounts = collectKeyCountsFromObjects(objects);
+
+  // Run pattern detection
+  const keys = Array.from(uniqueKeys);
+  const detection = detectDynamicKeys(keys, config);
+
+  if (!detection.detected) {
+    return {
+      fieldPath,
+      uniqueKeys,
+      keyCountsPerDocument: keyCounts,
+      isDynamic: false,
+      detection,
+    };
+  }
+
+  // Analyze value types for detected dynamic keys
+  const valueSchema = analyzeValueTypes(
+    objects,
+    "", // No path needed as we pass objects directly
+    uniqueKeys,
+    config,
+    depth,
+  );
+
+  // Build complete metadata
+  const metadata = buildDynamicKeyMetadata(
+    detection,
+    keyCounts,
+    objects.length,
+    valueSchema,
+  );
+
+  return {
+    fieldPath,
+    uniqueKeys,
+    keyCountsPerDocument: keyCounts,
+    isDynamic: true,
+    detection,
+    metadata,
+    valueSchema,
+  };
 }
 
 /**
@@ -152,56 +232,70 @@ function collectKeyCountsPerDocument(
  * type distribution and generate a schema. Calculates type probabilities based on
  * observation frequency and creates sample schemas for each type.
  *
- * @param documents - Array of documents to analyze
+ * @param documents - Array of documents to analyze (or objects if fieldPath is "")
  * @param fieldPath - Dot-notation path to the object field
  * @param keys - Set of dynamic keys to analyze
+ * @param config - Optional configuration for recursive detection
+ * @param depth - Current recursion depth
  * @returns Value schema describing types, probabilities, and sample schemas
- *
- * @example
- * ```typescript
- * const docs = [
- *   { data: { uuid1: 'value', uuid2: 123 } },
- *   { data: { uuid3: 'another', uuid4: 456 } }
- * ];
- * const keys = new Set(['uuid1', 'uuid2', 'uuid3', 'uuid4']);
- * const schema = analyzeValueTypes(docs, 'data', keys);
- * // Returns: { types: ['string', 'integer'], typeProbabilities: [0.5, 0.5], ... }
- * ```
  */
 export function analyzeValueTypes(
   documents: any[],
   fieldPath: string,
   keys: Set<string>,
+  config?: DynamicKeyDetectionConfig,
+  depth: number = 0,
 ): DynamicKeyValueSchema {
   const typeObservations = new Map<string, ValueTypeObservation>();
+  const allValuesPerType = new Map<string, any[]>();
 
   // Collect all value types across all keys and documents
   for (const doc of documents) {
-    const obj = getValueAtPath(doc, fieldPath);
+    const obj = fieldPath === "" ? doc : getValueAtPath(doc, fieldPath);
     if (!obj || typeof obj !== "object" || Array.isArray(obj)) {
       continue;
     }
 
-    for (const key of keys) {
-      if (key in obj) {
-        const value = obj[key];
-        const type = getValueType(value);
-
-        const observation = typeObservations.get(type) || {
-          type,
-          count: 0,
-          sampleSchemas: [],
-        };
-
-        observation.count++;
-
-        // Store sample schemas (max 3 per type)
-        if (observation.sampleSchemas.length < 3) {
-          observation.sampleSchemas.push(inferValueSchema(value, type));
+    // Optimization: if obj has fewer keys than 'keys' set, iterate over obj
+    const objKeys = Object.keys(obj);
+    if (objKeys.length < keys.size) {
+      for (const key of objKeys) {
+        if (keys.has(key)) {
+          const value = obj[key];
+          processValue(value, typeObservations, allValuesPerType);
         }
-
-        typeObservations.set(type, observation);
       }
+    } else {
+      for (const key of keys) {
+        if (key in obj) {
+          const value = obj[key];
+          processValue(value, typeObservations, allValuesPerType);
+        }
+      }
+    }
+  }
+
+  // Helper to process a single value
+  function processValue(
+    value: any,
+    observations: Map<string, ValueTypeObservation>,
+    valuesMap: Map<string, any[]>,
+  ) {
+    const type = getValueType(value);
+    const observation = observations.get(type) || {
+      type,
+      count: 0,
+      sampleSchemas: [],
+    };
+
+    observation.count++;
+    observations.set(type, observation);
+
+    // Collect values for recursive analysis if it's an object
+    if (type === "object") {
+      const values = valuesMap.get(type) || [];
+      values.push(value);
+      valuesMap.set(type, values);
     }
   }
 
@@ -224,8 +318,39 @@ export function analyzeValueTypes(
     types.push(obs.type);
     typeProbabilities.push(obs.count / totalObservations);
 
-    // Use the first sample schema as representative
-    schemas.push(obs.sampleSchemas[0] || { type: obs.type });
+    let schema: any;
+
+    // Recursive detection for nested objects
+    if (obs.type === "object" && config && depth < 5) {
+      const objects = allValuesPerType.get("object") || [];
+      const nestedAnalysis = analyzeObjectsDirectly(
+        objects,
+        `${fieldPath ? fieldPath + "." : ""}*`,
+        config,
+        depth + 1,
+      );
+
+      if (nestedAnalysis.isDynamic && nestedAnalysis.metadata) {
+        schema = {
+          type: "object",
+          "x-dynamic-keys": {
+            enabled: true,
+            metadata: nestedAnalysis.metadata,
+            valueSchema: nestedAnalysis.valueSchema,
+          },
+        };
+      }
+    }
+
+    // Fallback to standard inference if not dynamic or not an object
+    if (!schema) {
+      // Collect some samples for standard inference
+      const samples = allValuesPerType.get(obs.type) || [];
+      const representativeValue = samples[0];
+      schema = inferValueSchema(representativeValue, obs.type);
+    }
+
+    schemas.push(schema);
   }
 
   const isUniformType = types.length === 1;
@@ -257,13 +382,21 @@ function getValueType(value: any): string {
 }
 
 /**
- * Infer a simple JSON Schema for a value
+ * Infer a simple JSON Schema for a value (recursive)
  */
-function inferValueSchema(value: any, type: string): any {
+function inferValueSchema(value: any, type: string, depth: number = 0): any {
+  // Prevent infinite recursion
+  if (depth > 10) {
+    return { type };
+  }
+
   const schema: any = { type };
 
   if (type === "string" && typeof value === "string") {
-    // Add basic string constraints
+    // Add enum for small strings to preserve fidelity
+    if (value.length < 100) {
+      schema.enum = [value];
+    }
     schema.minLength = value.length;
     schema.maxLength = value.length;
   } else if (type === "number" || type === "integer") {
@@ -276,14 +409,14 @@ function inferValueSchema(value: any, type: string): any {
     // Infer item type from first element
     if (value.length > 0) {
       const itemType = getValueType(value[0]);
-      schema.items = { type: itemType };
+      schema.items = inferValueSchema(value[0], itemType, depth + 1);
     }
   } else if (type === "object" && value && typeof value === "object") {
-    // Simple object schema
+    // Recursive object schema
     const properties: any = {};
     for (const key of Object.keys(value)) {
       const propType = getValueType(value[key]);
-      properties[key] = { type: propType };
+      properties[key] = inferValueSchema(value[key], propType, depth + 1);
     }
     schema.properties = properties;
   }
@@ -438,20 +571,22 @@ export function analyzeObjectKeys(
     };
   }
 
-  // Count unique keys across all documents
-  const uniqueKeys = countUniqueKeys(documents, fieldPath);
-
-  // Collect key counts per document for frequency distribution
-  const keyCountsPerDocument = collectKeyCountsPerDocument(
-    documents,
-    fieldPath,
-  );
+  // Collect objects for analysis
+  const objects: any[] = [];
+  for (const doc of documents) {
+    const value = getValueAtPath(doc, fieldPath);
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      objects.push(value);
+    }
+  }
 
   // If forced dynamic, skip pattern detection
   if (override === "dynamic") {
     logger.debug("Field path forced as dynamic keys", { fieldPath });
 
-    const valueSchema = analyzeValueTypes(documents, fieldPath, uniqueKeys);
+    const uniqueKeys = countUniqueKeysFromObjects(objects, fieldPath);
+    const keyCounts = collectKeyCountsFromObjects(objects);
+    const valueSchema = analyzeValueTypes(objects, "", uniqueKeys, config, 0);
 
     // Create a synthetic detection result
     const detection: DetectionResult = {
@@ -467,7 +602,7 @@ export function analyzeObjectKeys(
 
     const metadata = buildDynamicKeyMetadata(
       detection,
-      keyCountsPerDocument,
+      keyCounts,
       documents.length,
       valueSchema,
     );
@@ -475,7 +610,7 @@ export function analyzeObjectKeys(
     return {
       fieldPath,
       uniqueKeys,
-      keyCountsPerDocument,
+      keyCountsPerDocument: keyCounts,
       isDynamic: true,
       detection,
       metadata,
@@ -483,53 +618,17 @@ export function analyzeObjectKeys(
     };
   }
 
-  // Run pattern detection
-  const keys = Array.from(uniqueKeys);
-  const detection = detectDynamicKeys(keys, config);
+  // Delegate to core analysis logic
+  const analysis = analyzeObjectsDirectly(objects, fieldPath, config, 0);
 
-  logger.debug("Dynamic key detection result", {
-    fieldPath,
-    detected: detection.detected,
-    pattern: detection.pattern,
-    confidence: detection.confidence,
-    totalKeys: detection.totalKeys,
-  });
-
-  if (!detection.detected) {
-    return {
+  if (analysis.isDynamic) {
+    logger.info("Dynamic keys detected", {
       fieldPath,
-      uniqueKeys,
-      keyCountsPerDocument,
-      isDynamic: false,
-      detection,
-    };
+      pattern: analysis.metadata?.pattern,
+      confidence: analysis.metadata?.confidence,
+      uniqueKeys: analysis.metadata?.uniqueKeysObserved,
+    });
   }
 
-  // Analyze value types for detected dynamic keys
-  const valueSchema = analyzeValueTypes(documents, fieldPath, uniqueKeys);
-
-  // Build complete metadata
-  const metadata = buildDynamicKeyMetadata(
-    detection,
-    keyCountsPerDocument,
-    documents.length,
-    valueSchema,
-  );
-
-  logger.info("Dynamic keys detected", {
-    fieldPath,
-    pattern: metadata.pattern,
-    confidence: metadata.confidence,
-    uniqueKeys: metadata.uniqueKeysObserved,
-  });
-
-  return {
-    fieldPath,
-    uniqueKeys,
-    keyCountsPerDocument,
-    isDynamic: true,
-    detection,
-    metadata,
-    valueSchema,
-  };
+  return analysis;
 }

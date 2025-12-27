@@ -48,8 +48,21 @@ function detectDynamicKeyFields(
   const analyses = new Map<string, ObjectKeysAnalysis>();
   const fieldPaths = extractFieldPaths(schema);
 
+  // Sort paths by depth (shallowest first) so we can skip nested paths of dynamic fields
+  const sortedPaths = Array.from(fieldPaths.entries()).sort(
+    (a, b) => a[0].split(".").length - b[0].split(".").length,
+  );
+
+  const dynamicPaths: string[] = [];
+
   // Find object-type fields that might have dynamic keys
-  for (const [path, field] of fieldPaths) {
+  for (const [path, field] of sortedPaths) {
+    // Skip if path is nested under an already detected dynamic field
+    // (Nested dynamic keys are handled recursively within analyzeObjectKeys)
+    if (dynamicPaths.some((dp) => path === dp || path.startsWith(dp + "."))) {
+      continue;
+    }
+
     // Check if field is an object type
     const hasObjectType = Array.isArray(field.type)
       ? field.type.includes("Document")
@@ -64,6 +77,9 @@ function detectDynamicKeyFields(
 
     if (analysis.isDynamic || analysis.detection) {
       analyses.set(path, analysis);
+      if (analysis.isDynamic) {
+        dynamicPaths.push(path);
+      }
     }
   }
 
