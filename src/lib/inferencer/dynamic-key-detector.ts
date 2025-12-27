@@ -95,6 +95,15 @@ export function countUniqueKeys(
     }
   }
 
+  // Debug logging for fields with many keys
+  if (uniqueKeys.size > 50) {
+    logger.debug('Found field with high key count', {
+      fieldPath,
+      uniqueKeyCount: uniqueKeys.size,
+      exampleKeys: Array.from(uniqueKeys).slice(0, 5),
+    });
+  }
+
   return uniqueKeys;
 }
 

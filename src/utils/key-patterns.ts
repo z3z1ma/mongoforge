@@ -215,86 +215,100 @@ export function getConfidenceLevel(confidence: number): ConfidenceLevel {
 /**
  * Detect dynamic keys in a set of object keys
  *
+ * Uses OR-based detection: detects if EITHER pattern match is strong OR key count is high.
+ * This prevents false negatives from requiring both conditions.
+ *
+ * Detection paths:
+ * 1. Pattern-based: ≥minPatternMatch (default 80%) of keys match a pattern (regardless of count)
+ * 2. Count-based: Key count ≥ threshold (default 50) (regardless of pattern)
+ * 3. Hybrid: Both conditions met provides highest confidence
+ *
  * @param keys - Array of key strings from object properties
  * @param config - Dynamic key detection configuration
  * @returns Detection result with pattern and confidence information
  *
  * @example
+ * // Pattern-based detection (12 keys, 100% UUID match)
  * const keys = [
  *   'a0b1c2d3-e4f5-6789-abcd-ef0123456789',
- *   'b1c2d3e4-f5a6-789b-cdef-0123456789ab'
+ *   'b1c2d3e4-f5a6-789b-cdef-0123456789ab',
+ *   // ... 10 more UUIDs
  * ];
  * const result = detectDynamicKeys(keys, config);
- * // Returns: { detected: true, pattern: 'UUID', confidence: 0.95, ... }
+ * // Returns: { detected: true, pattern: 'UUID', confidence: 0.85, ... }
+ *
+ * @example
+ * // Count-based detection (150 keys, no pattern match)
+ * const keys = ['johns-post', 'marys-article', ...]; // 150 unique user slugs
+ * const result = detectDynamicKeys(keys, config);
+ * // Returns: { detected: true, pattern: null, confidence: 0.65, ... }
  */
 export function detectDynamicKeys(
   keys: string[],
   config: DynamicKeyDetectionConfig
 ): DetectionResult {
-  // Stage 1: Count threshold check
-  if (keys.length < config.threshold) {
-    return {
-      detected: false,
-      pattern: null,
-      confidence: 0,
-      confidenceLevel: 'low',
-      totalKeys: keys.length,
-      matchCount: 0,
-      matchRatio: 0,
-      exampleKeys: keys.slice(0, 10),
-    };
-  }
+  const totalKeys = keys.length;
 
-  // Stage 2: Compile and test patterns
+  // Compile and test patterns
   const patterns = compilePatterns(config);
   const bestMatch = findBestPattern(keys, patterns);
 
-  // No pattern matched
-  if (!bestMatch) {
+  // Calculate metrics
+  const matchRatio = bestMatch?.matchRatio || 0;
+  const matchCount = bestMatch?.matchCount || 0;
+  const pattern = bestMatch?.pattern || null;
+
+  // OR-based detection conditions
+  const meetsCountThreshold = totalKeys >= config.threshold;
+  const meetsPatternThreshold = matchRatio >= config.minPatternMatch;
+
+  // Detect if EITHER condition is met
+  const shouldDetect = meetsCountThreshold || meetsPatternThreshold;
+
+  if (!shouldDetect) {
     return {
       detected: false,
-      pattern: null,
-      confidence: 0,
-      confidenceLevel: 'low',
-      totalKeys: keys.length,
-      matchCount: 0,
-      matchRatio: 0,
+      pattern,
+      confidence: matchRatio,
+      confidenceLevel: getConfidenceLevel(matchRatio),
+      totalKeys,
+      matchCount,
+      matchRatio,
       exampleKeys: keys.slice(0, 10),
     };
   }
 
-  // Stage 3: Pattern match threshold check
-  if (bestMatch.matchRatio < config.minPatternMatch) {
-    return {
-      detected: false,
-      pattern: bestMatch.pattern,
-      confidence: bestMatch.matchRatio,
-      confidenceLevel: getConfidenceLevel(bestMatch.matchRatio),
-      totalKeys: keys.length,
-      matchCount: bestMatch.matchCount,
-      matchRatio: bestMatch.matchRatio,
-      exampleKeys: keys.slice(0, 10),
-    };
+  // Compute confidence score based on which conditions were met
+  let confidence: number;
+
+  if (meetsPatternThreshold && meetsCountThreshold) {
+    // Hybrid: Both conditions met - highest confidence
+    confidence = computeConfidenceScore(matchRatio, totalKeys, config.threshold);
+  } else if (meetsPatternThreshold) {
+    // Pattern-based only: Use pattern match ratio as base, slight boost for pattern clarity
+    confidence = Math.min(1.0, matchRatio + 0.05);
+  } else {
+    // Count-based only: Base confidence from high cardinality
+    // Start at confidenceThreshold (e.g., 0.7) and scale up to 0.9 based on exceedance
+    const exceedanceRatio = totalKeys / config.threshold;
+    const baseConfidence = config.confidenceThreshold;
+    const maxConfidence = 0.9;
+    const scaleFactor = Math.log10(exceedanceRatio) * 0.2;
+    confidence = Math.min(maxConfidence, baseConfidence + scaleFactor);
   }
 
-  // Stage 4: Compute confidence score
-  const confidence = computeConfidenceScore(
-    bestMatch.matchRatio,
-    keys.length,
-    config.threshold
-  );
-
-  // Stage 5: Confidence threshold check
+  // Final confidence threshold check
   const detected = confidence >= config.confidenceThreshold;
 
   return {
     detected,
-    pattern: bestMatch.pattern,
+    pattern,
+    customPattern: !pattern ? 'HIGH_CARDINALITY' : undefined,
     confidence,
     confidenceLevel: getConfidenceLevel(confidence),
-    totalKeys: keys.length,
-    matchCount: bestMatch.matchCount,
-    matchRatio: bestMatch.matchRatio,
-    exampleKeys: bestMatch.matchedKeys.slice(0, 10),
+    totalKeys,
+    matchCount,
+    matchRatio,
+    exampleKeys: bestMatch?.matchedKeys.slice(0, 10) || keys.slice(0, 10),
   };
 }

@@ -298,7 +298,8 @@ describe('Key Pattern Detection Utilities', () => {
       expect(result.exampleKeys.length).toBeGreaterThan(0);
     });
 
-    it('should not detect when below threshold', () => {
+    it('should detect via pattern-based path even when below count threshold', () => {
+      // Pattern-based detection: 100% UUID match, but only 2 keys (below default threshold of 50)
       const keys = [
         '550e8400-e29b-41d4-a716-446655440001',
         '550e8400-e29b-41d4-a716-446655440002',
@@ -306,12 +307,16 @@ describe('Key Pattern Detection Utilities', () => {
 
       const result = detectDynamicKeys(keys, DEFAULT_DYNAMIC_KEY_CONFIG);
 
-      expect(result.detected).toBe(false);
-      expect(result.confidence).toBe(0);
+      // Should detect via pattern-based path (100% match meets minPatternMatch threshold)
+      expect(result.detected).toBe(true);
+      expect(result.pattern).toBe('UUID');
+      expect(result.matchRatio).toBe(1.0);
       expect(result.totalKeys).toBe(2);
+      expect(result.confidence).toBeGreaterThan(0.7); // Pattern-based confidence
     });
 
-    it('should not detect when match ratio is below minPatternMatch', () => {
+    it('should detect via count-based path when pattern match is weak but count is high', () => {
+      // Count-based detection: 60 keys (meets threshold), but only 66.7% pattern match
       const keys = Array.from({ length: 60 }, (_, i) =>
         i < 40
           ? `550e8400-e29b-41d4-a716-4466554400${String(i).padStart(2, '0')}`
@@ -320,9 +325,13 @@ describe('Key Pattern Detection Utilities', () => {
 
       const result = detectDynamicKeys(keys, DEFAULT_DYNAMIC_KEY_CONFIG);
 
-      // 40/60 = 66.7% match, below default minPatternMatch (0.8)
-      expect(result.detected).toBe(false);
+      // Should detect via count-based path (60 keys ≥ threshold of 50)
+      // Pattern match is 40/60 = 66.7%, below minPatternMatch (0.8), but count path triggers
+      expect(result.detected).toBe(true);
       expect(result.matchRatio).toBeCloseTo(0.667, 2);
+      expect(result.totalKeys).toBe(60);
+      expect(result.pattern).toBe('UUID'); // Best pattern found
+      expect(result.confidence).toBeGreaterThan(0.6); // Count-based confidence
     });
 
     it('should detect MongoDB ObjectId pattern', () => {
@@ -382,13 +391,34 @@ describe('Key Pattern Detection Utilities', () => {
       expect(result.matchRatio).toBeCloseTo(0.9167, 2);
     });
 
-    it('should not detect regular object keys', () => {
+    it('should detect regular object keys via count-based path if count is high', () => {
+      // Count-based detection: 60 generic field names (no pattern match)
       const keys = Array.from({ length: 60 }, (_, i) => `field${i}`);
 
       const result = detectDynamicKeys(keys, DEFAULT_DYNAMIC_KEY_CONFIG);
 
+      // Should detect via count-based path (60 ≥ threshold of 50)
+      expect(result.detected).toBe(true);
+      expect(result.pattern).toBe(null); // No pattern matched
+      expect(result.customPattern).toBe('HIGH_CARDINALITY');
+      expect(result.matchRatio).toBe(0); // No pattern match
+      expect(result.confidence).toBeGreaterThan(0.6); // Count-based confidence
+    });
+
+    it('should not detect when both count and pattern thresholds fail', () => {
+      // Low count (below threshold) AND weak pattern match (below minPatternMatch)
+      const keys = [
+        '550e8400-e29b-41d4-a716-446655440001', // UUID
+        'not-a-uuid',
+        'another-regular-key',
+      ];
+
+      const result = detectDynamicKeys(keys, DEFAULT_DYNAMIC_KEY_CONFIG);
+
+      // Should NOT detect: only 3 keys (< 50 threshold) AND 33% pattern match (< 80% minPatternMatch)
       expect(result.detected).toBe(false);
-      expect(result.pattern).toBe(null);
+      expect(result.totalKeys).toBe(3);
+      expect(result.matchRatio).toBeCloseTo(0.333, 2);
     });
 
     it('should respect custom threshold', () => {

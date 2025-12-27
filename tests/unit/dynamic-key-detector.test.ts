@@ -447,7 +447,7 @@ describe('Dynamic Key Detector', () => {
       expect(analysis.isDynamic).toBe(true);
     });
 
-    it('should not detect when pattern match ratio is below threshold', () => {
+    it('should detect via count-based path even when pattern match ratio is low', () => {
       const documents = [
         {
           data: {
@@ -466,9 +466,12 @@ describe('Dynamic Key Detector', () => {
 
       const analysis = analyzeObjectKeys(documents, 'data', lowThresholdConfig);
 
-      // 3/10 = 30% match ratio, below 0.8 threshold
+      // 10 keys meets count threshold (5), even though pattern match is only 3/10 = 30% (below 0.8)
       expect(analysis.uniqueKeys.size).toBe(10);
-      expect(analysis.isDynamic).toBe(false);
+      expect(analysis.isDynamic).toBe(true); // Detected via count-based path
+      expect(analysis.detection?.pattern).toBe('UUID'); // Best pattern found
+      expect(analysis.detection?.matchRatio).toBeCloseTo(0.3, 1);
+      expect(analysis.detection?.confidence).toBeGreaterThanOrEqual(0.7); // Count-based confidence
     });
 
     it('should handle nested field paths', () => {
