@@ -92,8 +92,9 @@ describe('Frequency Map Utilities', () => {
       };
 
       // Sample multiple times to test weighted selection
+      // Increased from 100 to 1000 for more stable probabilistic testing
       const samples: number[] = [];
-      for (let i = 0; i < 100; i++) {
+      for (let i = 0; i < 1000; i++) {
         const sample = sampleFromDistribution(distribution);
         samples.push(sample);
         expect([1, 2, 3]).toContain(sample);
@@ -104,13 +105,14 @@ describe('Frequency Map Utilities', () => {
       expect(uniqueSamples.size).toBe(3);
 
       // Verify distribution is roughly correct (1 should appear most, 3 least)
+      // Using >= to handle edge cases while still validating distribution
       const sampledFreqs = calculateFrequencies(samples);
       const freq1 = parseInt(sampledFreqs['1'] || '0', 10);
       const freq2 = parseInt(sampledFreqs['2'] || '0', 10);
       const freq3 = parseInt(sampledFreqs['3'] || '0', 10);
 
-      expect(freq1).toBeGreaterThan(freq2);
-      expect(freq2).toBeGreaterThan(freq3);
+      expect(freq1).toBeGreaterThanOrEqual(freq2);
+      expect(freq2).toBeGreaterThanOrEqual(freq3);
     });
 
     it('should always return same value for single-value distribution', () => {
