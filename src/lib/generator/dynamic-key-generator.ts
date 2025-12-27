@@ -218,8 +218,25 @@ export class DynamicKeyGenerator {
    * Falls back to alphanumeric if pattern is not provided
    */
   private generateCustomKey(customPattern?: string): string {
-    // TODO: Future enhancement - parse customPattern and generate matching string
-    // For now, use alphanumeric with random length between 8-32
+    if (customPattern) {
+      try {
+        // Use json-schema-faker to generate a string matching the regex pattern
+        return jsf.generate({
+          type: "string",
+          pattern: customPattern,
+        }) as string;
+      } catch (error) {
+        logger.warn(
+          "Failed to generate key from custom pattern, falling back to alphanumeric",
+          {
+            customPattern,
+            error: error instanceof Error ? error.message : String(error),
+          },
+        );
+      }
+    }
+
+    // Default: use alphanumeric with random length between 8-32
     const length = faker.number.int({ min: 8, max: 32 });
     return faker.string.alphanumeric(length);
   }

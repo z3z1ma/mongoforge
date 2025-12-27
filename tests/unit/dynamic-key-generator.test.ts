@@ -57,7 +57,13 @@ describe('Dynamic Key Generator', () => {
         expect(key).toMatch(/^(user|doc|item|order)_[a-z0-9]{16}$/i);
       });
 
-      it('should generate custom pattern key', () => {
+      it('should generate custom pattern key with regex', () => {
+        const key = generator.generateKey('CUSTOM', '^KEY-[0-9]{5}$');
+
+        expect(key).toMatch(/^KEY-[0-9]{5}$/);
+      });
+
+      it('should fallback to alphanumeric for CUSTOM without pattern', () => {
         const key = generator.generateKey('CUSTOM');
 
         expect(key).toMatch(/^[a-z0-9]+$/i);
