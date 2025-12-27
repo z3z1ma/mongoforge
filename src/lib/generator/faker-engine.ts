@@ -226,6 +226,7 @@ export async function generateMany(
   } = {},
 ): Promise<any[]> {
   const documents: any[] = [];
+  const generator = new DynamicKeyGenerator();
 
   for (let i = 0; i < count; i++) {
     // Yield event loop periodically to prevent starvation
@@ -235,7 +236,11 @@ export async function generateMany(
 
     // Use seed + i for deterministic but varied generation
     const docSeed = options.seed !== undefined ? options.seed + i : undefined;
-    const doc = generate(schema, { ...options, seed: docSeed });
+    const doc = generate(schema, {
+      ...options,
+      seed: docSeed,
+      dynamicKeyGenerator: generator,
+    });
     documents.push(doc);
   }
 
