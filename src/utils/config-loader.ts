@@ -60,7 +60,8 @@ export function loadDynamicKeyConfig(
     logger.info('Dynamic key detection disabled via --no-dynamic-keys flag');
     return {
       ...DEFAULT_DYNAMIC_KEY_CONFIG,
-      threshold: Number.MAX_SAFE_INTEGER, // Effectively disable detection
+      threshold: Number.MAX_SAFE_INTEGER, // Effectively disable count-based detection
+      minPatternMatch: 1.1, // Impossible to reach (ratios are 0-1), disables pattern-based detection
     };
   }
 
@@ -70,6 +71,7 @@ export function loadDynamicKeyConfig(
     return {
       ...DEFAULT_DYNAMIC_KEY_CONFIG,
       threshold: Number.MAX_SAFE_INTEGER,
+      minPatternMatch: 1.1, // Impossible to reach, disables pattern-based detection
     };
   }
 
