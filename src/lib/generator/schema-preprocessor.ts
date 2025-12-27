@@ -340,9 +340,13 @@ export function extractDynamicKeyMetadata(
  * Count total dynamic keys across schema (including nested)
  *
  * @param schema - JSON Schema
+ * @param depth - Current recursion depth
  * @returns Count of schemas with dynamic keys
  */
-export function countDynamicKeySchemas(schema: any): number {
+export function countDynamicKeySchemas(schema: any, depth = 0): number {
+  // Prevent infinite recursion
+  if (depth > 15) return 0;
+
   if (!schema || typeof schema !== "object") {
     return 0;
   }
@@ -357,7 +361,7 @@ export function countDynamicKeySchemas(schema: any): number {
   // Check nested properties
   if (schema.properties) {
     for (const propSchema of Object.values(schema.properties)) {
-      count += countDynamicKeySchemas(propSchema);
+      count += countDynamicKeySchemas(propSchema, depth + 1);
     }
   }
 
@@ -365,10 +369,10 @@ export function countDynamicKeySchemas(schema: any): number {
   if (schema.items) {
     if (Array.isArray(schema.items)) {
       for (const item of schema.items) {
-        count += countDynamicKeySchemas(item);
+        count += countDynamicKeySchemas(item, depth + 1);
       }
     } else {
-      count += countDynamicKeySchemas(schema.items);
+      count += countDynamicKeySchemas(schema.items, depth + 1);
     }
   }
 
@@ -377,14 +381,14 @@ export function countDynamicKeySchemas(schema: any): number {
     schema.additionalProperties &&
     typeof schema.additionalProperties === "object"
   ) {
-    count += countDynamicKeySchemas(schema.additionalProperties);
+    count += countDynamicKeySchemas(schema.additionalProperties, depth + 1);
   }
 
   // Check combiners
   for (const combiner of ["oneOf", "anyOf", "allOf"]) {
     if (Array.isArray(schema[combiner])) {
       for (const subschema of schema[combiner]) {
-        count += countDynamicKeySchemas(subschema);
+        count += countDynamicKeySchemas(subschema, depth + 1);
       }
     }
   }
