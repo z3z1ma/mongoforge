@@ -99,7 +99,9 @@ describe('Enum Generation - Integration', () => {
         if (doc.rank === 1) count1++;
     }
 
-    expect(count1).toBeGreaterThan(40);
-    expect(count1).toBeLessThan(60);
+    // 100 samples, p=0.5. Mean=50, SD=5.
+    // 3 sigma range is 35-65.
+    expect(count1).toBeGreaterThanOrEqual(35);
+    expect(count1).toBeLessThanOrEqual(65);
   });
 });
