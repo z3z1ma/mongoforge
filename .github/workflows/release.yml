@@ -34,6 +34,7 @@ jobs:
         run: bun install
 
       - name: Build binary
+        shell: bash
         run: |
           bun build src/cli/index.ts \
             --compile \
