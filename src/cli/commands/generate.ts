@@ -163,6 +163,8 @@ export function createGenerateCommand(): Command {
         );
 
         let insertionMetrics = null;
+        let generationDurationMs = 0;
+        const generationStart = Date.now();
 
         // CDC Simulation Mode
         if (
@@ -238,6 +240,7 @@ export function createGenerateCommand(): Command {
           });
 
           insertionMetrics = await cdcInserter.bulkWrite(cdcStream);
+          generationDurationMs = insertionMetrics.durationMs;
         }
         // MongoDB Direct Insertion Mode
         else if (
@@ -262,6 +265,7 @@ export function createGenerateCommand(): Command {
           });
 
           insertionMetrics = await inserter.bulkInsert(documentStream);
+          generationDurationMs = insertionMetrics.durationMs;
         }
         // File/Stdout Output Mode
         else {
@@ -297,6 +301,7 @@ export function createGenerateCommand(): Command {
               : createNDJSONWriter();
 
           await pipelineAsync(documentStream, formatWriter, outputStream);
+          generationDurationMs = Date.now() - generationStart;
         }
 
         // Prepare and output result
@@ -327,19 +332,22 @@ export function createGenerateCommand(): Command {
                       : resolve(config.output.dir || ".", config.output.path),
                 }),
           },
-          metrics: insertionMetrics
-            ? {
-                durationMs: insertionMetrics.durationMs,
-                throughput: Math.round(
-                  docCount / (insertionMetrics.durationMs / 1000),
-                ),
-                memoryPeakMb: process.memoryUsage().heapUsed / 1024 / 1024,
-              }
-            : null,
+          metrics: {
+            durationMs: generationDurationMs,
+            throughput: Math.round(
+              docCount / (generationDurationMs / 1000 || 1),
+            ),
+            memoryPeakMb: process.memoryUsage().heapUsed / 1024 / 1024,
+          },
         };
 
-        console.log(JSON.stringify(result, null, 2));
-        process.exit(0);
+        // Output to stderr to avoid breaking NDJSON/JSON output on stdout
+        logger.info("Generation complete", result);
+
+        // If output is not stdout, we can also print to stdout
+        if (config.output.path !== "stdout") {
+          console.log(JSON.stringify(result, null, 2));
+        }
       } catch (error) {
         logger.error("Generate command error", error);
         process.exit(1);

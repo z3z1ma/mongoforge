@@ -51,30 +51,129 @@ export function initializeFaker(seed?: string | number): void {
 }
 
 /**
- * Preprocess schema to apply frequency distribution-based array lengths
- * and other field-level extensions (like _id format overrides)
- * Walks through schema and replaces minItems/maxItems with sampled values from x-array-length-distribution
+ * Precompute which branches of the schema have extensions that need per-document processing
  */
-function preprocessSchemaExtensions(
-  schema: any,
-  fieldName?: string,
-  depth = 0,
-): any {
-  // Prevent infinite recursion, but allow deep valid ones
+const HAS_EXTENSIONS = Symbol("has_extensions");
+
+/**
+ * Perform one-time preparation of the schema for faster generation
+ */
+export function prepareSchema(schema: any): any {
+  if (!schema || typeof schema !== "object") return schema;
+
+  let hasExtensions = false;
+
+  // 1. One-time _id format override
+  if (
+    schema.properties?._id &&
+    schema.properties._id.type === "string" &&
+    !schema.properties._id.format
+  ) {
+    schema.properties._id.format = "objectid";
+    logger.debug("Applied one-time objectid format override to _id field");
+  }
+
+  // 2. Prune "undefined" types - these are non-standard and cause massive performance issues
+  // in json-schema-faker when objects have thousands of them.
+  if (schema.properties) {
+    const propertyEntries = Object.entries(schema.properties);
+    const initialCount = propertyEntries.length;
+    const prunedProperties: string[] = [];
+
+    for (const [key, value] of propertyEntries) {
+      if ((value as any).type === "undefined") {
+        delete schema.properties[key];
+        prunedProperties.push(key);
+      }
+    }
+
+    if (prunedProperties.length > 0) {
+      hasExtensions = true; // Mark as modified
+      logger.warn(
+        `Pruned ${prunedProperties.length}/${initialCount} properties with type "undefined"`,
+        {
+          path: schema.title || "anonymous object",
+        },
+      );
+
+      // Also remove from required array if present
+      if (Array.isArray(schema.required)) {
+        schema.required = schema.required.filter(
+          (req: string) => !prunedProperties.includes(req),
+        );
+      }
+    }
+  }
+
+  // 3. Check for distributions/extensions at current level
+  if (
+    schema["x-array-length-distribution"] ||
+    schema["x-gen"]?.enum?.distribution ||
+    schema["x-dynamic-keys"]
+  ) {
+    hasExtensions = true;
+  }
+
+  // 4. Recursively prepare nested properties
+  if (schema.properties) {
+    for (const value of Object.values(schema.properties)) {
+      const preparedChild = prepareSchema(value);
+      if (preparedChild[HAS_EXTENSIONS]) {
+        hasExtensions = true;
+      }
+    }
+  }
+
+  // 5. Recursively prepare array items
+  if (schema.items) {
+    if (Array.isArray(schema.items)) {
+      for (const item of schema.items) {
+        if (prepareSchema(item)[HAS_EXTENSIONS]) {
+          hasExtensions = true;
+        }
+      }
+    } else {
+      if (prepareSchema(schema.items)[HAS_EXTENSIONS]) {
+        hasExtensions = true;
+      }
+    }
+  }
+
+  // Mark the schema with the precomputed flag
+  try {
+    Object.defineProperty(schema, HAS_EXTENSIONS, {
+      value: hasExtensions,
+      enumerable: false,
+      configurable: true,
+    });
+  } catch (e) {
+    // Fallback if object is not extensible
+  }
+
+  return schema;
+}
+
+/**
+ * Preprocess schema to apply frequency distribution-based array lengths
+ * and other field-level extensions
+ * Walks through schema and replaces minItems/maxItems with sampled values
+ */
+function preprocessSchemaExtensions(schema: any, depth = 0): any {
+  // Prevent infinite recursion
   if (depth > 100) return schema;
 
   if (!schema || typeof schema !== "object") {
     return schema;
   }
 
-  // Clone to avoid mutating original
-  let processed = { ...schema };
-
-  // Optimization: Handle _id fields specifically to ensure they look like keys
-  if (fieldName === "_id" && processed.type === "string" && !processed.format) {
-    processed.format = "objectid";
-    logger.debug("Applied objectid format override to _id field");
+  // OPTIMIZATION: If this branch has no extensions, return it as-is (no cloning!)
+  if (schema[HAS_EXTENSIONS] === false) {
+    return schema;
   }
+
+  // Clone only when we might mutate
+  let processed = { ...schema };
+  let modified = false;
 
   // Check if this is an array with x-array-length-distribution annotation
   if (
@@ -85,24 +184,16 @@ function preprocessSchemaExtensions(
       .distribution as FrequencyDistribution;
 
     try {
-      // Sample a length from the distribution
       const sampledLength = Number(sampleFromDistribution(distribution));
-
-      // Override minItems/maxItems to force this specific length
       processed.minItems = sampledLength;
       processed.maxItems = sampledLength;
+      modified = true;
 
       logger.debug("Applied frequency distribution sampling for array", {
         sampledLength,
-        distributionSize: Object.keys(distribution).length,
       });
     } catch (error) {
-      logger.warn(
-        "Failed to sample from array length distribution, using existing constraints",
-        {
-          error: error instanceof Error ? error.message : String(error),
-        },
-      );
+      logger.warn("Failed to sample from array length distribution", { error });
     }
   }
 
@@ -114,52 +205,58 @@ function preprocessSchemaExtensions(
       const sampledValue = sampleFromDistribution(distribution);
       let finalValue: string | number = sampledValue;
 
-      // Try to convert to number if the schema type is numeric
       if (processed.type === "number" || processed.type === "integer") {
         const num = Number(sampledValue);
-        if (!isNaN(num)) {
-          finalValue = num;
-        }
+        if (!isNaN(num)) finalValue = num;
       }
 
-      // Override enum to force this specific value
       processed.enum = [finalValue];
-      logger.debug("Applied enum distribution sampling", {
-        sampledValue: finalValue,
-      });
+      modified = true;
     } catch (error) {
-      logger.warn("Failed to sample from enum distribution", {
-        error: error instanceof Error ? error.message : String(error),
-      });
+      logger.warn("Failed to sample from enum distribution", { error });
     }
   }
 
-  // Recursively process nested properties
+  // Recursively process nested properties only if they might have extensions
   if (processed.properties) {
-    processed.properties = Object.fromEntries(
-      Object.entries(processed.properties).map(([key, value]) => [
-        key,
-        preprocessSchemaExtensions(value, key, depth + 1),
-      ]),
-    );
+    const newProps: any = {};
+    let propsChanged = false;
+
+    for (const [key, value] of Object.entries(processed.properties)) {
+      const newVal = preprocessSchemaExtensions(value, depth + 1);
+      newProps[key] = newVal;
+      if (newVal !== value) propsChanged = true;
+    }
+
+    if (propsChanged) {
+      processed.properties = newProps;
+      modified = true;
+    }
   }
 
   // Recursively process array items
   if (processed.items) {
     if (Array.isArray(processed.items)) {
-      processed.items = processed.items.map((item: any) =>
-        preprocessSchemaExtensions(item, undefined, depth + 1),
+      const newItems = processed.items.map((item: any) =>
+        preprocessSchemaExtensions(item, depth + 1),
       );
+      const itemsChanged = newItems.some(
+        (item: any, i: number) => item !== (processed.items as any)[i],
+      );
+      if (itemsChanged) {
+        processed.items = newItems;
+        modified = true;
+      }
     } else {
-      processed.items = preprocessSchemaExtensions(
-        processed.items,
-        undefined,
-        depth + 1,
-      );
+      const newItem = preprocessSchemaExtensions(processed.items, depth + 1);
+      if (newItem !== processed.items) {
+        processed.items = newItem;
+        modified = true;
+      }
     }
   }
 
-  return processed;
+  return modified ? processed : schema;
 }
 
 /**

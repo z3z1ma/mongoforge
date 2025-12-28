@@ -99,14 +99,14 @@ export function profileDocuments(
     },
   };
 
-      logger.info("Profiling complete", {
-      arrayFieldsFound: arrayStats.size,
-      numericFieldsFound: numericRanges.size,
-      semanticFieldsFound: semanticStats.size,
-      dynamicKeyFieldsFound: dynamicKeyStats.size,
-      sizeBucketsCreated: sizeBuckets.length,
-    });
-    return profile;
+  logger.info("Profiling complete", {
+    arrayFieldsFound: arrayStats.size,
+    numericFieldsFound: numericRanges.size,
+    semanticFieldsFound: semanticStats.size,
+    dynamicKeyFieldsFound: dynamicKeyStats.size,
+    sizeBucketsCreated: sizeBuckets.length,
+  });
+  return profile;
 }
 
 /**

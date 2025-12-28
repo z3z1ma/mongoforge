@@ -44,6 +44,14 @@ export function updateFrequencies(
   distribution[key] = (distribution[key] || 0) + 1;
 }
 
+// Internal cache key for prepared distributions to avoid repeated Object.entries/reduce calls
+const PREPARED_DISTRIBUTION = Symbol("prepared_distribution");
+
+interface PreparedDistribution {
+  entries: [string, number][];
+  total: number;
+}
+
 /**
  * Sample a value from a frequency distribution
  * Uses weighted random selection based on frequencies
@@ -60,33 +68,53 @@ export function sampleFromDistribution(
   distribution: FrequencyDistribution,
   randomValue = Math.random(),
 ): string {
-  const entries = Object.entries(distribution);
+  // Use cached prepared state if available
+  let prepared = (distribution as any)[PREPARED_DISTRIBUTION] as
+    | PreparedDistribution
+    | undefined;
 
-  if (entries.length === 0) {
-    throw new Error("Cannot sample from empty distribution");
+  if (!prepared) {
+    const entries = Object.entries(distribution) as [string, number][];
+
+    if (entries.length === 0) {
+      throw new Error("Cannot sample from empty distribution");
+    }
+
+    // Calculate total frequency
+    const total = entries.reduce((sum, [, count]) => sum + count, 0);
+
+    prepared = { entries, total };
+
+    // Cache it on the distribution object
+    try {
+      Object.defineProperty(distribution, PREPARED_DISTRIBUTION, {
+        value: prepared,
+        enumerable: false,
+        configurable: true,
+      });
+    } catch (e) {
+      // Fallback for non-extensible objects, though rare for our use case
+    }
   }
 
-  // Calculate total frequency
-  const total = entries.reduce((sum, [, count]) => sum + count, 0);
+  const { entries, total } = prepared;
 
   // Use provided random value or generate a new one
   const random = randomValue * total;
 
   // Find the value corresponding to this random number
   let cumulative = 0;
-  for (const [value, count] of entries) {
-    cumulative += count;
+  for (let i = 0; i < entries.length; i++) {
+    const entry = entries[i]!;
+    cumulative += entry[1];
     if (random < cumulative) {
-      return value;
+      return entry[0];
     }
   }
 
   // Fallback to last value (should never reach here due to floating point precision)
   const lastEntry = entries[entries.length - 1];
-  if (!lastEntry) {
-    throw new Error("Distribution has no entries");
-  }
-  return lastEntry[0];
+  return lastEntry ? lastEntry[0] : "";
 }
 
 /**

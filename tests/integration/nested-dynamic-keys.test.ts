@@ -21,7 +21,7 @@ describe('Nested Dynamic Keys Support', () => {
 
   it('should detect and expand 2-level nested dynamic keys', async () => {
     const documents = [];
-    // 10 documents, each with 5 UUID keys at Level 1, 
+    // 10 documents, each with 5 UUID keys at Level 1,
     // and each of those has 5 UUID keys at Level 2
     for (let i = 0; i < 10; i++) {
       const l1Obj = {};
@@ -43,7 +43,7 @@ describe('Nested Dynamic Keys Support', () => {
 
     const inferencer = new Inferencer();
     const result = await inferencer.infer(normalized);
-    
+
     const profiler = new Profiler({ dynamicKeyDetection: commonConfig });
     const { profile: constraints } = profiler.profile(normalized);
     const dynamicKeyAnalyses = constraints.dynamicKeyStats;
@@ -52,10 +52,9 @@ describe('Nested Dynamic Keys Support', () => {
     const l1Analysis = dynamicKeyAnalyses?.get('a');
     expect(l1Analysis?.isDynamic).toBe(true);
 
-    // Level 2 detection is currently disabled in streaming mode to save memory/performance
-    // const l1ValueSchema = l1Analysis?.valueSchema.schemas[0];
-    // expect(l1ValueSchema['x-dynamic-keys']).toBeDefined();
-    // expect(l1ValueSchema['x-dynamic-keys'].metadata.pattern).toBe('UUID');
+    const l1ValueSchema = l1Analysis?.valueSchema.schemas[0];
+    expect(l1ValueSchema['x-dynamic-keys']).toBeDefined();
+    expect(l1ValueSchema['x-dynamic-keys'].metadata.pattern).toBe('UUID');
 
     // Synthesize generation schema
     const synthesizer = new Synthesizer();
@@ -67,27 +66,22 @@ describe('Nested Dynamic Keys Support', () => {
 
     // Now test expansion
     const preprocessed = preprocessSchema(generationSchema, { seed: 42 });
-    
+
     // Root properties should have 'a'
     const aProps = preprocessed.properties.a.properties;
     expect(Object.keys(aProps).length).toBeGreaterThan(0);
-    
+
     // Pick one generated key from 'a'
     const firstKey = Object.keys(aProps)[0];
     const innerObj = aProps[firstKey];
-    
+
     // It should have expanded properties from Level 2
-    // Since we didn't detect L2 as dynamic, it might be inferred as static properties if samples were consistent?
-    // But since keys were random UUIDs, 'inferValueSchema' on the sample would see a specific UUID key.
-    // So 'innerObj' will look like { '2222...': { val: ... } } (based on sample).
-    // This test expects 'expanded properties'.
-    
     expect(innerObj.properties).toBeDefined();
     const l2Keys = Object.keys(innerObj.properties);
     expect(l2Keys.length).toBeGreaterThan(0);
-    
-    // The keys should match UUID pattern (or at least be one of the sample keys)
-    // expect(l2Keys[0]).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
+
+    // The keys should match UUID pattern
+    expect(l2Keys[0]).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
   });
 
   it('should handle complex static structures under dynamic keys', async () => {
@@ -115,17 +109,17 @@ describe('Nested Dynamic Keys Support', () => {
 
     const inferencer = new Inferencer();
     const result = await inferencer.infer(normalized);
-    
+
     const profiler = new Profiler({ dynamicKeyDetection: commonConfig });
     const { profile: constraints } = profiler.profile(normalized);
     const dynamicKeyAnalyses = constraints.dynamicKeyStats;
-    
+
     const l1Analysis = dynamicKeyAnalyses?.get('a');
     const innerSchema = l1Analysis?.valueSchema.schemas[0];
-    
+
     // Should have deep static structure (inferred from sample)
     expect(innerSchema.properties.user.properties.profile.properties.settings.properties.theme).toBeDefined();
-    
+
     // Synthesize
     const synthesizer = new Synthesizer();
     const { schema: generationSchema } = synthesizer.synthesize(

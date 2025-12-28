@@ -4,7 +4,7 @@
 
 import { Readable } from "stream";
 import { GenerationSchema, SyntheticDocument } from "../../types/data-model.js";
-import { generate, initializeFaker } from "./faker-engine.js";
+import { generate, initializeFaker, prepareSchema } from "./faker-engine.js";
 import { registerCustomFormats } from "./custom-formats.js";
 import { logger } from "../../utils/logger.js";
 import { countDynamicKeySchemas } from "./schema-preprocessor.js";
@@ -51,6 +51,9 @@ export class DocumentGeneratorStream extends Readable {
 
     // Register custom formats
     registerCustomFormats();
+
+    // Prepare schema for faster generation (one-time optimizations)
+    this.schema = prepareSchema(this.schema);
 
     // Precompute performance optimization flags
     this.hasDynamicKeys = countDynamicKeySchemas(this.schema) > 0;

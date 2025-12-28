@@ -79,12 +79,15 @@ describe('Constraints - Dynamic Key Bloat Prevention', () => {
       sizeProxy: 'leafFieldCount',
       dynamicKeyDetection: {
         threshold: 5,
-        patterns: [],
+        patterns: [
+          { name: 'UUID', regex: '^uuid-key-[0-9]{3}$' }
+        ],
         minPatternMatch: 0.8,
         confidenceThreshold: 0.7,
         forceStaticPaths: [],
         forceDynamicPaths: [],
       },
+
     });
     const { profile: constraints } = profiler.profile(normalized);
     const dynamicKeyAnalyses = constraints.dynamicKeyStats;

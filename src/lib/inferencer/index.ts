@@ -62,9 +62,7 @@ export async function inferStream(
 /**
  * Internal helper for schema post-processing (semantic types)
  */
-function postProcessSchema(
-  schema: InferredSchema,
-): InferredSchema {
+function postProcessSchema(schema: InferredSchema): InferredSchema {
   // Semantic type detection is now handled by the Profiler (SemanticStatsAccumulator)
   // We no longer need to post-process the schema for semantic types here.
 

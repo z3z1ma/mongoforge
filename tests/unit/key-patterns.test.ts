@@ -316,23 +316,24 @@ describe('Key Pattern Detection Utilities', () => {
     });
 
     it('should detect via count-based path when pattern match is weak but count is high', () => {
-      // Count-based detection: 60 keys (meets threshold), but only 66.7% pattern match
-      const keys = Array.from({ length: 60 }, (_, i) =>
-        i < 40
+      // Count-based detection: 120 keys (meets threshold of 100), but only 66.7% pattern match
+      const keys = Array.from({ length: 120 }, (_, i) =>
+        i < 80
           ? `550e8400-e29b-41d4-a716-4466554400${String(i).padStart(2, '0')}`
           : `random_key_${i}`
       );
 
       const result = detectDynamicKeys(keys, DEFAULT_DYNAMIC_KEY_CONFIG);
 
-      // Should detect via count-based path (60 keys ≥ threshold of 50)
-      // Pattern match is 40/60 = 66.7%, below minPatternMatch (0.8), but count path triggers
+      // Should detect via count-based path (120 keys ≥ threshold of 100)
+      // Pattern match is 80/120 = 66.7%, below minPatternMatch (0.8), but count path triggers
       expect(result.detected).toBe(true);
       expect(result.matchRatio).toBeCloseTo(0.667, 2);
-      expect(result.totalKeys).toBe(60);
+      expect(result.totalKeys).toBe(120);
       expect(result.pattern).toBe('UUID'); // Best pattern found
       expect(result.confidence).toBeGreaterThan(0.6); // Count-based confidence
     });
+
 
     it('should detect MongoDB ObjectId pattern', () => {
       const keys = Array.from({ length: 60 }, (_, i) =>
@@ -392,18 +393,19 @@ describe('Key Pattern Detection Utilities', () => {
     });
 
     it('should detect regular object keys via count-based path if count is high', () => {
-      // Count-based detection: 60 generic field names (no pattern match)
-      const keys = Array.from({ length: 60 }, (_, i) => `field${i}`);
+      // Count-based detection: 120 generic field names (no pattern match)
+      const keys = Array.from({ length: 120 }, (_, i) => `field${i}`);
 
       const result = detectDynamicKeys(keys, DEFAULT_DYNAMIC_KEY_CONFIG);
 
-      // Should detect via count-based path (60 ≥ threshold of 50)
+      // Should detect via count-based path (120 ≥ threshold of 100)
       expect(result.detected).toBe(true);
       expect(result.pattern).toBe(null); // No pattern matched
       expect(result.customPattern).toBeUndefined();
       expect(result.matchRatio).toBe(0); // No pattern match
       expect(result.confidence).toBeGreaterThan(0.6); // Count-based confidence
     });
+
 
     it('should not detect when both count and pattern thresholds fail', () => {
       // Low count (below threshold) AND weak pattern match (below minPatternMatch)

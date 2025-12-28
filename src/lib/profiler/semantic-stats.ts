@@ -3,7 +3,10 @@
  * Detects email addresses, URLs, UUIDs, phone numbers, etc. in a streaming fashion.
  */
 
-import { SemanticDetector, BUILTIN_DETECTORS } from "../inferencer/semantic-detectors.js";
+import {
+  SemanticDetector,
+  BUILTIN_DETECTORS,
+} from "../inferencer/semantic-detectors.js";
 import { SemanticStats } from "../../types/data-model.js";
 
 /**
@@ -57,7 +60,11 @@ export class SemanticStatsAccumulator {
     }
   }
 
-  private recordValue(fieldPath: string, fieldName: string, value: string): void {
+  private recordValue(
+    fieldPath: string,
+    fieldName: string,
+    value: string,
+  ): void {
     let stat = this.stats.get(fieldPath);
 
     if (!stat) {
@@ -75,7 +82,7 @@ export class SemanticStatsAccumulator {
     for (const detector of this.detectors) {
       // Check if field name matches pattern
       const nameMatches = detector.fieldPatterns.some(
-        (pattern) => pattern.test(fieldName) || pattern.test(fieldPath)
+        (pattern) => pattern.test(fieldName) || pattern.test(fieldPath),
       );
 
       if (!nameMatches) {
@@ -126,7 +133,7 @@ export class SemanticStatsAccumulator {
  */
 export function calculateAllSemanticStats(
   documents: any[],
-  detectors: SemanticDetector[] = BUILTIN_DETECTORS
+  detectors: SemanticDetector[] = BUILTIN_DETECTORS,
 ): Map<string, SemanticStats> {
   const accumulator = new SemanticStatsAccumulator(detectors);
   documents.forEach((doc) => accumulator.addDocument(doc));

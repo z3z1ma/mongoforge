@@ -80,19 +80,35 @@ function mapTypeToJsonSchema(
     IPv6: "string",
   };
 
+  const allowedTypes = [
+    "string",
+    "number",
+    "integer",
+    "boolean",
+    "object",
+    "array",
+    "null",
+  ];
+
+  const mapSingle = (t: string): string => {
+    // Exact match from map
+    if (typeMap[t]) return typeMap[t];
+
+    // Check if lowercase version is a valid JSON Schema type
+    const lower = t ? t.toLowerCase() : "";
+    if (allowedTypes.includes(lower)) return lower;
+
+    // Fallback for Undefined/unknown to string
+    return "string";
+  };
+
   if (Array.isArray(mongoSchemaType)) {
-    const mapped = mongoSchemaType.map(
-      (t) => typeMap[t] || (t ? t.toLowerCase() : "") || "string",
-    );
+    const mapped = mongoSchemaType.map(mapSingle);
     if (mapped.length === 0) return "string";
-    const first = mapped[0];
-    return mapped.length === 1 ? first || "string" : mapped;
+    return mapped.length === 1 ? mapped[0]! : mapped;
   }
 
-  const lowerType =
-    typeof mongoSchemaType === "string" ? mongoSchemaType.toLowerCase() : "";
-  const result = typeMap[mongoSchemaType] || lowerType;
-  return result || "string"; // Always return a string, never undefined
+  return mapSingle(mongoSchemaType);
 }
 
 /**
@@ -391,7 +407,8 @@ export function synthesize(
   const opts = { ...DEFAULT_OPTIONS, ...options };
 
   // Use dynamic key stats from profile if available, otherwise fall back to explicit argument
-  const effectiveDynamicKeyAnalyses = constraints.dynamicKeyStats || dynamicKeyAnalyses;
+  const effectiveDynamicKeyAnalyses =
+    constraints.dynamicKeyStats || dynamicKeyAnalyses;
 
   logger.info("Synthesizing generation schema", {
     fieldsInferred: Object.keys(inferredSchema.fields).length,

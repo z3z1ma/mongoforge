@@ -309,10 +309,8 @@ async function executeInfer(options: InferCommandOptions): Promise<void> {
     }
 
     // Run inference (this consumes the stream and also triggers profiling via multiplexedStream)
-    const {
-      schema: inferredSchema,
-      metadata: inferMeta,
-    } = await inferencer.inferStream(multiplexedStream());
+    const { schema: inferredSchema, metadata: inferMeta } =
+      await inferencer.inferStream(multiplexedStream());
 
     const typeHints = normalizer.getTypeHints();
 
@@ -320,29 +318,75 @@ async function executeInfer(options: InferCommandOptions): Promise<void> {
     const { profile: constraints, metadata: profileMeta } =
       profiler.getProfileResult();
 
-    // Strip array stats for paths nested under dynamic key fields to prevent bloat
+    // Strip stats for paths nested under dynamic key fields to prevent bloat and RangeErrors
     if (constraints.dynamicKeyStats && constraints.dynamicKeyStats.size > 0) {
-      const dynamicKeyPaths = new Set(
-        Array.from(constraints.dynamicKeyStats.entries())
-          .filter(([_, analysis]) => analysis.isDynamic)
-          .map(([path, _]) => path),
-      );
+      const dynamicKeyPaths = Array.from(constraints.dynamicKeyStats.entries())
+        .filter(([_, analysis]) => analysis.isDynamic)
+        .map(([path, _]) => path);
 
-      let removedCount = 0;
-      for (const [arrayPath, _] of constraints.arrayStats) {
-        for (const dynamicPath of dynamicKeyPaths) {
-          if (arrayPath.startsWith(dynamicPath + ".")) {
-            constraints.arrayStats.delete(arrayPath);
-            removedCount++;
-            break;
+      if (dynamicKeyPaths.length > 0) {
+        let removedArrayCount = 0;
+        let removedNumericCount = 0;
+        let removedSemanticCount = 0;
+
+        // 1. Prune Array Stats
+        for (const [path, _] of constraints.arrayStats) {
+          if (dynamicKeyPaths.some((dp) => path.startsWith(dp + "."))) {
+            constraints.arrayStats.delete(path);
+            removedArrayCount++;
           }
         }
-      }
 
-      if (removedCount > 0) {
-        logger.info("Stripped array stats nested under dynamic key fields", {
-          removedEntries: removedCount,
-          remainingEntries: constraints.arrayStats.size,
+        // 2. Prune Numeric Ranges
+        for (const [path, _] of constraints.numericRanges) {
+          if (dynamicKeyPaths.some((dp) => path.startsWith(dp + "."))) {
+            constraints.numericRanges.delete(path);
+            removedNumericCount++;
+          }
+        }
+
+        // 3. Prune Semantic Stats
+        for (const [path, _] of constraints.semanticStats) {
+          if (dynamicKeyPaths.some((dp) => path.startsWith(dp + "."))) {
+            constraints.semanticStats.delete(path);
+            removedSemanticCount++;
+          }
+        }
+
+        // 4. Prune Inferred Schema recursively
+        const pruneSchema = (
+          fields: Record<string, any>,
+          parentPath: string,
+        ) => {
+          for (const [name, field] of Object.entries(fields)) {
+            const currentPath = parentPath ? `${parentPath}.${name}` : name;
+
+            if (dynamicKeyPaths.includes(currentPath)) {
+              // This is a dynamic key field - remove its static sub-fields
+              if (field.fields) {
+                const subFieldCount = Object.keys(field.fields).length;
+                field.fields = {}; // Empty it
+                logger.debug(
+                  "Pruned sub-fields from dynamic key field in inferred schema",
+                  {
+                    path: currentPath,
+                    subFieldsRemoved: subFieldCount,
+                  },
+                );
+              }
+            } else if (field.fields) {
+              pruneSchema(field.fields, currentPath);
+            }
+          }
+        };
+
+        pruneSchema(inferredSchema.fields, "");
+
+        logger.info("Stripped nested stats for dynamic key fields", {
+          dynamicFieldsDetected: dynamicKeyPaths.length,
+          removedArrayEntries: removedArrayCount,
+          removedNumericEntries: removedNumericCount,
+          removedSemanticEntries: removedSemanticCount,
         });
       }
     }
