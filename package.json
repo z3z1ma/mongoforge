@@ -1,6 +1,6 @@
 {
   "name": "mongoforge",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Schema-driven synthetic MongoDB document generation for high-volume CDC and load testing",
   "type": "module",
   "main": "./dist/index.cjs",
