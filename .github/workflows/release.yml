@@ -39,22 +39,12 @@ jobs:
           bun build src/cli/index.ts \
             --compile \
             --minify \
-            --outfile mongoforge
+            --outfile ${{ matrix.artifact }}
 
       - name: Strip binary (Linux/macOS)
         if: runner.os != 'Windows'
         run: |
-          strip mongoforge || true
-
-      - name: Rename artifact
-        run: |
-          if [ "$RUNNER_OS" = "Windows" ]; then
-            mv mongoforge mongoforge.exe
-            mv mongoforge.exe ${{ matrix.artifact }}
-          else
-            mv mongoforge ${{ matrix.artifact }}
-          fi
-        shell: bash
+          strip ${{ matrix.artifact }} || true
 
       - name: Upload artifact
         uses: actions/upload-artifact@v6
