@@ -39,8 +39,8 @@ export function compareArrayLengths(
           minLen: sampleStat.stats.min,
           maxLen: sampleStat.stats.max,
           p50Len: sampleStat.stats.median,
-          p90Len: Math.round(sampleStat.stats.p95 * 0.95),
-          p99Len: sampleStat.stats.p95,
+          p90Len: sampleStat.stats.p90,
+          p99Len: sampleStat.stats.p99,
         },
         generated: {
           minLen: 0,
@@ -66,12 +66,12 @@ export function compareArrayLengths(
       generatedStat.stats.median,
     );
     const deviationP90 = calculatePercentageDeviation(
-      Math.round(sampleStat.stats.p95 * 0.95),
-      Math.round(generatedStat.stats.p95 * 0.95),
+      sampleStat.stats.p90,
+      generatedStat.stats.p90,
     );
     const deviationP99 = calculatePercentageDeviation(
-      sampleStat.stats.p95,
-      generatedStat.stats.p95,
+      sampleStat.stats.p99,
+      generatedStat.stats.p99,
     );
 
     // Check if deviations are within tolerance
@@ -85,15 +85,15 @@ export function compareArrayLengths(
         minLen: sampleStat.stats.min,
         maxLen: sampleStat.stats.max,
         p50Len: sampleStat.stats.median,
-        p90Len: Math.round(sampleStat.stats.p95 * 0.95),
-        p99Len: sampleStat.stats.p95,
+        p90Len: sampleStat.stats.p90,
+        p99Len: sampleStat.stats.p99,
       },
       generated: {
         minLen: generatedStat.stats.min,
         maxLen: generatedStat.stats.max,
         p50Len: generatedStat.stats.median,
-        p90Len: Math.round(generatedStat.stats.p95 * 0.95),
-        p99Len: generatedStat.stats.p95,
+        p90Len: generatedStat.stats.p90,
+        p99Len: generatedStat.stats.p99,
       },
       deviation: {
         p50: deviationP50,

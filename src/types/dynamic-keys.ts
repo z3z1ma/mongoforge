@@ -24,8 +24,14 @@ export interface DistributionStats {
   /** Median value (50th percentile) */
   median: number;
 
+  /** 90th percentile value */
+  p90: number;
+
   /** 95th percentile value */
   p95: number;
+
+  /** 99th percentile value */
+  p99: number;
 
   /** Total number of observations */
   total: number;

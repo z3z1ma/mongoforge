@@ -121,7 +121,7 @@ export function sampleFromDistribution(
  * Calculate comprehensive distribution statistics
  *
  * @param distribution - Frequency distribution
- * @returns Statistical summary including min, max, median, p95, total, and unique
+ * @returns Statistical summary including min, max, median, p90, p95, p99, total, and unique
  */
 export function calculateDistributionStats(
   distribution: FrequencyDistribution,
@@ -162,13 +162,19 @@ export function calculateDistributionStats(
 
   // Calculate percentiles in a single pass to be efficient
   let median = min;
+  let p90 = min;
   let p95 = min;
+  let p99 = min;
   const medianTarget = total * 0.5;
+  const p90Target = total * 0.9;
   const p95Target = total * 0.95;
+  const p99Target = total * 0.99;
 
   let cumulative = 0;
   let medianFound = false;
+  let p90Found = false;
   let p95Found = false;
+  let p99Found = false;
 
   for (let i = 0; i < sortedEntries.length; i++) {
     const entry = sortedEntries[i];
@@ -179,9 +185,17 @@ export function calculateDistributionStats(
       median = entry.value;
       medianFound = true;
     }
+    if (!p90Found && cumulative >= p90Target) {
+      p90 = entry.value;
+      p90Found = true;
+    }
     if (!p95Found && cumulative >= p95Target) {
       p95 = entry.value;
       p95Found = true;
+    }
+    if (!p99Found && cumulative >= p99Target) {
+      p99 = entry.value;
+      p99Found = true;
       break; // Found everything we need
     }
   }
@@ -190,7 +204,9 @@ export function calculateDistributionStats(
     min,
     max,
     median,
+    p90,
     p95,
+    p99,
     total,
     unique,
   };
